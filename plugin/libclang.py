@@ -11,6 +11,8 @@ def initClangComplete(clang_complete_flags):
   translationUnits = dict()
   global complete_flags
   complete_flags = int(clang_complete_flags)
+  global definitionFinder
+  definitionFinder = DefinitionFinder()
 
 # Get a tuple (fileName, fileContent) for the file opened in the current
 # vim buffer. The fileContent contains the unsafed buffer content.
@@ -194,6 +196,41 @@ class CompleteThread(threading.Thread):
       except Exception:
         pass
 
+class DefinitionFinder(object):
+
+  def __init__(self):
+    self.lastSuccessfulTranslationUnit = None
+
+  def getDefinitionCursor(self, translationUnit):
+    line = int(vim.eval("line('.')"))
+    column = int(vim.eval("col('.')"))
+    file = translationUnit.getFile(vim.current.buffer.name)
+    if not file:
+      return None
+    location = translationUnit.getLocation(file, line, column)
+    cursor = translationUnit.getCursor(location)
+    return cursor.get_definition()
+
+  def jumpToDefinition(self):
+    global debug
+    debug = int(vim.eval("g:clang_debug")) == 1
+
+    translationUnit = getCurrentTranslationUnit()
+    definitionCursor = self.getDefinitionCursor(translationUnit)
+
+    if definitionCursor:
+      self.lastSuccessfulTranslationUnit = translationUnit
+    elif self.lastSuccessfulTranslationUnit:
+      definitionCursor = self.getDefinitionCursor(self.lastSuccessfulTranslationUnit)
+
+    if definitionCursor:
+      definitionLocation = definitionCursor.extent.start
+      vim.command("e +" + str(definitionLocation.line) + " " + definitionLocation.file.name.spelling)
+    else:
+      print("No definition available")
+
+def jumpToDefinition():
+  return definitionFinder.jumpToDefinition()
 
 def getCurrentCompletions(base):
   global debug
