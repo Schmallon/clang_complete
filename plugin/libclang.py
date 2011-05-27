@@ -199,29 +199,51 @@ class CompleteThread(threading.Thread):
 class DefinitionFinder(object):
 
   def __init__(self):
-    self.lastSuccessfulTranslationUnit = None
+    self.referencingTranslationUnits = {}
 
-  def getDefinitionCursor(self, translationUnit):
-    line = int(vim.eval("line('.')"))
-    column = int(vim.eval("col('.')"))
-    file = translationUnit.getFile(vim.current.buffer.name)
-    if not file:
-      return None
-    location = translationUnit.getLocation(file, line, column)
-    cursor = translationUnit.getCursor(location)
-    return cursor.get_definition()
+  class FindDefinitionInTranslationUnit(object):
+    def __init__(self, translationUnit, referencingTranslationUnits):
+      self.translationUnit = translationUnit
+      self.referencingTranslationUnits = referencingTranslationUnits
+
+    def getCurrentLocation(self):
+      line = int(vim.eval("line('.')"))
+      column = int(vim.eval("col('.')"))
+      file = self.translationUnit.getFile(vim.current.buffer.name)
+      if not file:
+        return None
+      return self.translationUnit.getLocation(file, line, column)
+
+    def getDefinitionCursor(self):
+      location = self.getCurrentLocation()
+      cursor = self.translationUnit.getCursor(location)
+      result = cursor.get_definition()
+      if result:
+        self.storeReferencingTranslationUnit(result)
+      return result
+
+    def storeReferencingTranslationUnit(self, definitionCursor):
+      definitionLocation = definitionCursor.extent.start
+      definingFilename = definitionLocation.file.name.spelling
+      self.referencingTranslationUnits[definingFilename] = self.translationUnit
+
+  def findDefinitionInTranslationUnit(self, translationUnit):
+    return self.FindDefinitionInTranslationUnit(translationUnit,
+        self.referencingTranslationUnits).getDefinitionCursor()
 
   def jumpToDefinition(self):
     global debug
     debug = int(vim.eval("g:clang_debug")) == 1
 
-    translationUnit = getCurrentTranslationUnit()
-    definitionCursor = self.getDefinitionCursor(translationUnit)
+    definitionCursor = self.findDefinitionInTranslationUnit(getCurrentTranslationUnit())
 
-    if definitionCursor:
-      self.lastSuccessfulTranslationUnit = translationUnit
-    elif self.lastSuccessfulTranslationUnit:
-      definitionCursor = self.getDefinitionCursor(self.lastSuccessfulTranslationUnit)
+    if not definitionCursor:
+      try:
+        referencingTranslationUnit = self.referencingTranslationUnits[vim.current.buffer.name]
+        definitionCursor = self.findDefinitionInTranslationUnit(referencingTranslationUnit )
+      except KeyError:
+        print("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
+        pass
 
     if definitionCursor:
       definitionLocation = definitionCursor.extent.start
