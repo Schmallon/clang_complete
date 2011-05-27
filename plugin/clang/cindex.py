@@ -116,10 +116,7 @@ class SourceLocation(Structure):
         if self._data is None:
             f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
             SourceLocation_loc(self, byref(f), byref(l), byref(c), byref(o))
-            if f:
-                f = File(f)
-            else:
-                f = None
+            f = File(f) if f else None
             self._data = (f, int(l.value), int(c.value), int(c.value))
         return self._data
 
@@ -144,12 +141,8 @@ class SourceLocation(Structure):
         return self._get_instantiation()[3]
 
     def __repr__(self):
-        if self.file:
-            filename = self.file.name
-        else:
-            filename = None
         return "<SourceLocation file %r, line %r, column %r>" % (
-            filename, self.line, self.column)
+            self.file.name if self.file else None, self.line, self.column)
 
 class SourceRange(Structure):
     """
@@ -227,8 +220,8 @@ class Diagnostic(object):
                 return int(_clang_getDiagnosticNumRanges(self.diag))
 
             def __getitem__(self, key):
-                if (key >= len(self)):
-                    raise IndexError
+		if (key >= len(self)):
+			raise IndexError
                 return _clang_getDiagnosticRange(self.diag, key)
 
         return RangeIterator(self)
@@ -414,6 +407,51 @@ CursorKind.OBJC_CATEGORY_IMPL_DECL = CursorKind(19)
 # A typedef.
 CursorKind.TYPEDEF_DECL = CursorKind(20)
 
+# A C++ class method.
+CursorKind.CXX_METHOD = CursorKind(21)
+
+# A C++ namespace.
+CursorKind.NAMESPACE = CursorKind(22)
+
+# A linkage specification, e.g. 'extern "C"'.
+CursorKind.LINKAGE_SPEC = CursorKind(23)
+
+# A C++ constructor.
+CursorKind.CONSTRUCTOR = CursorKind(24)
+
+# A C++ destructor.
+CursorKind.DESTRUCTOR = CursorKind(25)
+
+# A C++ conversion function.
+CursorKind.CONVERSION_FUNCTION = CursorKind(26)
+
+# A C++ template type parameter
+CursorKind.TEMPLATE_TYPE_PARAMETER = CursorKind(27)
+
+# A C++ non-type template paramater.
+CursorKind.TEMPLATE_NON_TYPE_PARAMETER = CursorKind(28)
+
+# A C++ template template parameter.
+CursorKind.TEMPLATE_TEMPLATE_PARAMTER = CursorKind(29)
+
+# A C++ function template.
+CursorKind.FUNCTION_TEMPLATE = CursorKind(30)
+
+# A C++ class template.
+CursorKind.CLASS_TEMPLATE = CursorKind(31)
+
+# A C++ class template partial specialization.
+CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION = CursorKind(32)
+
+# A C++ namespace alias declaration.
+CursorKind.NAMESPACE_ALIAS = CursorKind(33)
+
+# A C++ using directive
+CursorKind.USING_DIRECTIVE = CursorKind(34)
+
+# A C++ using declaration
+CursorKind.USING_DECLARATION = CursorKind(35)
+
 ###
 # Reference Kinds
 
@@ -432,6 +470,25 @@ CursorKind.OBJC_CLASS_REF = CursorKind(42)
 # while the type of the variable "size" is referenced. The cursor
 # referenced by the type of size is the typedef for size_type.
 CursorKind.TYPE_REF = CursorKind(43)
+CursorKind.CXX_BASE_SPECIFIER = CursorKind(44)
+
+# A reference to a class template, function template, template
+# template parameter, or class template partial specialization.
+CursorKind.TEMPLATE_REF = CursorKind(45)
+
+# A reference to a namespace or namepsace alias.
+CursorKind.NAMESPACE_REF = CursorKind(46)
+
+# A reference to a member of a struct, union, or class that occurs in
+# some non-expression context, e.g., a designated initializer.
+CursorKind.MEMBER_REF = CursorKind(47)
+
+# A reference to a labeled statement.
+CursorKind.LABEL_REF = CursorKind(48)
+
+# A reference toa a set of overloaded functions or function templates
+# that has not yet been resolved to a specific function or function template.
+CursorKind.OVERLOADED_DECL_REF = CursorKind(49)
 
 ###
 # Invalid/Error Kinds
@@ -439,6 +496,7 @@ CursorKind.TYPE_REF = CursorKind(43)
 CursorKind.INVALID_FILE = CursorKind(70)
 CursorKind.NO_DECL_FOUND = CursorKind(71)
 CursorKind.NOT_IMPLEMENTED = CursorKind(72)
+CursorKind.INVALID_CODE = CursorKind(73)
 
 ###
 # Expression Kinds
@@ -464,12 +522,19 @@ CursorKind.CALL_EXPR = CursorKind(103)
 # An expression that sends a message to an Objective-C object or class.
 CursorKind.OBJC_MESSAGE_EXPR = CursorKind(104)
 
+# An expression that represents a block literal.
+CursorKind.BLOCK_EXPR = CursorKind(105)
+
 # A statement whose specific kind is not exposed via this interface.
 #
 # Unexposed statements have the same operations as any other kind of statement;
 # one can extract their location information, spelling, children, etc. However,
 # the specific kind of the statement is not reported.
 CursorKind.UNEXPOSED_STMT = CursorKind(200)
+
+# A labelled statement in a function.
+CursorKind.LABEL_STMT = CursorKind(201)
+
 
 ###
 # Other Kinds
@@ -479,6 +544,23 @@ CursorKind.UNEXPOSED_STMT = CursorKind(200)
 # The translation unit cursor exists primarily to act as the root cursor for
 # traversing the contents of a translation unit.
 CursorKind.TRANSLATION_UNIT = CursorKind(300)
+
+###
+# Attributes
+
+# An attribute whoe specific kind is note exposed via this interface
+CursorKind.UNEXPOSED_ATTR = CursorKind(400)
+
+CursorKind.IB_ACTION_ATTR = CursorKind(401)
+CursorKind.IB_OUTLET_ATTR = CursorKind(402)
+CursorKind.IB_OUTLET_COLLECTION_ATTR = CursorKind(403)
+
+###
+# Preprocessing
+CursorKind.PREPROCESSING_DIRECTIVE = CursorKind(500)
+CursorKind.MACRO_DEFINITION = CursorKind(501)
+CursorKind.MACRO_INSTANTIATION = CursorKind(502)
+CursorKind.INCLUSION_DIRECTIVE = CursorKind(503)
 
 ### Cursors ###
 
@@ -574,6 +656,10 @@ class Cursor(Structure):
         if res == Cursor_null():
             return None
         return res
+
+    @staticmethod
+    def nullCursor():
+        return Cursor_null()
 
 ## CIndex Objects ##
 
@@ -762,6 +848,10 @@ class CodeCompletionResult(Structure):
         return str(CompletionString(self.completionString))
 
     @property
+    def kind(self):
+        return CursorKind.from_id(self.cursorKind)
+
+    @property
     def string(self):
         return CompletionString(self.completionString)
 
@@ -807,6 +897,65 @@ class CodeCompletionResults(ClangObject):
 
         return DiagnosticsItr(self)
 
+
+class Index(ClangObject):
+    """
+    The Index type provides the primary interface to the Clang CIndex library,
+    primarily by providing an interface for reading and parsing translation
+    units.
+    """
+
+    @staticmethod
+    def create(excludeDecls=False):
+        """
+        Create a new Index.
+        Parameters:
+        excludeDecls -- Exclude local declarations from translation units.
+        """
+        return Index(Index_create(excludeDecls, 0))
+
+    def __del__(self):
+        Index_dispose(self)
+
+    def read(self, path):
+        """Load the translation unit from the given AST file."""
+        ptr = TranslationUnit_read(self, path)
+        return TranslationUnit(ptr) if ptr else None
+
+    def parse(self, path, args = [], unsaved_files = [], options = 0):
+        """
+        Load the translation unit from the given source code file by running
+        clang and generating the AST before loading. Additional command line
+        parameters can be passed to clang via the args parameter.
+
+        In-memory contents for files can be provided by passing a list of pairs
+        to as unsaved_files, the first item should be the filenames to be mapped
+        and the second should be the contents to be substituted for the
+        file. The contents may be passed as strings or file objects.
+        """
+        arg_array = 0
+        if len(args):
+            arg_array = (c_char_p * len(args))(* args)
+        unsaved_files_array = 0
+        if len(unsaved_files):
+            unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
+            for i,(name,value) in enumerate(unsaved_files):
+                if not isinstance(value, str):
+                    # FIXME: It would be great to support an efficient version
+                    # of this, one day.
+                    value = value.read()
+                    print value
+                if not isinstance(value, str):
+                    raise TypeError,'Unexpected unsaved file contents.'
+                unsaved_files_array[i].name = name
+                unsaved_files_array[i].contents = value
+                unsaved_files_array[i].length = len(value)
+        ptr = TranslationUnit_parse(self, path, arg_array, len(args),
+                                    unsaved_files_array, len(unsaved_files),
+                                    options)
+        return TranslationUnit(ptr) if ptr else None
+
+
 class TranslationUnit(ClangObject):
     """
     The TranslationUnit class represents a source code translation unit and
@@ -821,7 +970,7 @@ class TranslationUnit(ClangObject):
     CacheCompletionResults = 0x08
     CXXPrecompiledPreamble = 0x10
     CXXChainedPCH = 0x20
-
+    
     def __init__(self, ptr):
         ClangObject.__init__(self, ptr)
 
@@ -877,7 +1026,7 @@ class TranslationUnit(ClangObject):
 
         return DiagIterator(self)
 
-    def reparse(self, unsaved_files = [], options = Nothing):
+    def reparse(self, unsaved_files = [], options = 0):
         """
         Reparse an already parsed translation unit.
 
@@ -931,71 +1080,17 @@ class TranslationUnit(ClangObject):
                                            unsaved_files_array,
                                            len(unsaved_files),
                                            options)
-        if ptr:
-            return CodeCompletionResults(ptr)
+        return CodeCompletionResults(ptr) if ptr else None
 
-        return None
+    def getLocation(self, file, line, column):
+        return TranslationUnit_getLocation(self, file, line, column)
 
-class Index(ClangObject):
-    """
-    The Index type provides the primary interface to the Clang CIndex library,
-    primarily by providing an interface for reading and parsing translation
-    units.
-    """
+    def getFile(self, filename):
+        file =  TranslationUnit_getFile(self, filename)
+        return File(file)
 
-    @staticmethod
-    def create(excludeDecls=False):
-        """
-        Create a new Index.
-        Parameters:
-        excludeDecls -- Exclude local declarations from translation units.
-        """
-        return Index(Index_create(excludeDecls, 0))
-
-    def __del__(self):
-        Index_dispose(self)
-
-    def read(self, path):
-        """Load the translation unit from the given AST file."""
-        ptr = TranslationUnit_read(self, path)
-        if ptr:
-            return TranslationUnit(ptr)
-        return None
-
-    def parse(self, path, args = [], unsaved_files = [], options = TranslationUnit.Nothing):
-        """
-        Load the translation unit from the given source code file by running
-        clang and generating the AST before loading. Additional command line
-        parameters can be passed to clang via the args parameter.
-
-        In-memory contents for files can be provided by passing a list of pairs
-        to as unsaved_files, the first item should be the filenames to be mapped
-        and the second should be the contents to be substituted for the
-        file. The contents may be passed as strings or file objects.
-        """
-        arg_array = 0
-        if len(args):
-            arg_array = (c_char_p * len(args))(* args)
-        unsaved_files_array = 0
-        if len(unsaved_files):
-            unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i,(name,value) in enumerate(unsaved_files):
-                if not isinstance(value, str):
-                    # FIXME: It would be great to support an efficient version
-                    # of this, one day.
-                    value = value.read()
-                    print value
-                if not isinstance(value, str):
-                    raise TypeError,'Unexpected unsaved file contents.'
-                unsaved_files_array[i].name = name
-                unsaved_files_array[i].contents = value
-                unsaved_files_array[i].length = len(value)
-        ptr = TranslationUnit_parse(self, path, arg_array, len(args),
-                                    unsaved_files_array, len(unsaved_files),
-                                    options)
-        if ptr:
-            return TranslationUnit(ptr)
-        return None
+    def getCursor(self, sourceLocation):
+      return Cursor_get(self, sourceLocation)
 
 class File(ClangObject):
     """
@@ -1083,14 +1178,19 @@ CursorKind_is_inv = lib.clang_isInvalid
 CursorKind_is_inv.argtypes = [CursorKind]
 CursorKind_is_inv.restype = bool
 
-# Cursor Functions
-# TODO: Implement this function
 Cursor_get = lib.clang_getCursor
 Cursor_get.argtypes = [TranslationUnit, SourceLocation]
 Cursor_get.restype = Cursor
 
 Cursor_null = lib.clang_getNullCursor
 Cursor_null.restype = Cursor
+
+Cursor_eq = lib.clang_equalCursors
+Cursor_eq.argtypes = [Cursor, Cursor]
+Cursor_eq.restype = c_uint
+
+# Cursor Functions
+# TODO: Implement this function
 
 Cursor_usr = lib.clang_getCursorUSR
 Cursor_usr.argtypes = [Cursor]
@@ -1106,9 +1206,6 @@ Cursor_def.argtypes = [Cursor]
 Cursor_def.restype = Cursor
 Cursor_def.errcheck = Cursor.from_result
 
-Cursor_eq = lib.clang_equalCursors
-Cursor_eq.argtypes = [Cursor, Cursor]
-Cursor_eq.restype = c_uint
 
 Cursor_spelling = lib.clang_getCursorSpelling
 Cursor_spelling.argtypes = [Cursor]
@@ -1170,6 +1267,14 @@ TranslationUnit_spelling.argtypes = [TranslationUnit]
 TranslationUnit_spelling.restype = _CXString
 TranslationUnit_spelling.errcheck = _CXString.from_result
 
+TranslationUnit_getLocation = lib.clang_getLocation
+TranslationUnit_getLocation.argtypes = [TranslationUnit, File, c_uint, c_uint]
+TranslationUnit_getLocation.restype = SourceLocation
+
+TranslationUnit_getFile = lib.clang_getFile
+TranslationUnit_getFile.argtypes = [TranslationUnit, c_char_p]
+TranslationUnit_getFile.restype = c_object_p
+
 TranslationUnit_dispose = lib.clang_disposeTranslationUnit
 TranslationUnit_dispose.argtypes = [TranslationUnit]
 
@@ -1185,7 +1290,7 @@ TranslationUnit_includes.argtypes = [TranslationUnit,
 # File Functions
 File_name = lib.clang_getFileName
 File_name.argtypes = [File]
-File_name.restype = c_char_p
+File_name.restype = _CXString
 
 File_time = lib.clang_getFileTime
 File_time.argtypes = [File]
