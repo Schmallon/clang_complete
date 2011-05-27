@@ -107,6 +107,8 @@ let b:clang_user_options = ''
 let b:my_changedtick = 0
 let b:clang_type_complete = 0
 
+let s:python_for_clang_loaded = 0
+
 " Store plugin path, as this is available only when sourcing the file,
 " not during a function call.
 let s:plugin_path = escape(expand('<sfile>:p:h'), '\')
@@ -237,7 +239,11 @@ function! s:ClangCompleteInit()
   " Load the python bindings of libclang
   if g:clang_use_library == 1
     if has('python')
-      exe s:initClangCompletePython()
+
+      if s:python_for_clang_loaded == 0
+        exe s:initClangCompletePython()
+        let s:python_for_clang_loaded = 1
+      endif
     else
       echoe 'clang_complete: No python support available.'
       echoe 'Cannot use clang library, using executable'
