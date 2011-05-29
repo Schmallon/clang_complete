@@ -27,7 +27,25 @@ class VimInterface(object):
     return int(vim.eval("g:clang_debug")) == 1
 
 class EmacsInterface(object):
-  pass
+
+  def __init__(self):
+    import pymacs.lisp as emacs
+
+  def current_file(self):
+    return (self.filename, "")
+
+  @property
+  def filename(self):
+    return emacs.buffer_file_name()
+
+  def user_options():
+    return ""
+
+  def open_file(self, filename, line, column):
+    emacs.find_file(filename)
+
+  def debug_enabled(self):
+    return False
 
 def init_clang_complete(clang_complete_flags):
   global index
