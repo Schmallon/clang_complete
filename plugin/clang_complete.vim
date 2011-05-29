@@ -321,7 +321,7 @@ function! s:initClangCompletePython()
 
   exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
   exe 'pyfile ' . s:plugin_path . '/libclang.py'
-  python initClangComplete(vim.eval('g:clang_complete_lib_flags'))
+  python init_clang_complete(vim.eval('g:clang_complete_lib_flags'))
 endfunction
 
 function! s:GetKind(proto)
@@ -363,7 +363,7 @@ endfunction
 
 function! s:CallClangForDiagnostics(tempfile)
   if g:clang_use_library == 1
-    python updateCurrentDiagnostics()
+    python update_current_diagnostics()
   else
     return s:CallClangBinaryForDiagnostics(a:tempfile)
   endif
@@ -393,8 +393,8 @@ function! s:ClangQuickFix(clang_output, tempfname)
   if g:clang_use_library == 0
     let l:list = s:ClangUpdateQuickFix(a:clang_output, a:tempfname)
   else
-    python vim.command('let l:list = ' + str(getCurrentQuickFixList()))
-    python highlightCurrentDiagnostics()
+    python vim.command('let l:list = ' + str(get_current_quickfix_list()))
+    python highlight_current_diagnostics()
   endif
 
   if g:clang_complete_copen == 1
@@ -618,7 +618,7 @@ function! ClangComplete(findstart, base)
     endif
 
     if g:clang_use_library == 1
-      python vim.command('let l:res = ' + str(getCurrentCompletions(vim.eval('a:base'))))
+      python vim.command('let l:res = ' + str(get_current_completions(vim.eval('a:base'))))
     else
       let l:res = s:ClangCompleteBinary(a:base)
     endif
