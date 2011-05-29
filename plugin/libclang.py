@@ -4,6 +4,31 @@ import time
 import re
 import threading
 
+class VimInterface(object):
+# Get a tuple (fileName, fileContent) for the file opened in the current
+# vim buffer. The fileContent contains the unsafed buffer content.
+  def currentFile(self):
+    file = "\n".join(vim.eval("getline(1, '$')"))
+    return (self.filename, file)
+
+  def userOptions(self):
+    userOptionsGlobal = vim.eval("g:clang_user_options").split(" ")
+    userOptionsLocal = vim.eval("b:clang_user_options").split(" ")
+    return userOptionsGlobal + userOptionsLocal
+
+  @property
+  def filename(self):
+    return vim.current.buffer.name
+
+  def openFile(self, filename, line, column):
+    vim.command("e +" + str(line) + " " + filename)
+
+  def debug_enabled(self):
+    return int(vim.eval("g:clang_debug")) == 1
+
+class EmacsInterface(object):
+  pass
+
 def initClangComplete(clang_complete_flags):
   global index
   index = Index.create()
@@ -13,37 +38,31 @@ def initClangComplete(clang_complete_flags):
   complete_flags = int(clang_complete_flags)
   global definitionFinder
   definitionFinder = DefinitionFinder()
-
-# Get a tuple (fileName, fileContent) for the file opened in the current
-# vim buffer. The fileContent contains the unsafed buffer content.
-def getCurrentFile():
-  file = "\n".join(vim.eval("getline(1, '$')"))
-  return (vim.current.buffer.name, file)
+  global editor
+  editor = VimInterface()
 
 def getCurrentTranslationUnit(update = False):
-  userOptionsGlobal = vim.eval("g:clang_user_options").split(" ")
-  userOptionsLocal = vim.eval("b:clang_user_options").split(" ")
-  args = userOptionsGlobal + userOptionsLocal
+  args = editor.userOptions()
 
-  currentFile = getCurrentFile()
-  fileName = vim.current.buffer.name
+  currentFile = editor.currentFile()
+  fileName = editor.filename
 
   if fileName in translationUnits:
     tu = translationUnits[fileName]
     if update:
-      if debug:
+      if editor.debug_enabled():
         start = time.time()
       tu.reparse([currentFile])
-      if debug:
+      if editor.debug_enabled():
         elapsed = (time.time() - start)
         print "LibClang - Reparsing: " + str(elapsed)
     return tu
 
-  if debug:
+  if editor.debug_enabled():
     start = time.time()
   flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
   tu = index.parse(fileName, args, [currentFile], flags)
-  if debug:
+  if editor.debug_enabled():
     elapsed = (time.time() - start)
     print "LibClang - First parse: " + str(elapsed)
 
@@ -57,10 +76,10 @@ def getCurrentTranslationUnit(update = False):
   # Reparse to initialize the PCH cache even for auto completion
   # This should be done by index.parse(), however it is not.
   # So we need to reparse ourselves.
-  if debug:
+  if editor.debug_enabled():
     start = time.time()
   tu.reparse([currentFile])
-  if debug:
+  if editor.debug_enabled():
     elapsed = (time.time() - start)
     print "LibClang - First reparse (generate PCH cache): " + str(elapsed)
   return tu
@@ -120,27 +139,25 @@ def highlightDiagnostics(tu):
   map (highlightDiagnostic, tu.diagnostics)
 
 def highlightCurrentDiagnostics():
-  if vim.current.buffer.name in translationUnits:
-    highlightDiagnostics(translationUnits[vim.current.buffer.name])
+  if editor.filename in translationUnits:
+    highlightDiagnostics(translationUnits[editor.filename])
 
 def getCurrentQuickFixList():
-  if vim.current.buffer.name in translationUnits:
-    return getQuickFixList(translationUnits[vim.current.buffer.name])
+  if editor.filename in translationUnits:
+    return getQuickFixList(translationUnits[editor.filename])
   return []
 
 def updateCurrentDiagnostics():
-  global debug
-  debug = int(vim.eval("g:clang_debug")) == 1
   getCurrentTranslationUnit(update = True)
 
 def getCurrentCompletionResults(line, column):
   tu = getCurrentTranslationUnit()
-  currentFile = getCurrentFile()
-  if debug:
+  currentFile = editor.currentFile()
+  if editor.debug_enabled():
     start = time.time()
-  cr = tu.codeComplete(vim.current.buffer.name, line, column, [currentFile],
+  cr = tu.codeComplete(editor.filename, line, column, [currentFile],
       complete_flags)
-  if debug:
+  if editor.debug_enabled():
     elapsed = (time.time() - start)
     print "LibClang - Code completion time: " + str(elapsed)
   return cr
@@ -209,7 +226,7 @@ class DefinitionFinder(object):
     def getCurrentLocation(self):
       line = int(vim.eval("line('.')"))
       column = int(vim.eval("col('.')"))
-      file = self.translationUnit.getFile(vim.current.buffer.name)
+      file = self.translationUnit.getFile(editor.filename)
       if not file:
         return None
       return self.translationUnit.getLocation(file, line, column)
@@ -232,22 +249,21 @@ class DefinitionFinder(object):
         self.referencingTranslationUnits).getDefinitionCursor()
 
   def jumpToDefinition(self):
-    global debug
-    debug = int(vim.eval("g:clang_debug")) == 1
 
     definitionCursor = self.findDefinitionInTranslationUnit(getCurrentTranslationUnit())
 
     if not definitionCursor:
       try:
-        referencingTranslationUnit = self.referencingTranslationUnits[vim.current.buffer.name]
-        definitionCursor = self.findDefinitionInTranslationUnit(referencingTranslationUnit )
+        referencingTranslationUnit = self.referencingTranslationUnits[editor.filename]
+        definitionCursor = self.findDefinitionInTranslationUnit(referencingTranslationUnit)
       except KeyError:
         print("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
         pass
 
     if definitionCursor:
       definitionLocation = definitionCursor.extent.start
-      vim.command("e +" + str(definitionLocation.line) + " " + definitionLocation.file.name.spelling)
+      editor.openFile(definitionLocation.file.name.spelling,
+          definitionLocation.line, definitionLocation.column)
     else:
       print("No definition available")
 
@@ -255,8 +271,6 @@ def jumpToDefinition():
   return definitionFinder.jumpToDefinition()
 
 def getCurrentCompletions(base):
-  global debug
-  debug = int(vim.eval("g:clang_debug")) == 1
   priority = vim.eval("g:clang_sort_algo") == 'priority'
   line = int(vim.eval("line('.')"))
   column = int(vim.eval("b:col"))
