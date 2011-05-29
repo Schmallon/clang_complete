@@ -26,6 +26,18 @@ class VimInterface(object):
   def debug_enabled(self):
     return int(vim.eval("g:clang_debug")) == 1
 
+  def current_line(self):
+    return int(vim.eval("line('.')"))
+
+  def current_column(self):
+    return int(vim.eval("col('.')"))
+
+  def sort_algorithm(self):
+    return vim.eval("g:clang_sort_algo")
+
+  def abort_requested(self):
+    return 0 != int(vim.eval('complete_check()'))
+
 class EmacsInterface(object):
 
   def __init__(self):
@@ -38,7 +50,7 @@ class EmacsInterface(object):
   def filename(self):
     return emacs.buffer_file_name()
 
-  def user_options():
+  def user_options(self):
     return ""
 
   def open_file(self, filename, line, column):
@@ -47,198 +59,269 @@ class EmacsInterface(object):
   def debug_enabled(self):
     return False
 
-def init_clang_complete(clang_complete_flags):
-  global index
-  index = Index.create()
-  global translation_units
-  translation_units = dict()
-  global complete_flags
-  complete_flags = int(clang_complete_flags)
-  global definition_finder
-  definition_finder = DefinitionFinder()
-  global editor
-  editor = VimInterface()
+class ClangPlugin(object):
+  def __init__(self, clang_complete_flags):
+    self.editor = VimInterface()
+    self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
+    self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
+    self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
+    self.diagnostics_printer = DiagnosticsPrinter(self.editor,
+        self.translation_unit_accessor)
 
-def get_current_translation_unit(update = False):
-  args = editor.user_options()
+  def jump_to_definition(self):
+    self.definition_finder.jump_to_definition()
 
-  current_file = editor.current_file()
-  filename = editor.filename
+  def update_current_diagnostics(self):
+    self.translation_unit_accessor.get_current_translation_unit(update = True)
 
-  if filename in translation_units:
-    tu = translation_units[filename]
-    if update:
-      if editor.debug_enabled():
-        start = time.time()
-      tu.reparse([current_file])
-      if editor.debug_enabled():
-        elapsed = (time.time() - start)
-        print "LibClang - Reparsing: " + str(elapsed)
+  def get_current_quickfix_list(self):
+    return self.diagnostics_printer.get_current_quickfix_list()
+
+  def highlight_current_diagnostics(self):
+    self.diagnostics_printer.highlight_current_diagnostics()
+
+  def get_current_completions(self, base):
+    return self.completer.get_current_completions(base)
+
+class TranslationUnitAccessor(object):
+
+  def __init__(self, editor):
+    self.index = Index.create()
+    self.translation_units = dict()
+    self.editor = editor
+
+  def get_current_translation_unit(self, update = False):
+    args = self.editor.user_options()
+
+    current_file = self.editor.current_file()
+    filename = self.editor.filename
+
+    if filename in self.translation_units:
+      tu = self.translation_units[filename]
+      if update:
+        if self.editor.debug_enabled():
+          start = time.time()
+        tu.reparse([current_file])
+        if self.editor.debug_enabled():
+          elapsed = (time.time() - start)
+          print "LibClang - Reparsing: " + str(elapsed)
+      return tu
+
+    if self.editor.debug_enabled():
+      start = time.time()
+    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
+    tu = self.index.parse(filename, args, [current_file], flags)
+    if self.editor.debug_enabled():
+      elapsed = (time.time() - start)
+      print "LibClang - First parse: " + str(elapsed)
+
+    if tu == None:
+      print "Cannot parse this source file. The following arguments " \
+          + "are used for clang: " + " ".join(args)
+      return None
+
+    self.translation_units[filename] = tu
+
+    # Reparse to initialize the PCH cache even for auto completion
+    # This should be done by index.parse(), however it is not.
+    # So we need to reparse ourselves.
+    if self.editor.debug_enabled():
+      start = time.time()
+    tu.reparse([current_file])
+    if self.editor.debug_enabled():
+      elapsed = (time.time() - start)
+      print "LibClang - First reparse (generate PCH cache): " + str(elapsed)
     return tu
 
-  if editor.debug_enabled():
-    start = time.time()
-  flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
-  tu = index.parse(filename, args, [current_file], flags)
-  if editor.debug_enabled():
-    elapsed = (time.time() - start)
-    print "LibClang - First parse: " + str(elapsed)
+class DiagnosticsPrinter(object):
 
-  if tu == None:
-    print "Cannot parse this source file. The following arguments " \
-        + "are used for clang: " + " ".join(args)
-    return None
+  def __init__(self, editor, translation_unit_accessor):
+    self.editor = editor
+    self.translation_unit_accessor = translation_unit_accessor
 
-  translation_units[filename] = tu
+  def get_quick_fix(self, diagnostic):
+    # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
+    if diagnostic.location.file:
+      filename = diagnostic.location.file.name.spelling
+    else:
+      filename = ""
 
-  # Reparse to initialize the PCH cache even for auto completion
-  # This should be done by index.parse(), however it is not.
-  # So we need to reparse ourselves.
-  if editor.debug_enabled():
-    start = time.time()
-  tu.reparse([current_file])
-  if editor.debug_enabled():
-    elapsed = (time.time() - start)
-    print "LibClang - First reparse (generate PCH cache): " + str(elapsed)
-  return tu
+    if diagnostic.severity == diagnostic.Warning:
+      type = 'W'
+    elif diagnostic.severity == diagnostic.Error:
+      type = 'E'
+    else:
+      return None
 
-def get_quick_fix(diagnostic):
-  # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
-  if diagnostic.location.file:
-    filename = diagnostic.location.file.name.spelling
-  else:
-    filename = ""
+    return dict({ 'bufnr' : int(vim.eval("bufnr('" + filename + "', 1)")),
+      'lnum' : diagnostic.location.line,
+      'col' : diagnostic.location.column,
+      'text' : diagnostic.spelling,
+      'type' : type})
 
-  if diagnostic.severity == diagnostic.Warning:
-    type = 'W'
-  elif diagnostic.severity == diagnostic.Error:
-    type = 'E'
-  else:
-    return None
+  def get_quick_fix_list(self, tu):
+    return filter (None, map (self.get_quick_fix, tu.diagnostics))
 
-  return dict({ 'bufnr' : int(vim.eval("bufnr('" + filename + "', 1)")),
-    'lnum' : diagnostic.location.line,
-    'col' : diagnostic.location.column,
-    'text' : diagnostic.spelling,
-    'type' : type})
+  def highlight_range(self, range, hg_group):
+    pattern = '/\%' + str(range.start.line) + 'l' + '\%' \
+        + str(range.start.column) + 'c' + '.*' \
+        + '\%' + str(range.end.column) + 'c/'
+    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
+    vim.command(command)
 
-def get_quick_fix_list(tu):
-  return filter (None, map (get_quick_fix, tu.diagnostics))
+  def highlight_diagnostic(self, diagnostic):
+    if diagnostic.severity == diagnostic.Warning:
+      hg_group = 'SpellLocal'
+    elif diagnostic.severity == diagnostic.Error:
+      hg_group = 'SpellBad'
+    else:
+      return
 
-def highlight_range(range, hg_group):
-  pattern = '/\%' + str(range.start.line) + 'l' + '\%' \
-      + str(range.start.column) + 'c' + '.*' \
-      + '\%' + str(range.end.column) + 'c/'
-  command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-  vim.command(command)
+    pattern = '/\%' + str(diagnostic.location.line) + 'l\%' \
+        + str(diagnostic.location.column) + 'c./'
+    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
+    vim.command(command)
 
-def highlight_diagnostic(diagnostic):
-  if diagnostic.severity == diagnostic.Warning:
-    hg_group = 'SpellLocal'
-  elif diagnostic.severity == diagnostic.Error:
-    hg_group = 'SpellBad'
-  else:
-    return
+    # Use this wired kind of iterator as the python clang libraries
+          # have a bug in the range iterator that stops us to use:
+          #
+          # | for range in diagnostic.ranges
+          #
+    for i in range(len(diagnostic.ranges)):
+      self.highlight_range(diagnostic.ranges[i], hg_group)
 
-  pattern = '/\%' + str(diagnostic.location.line) + 'l\%' \
-      + str(diagnostic.location.column) + 'c./'
-  command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-  vim.command(command)
+  def highlight_diagnostics(self, tu):
+    map (self.highlight_diagnostic, tu.diagnostics)
 
-  # Use this wired kind of iterator as the python clang libraries
-        # have a bug in the range iterator that stops us to use:
-        #
-        # | for range in diagnostic.ranges
-        #
-  for i in range(len(diagnostic.ranges)):
-    highlight_range(diagnostic.ranges[i], hg_group)
+  def highlight_current_diagnostics(self):
+    if self.editor.filename in self.translation_unit_accessor.translation_units:
+      self.highlight_diagnostics(self.translation_unit_accessor.translation_units[self.editor.filename])
 
-def highlight_diagnostics(tu):
-  map (highlight_diagnostic, tu.diagnostics)
+  def get_current_quickfix_list(self):
+    if self.editor.filename in self.translation_unit_accessor.translation_units:
+      return self.get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename])
+    return []
 
-def highlight_current_diagnostics():
-  if editor.filename in translation_units:
-    highlight_diagnostics(translation_units[editor.filename])
 
-def get_current_quickfix_list():
-  if editor.filename in translation_units:
-    return get_quick_fix_list(translation_units[editor.filename])
-  return []
 
-def update_current_diagnostics():
-  get_current_translation_unit(update = True)
+class Completer(object):
 
-def get_current_completion_results(line, column):
-  tu = get_current_translation_unit()
-  current_file = editor.current_file()
-  if editor.debug_enabled():
-    start = time.time()
-  cr = tu.codeComplete(editor.filename, line, column, [current_file],
-      complete_flags)
-  if editor.debug_enabled():
-    elapsed = (time.time() - start)
-    print "LibClang - Code completion time: " + str(elapsed)
-  return cr
+  def __init__(self, editor, translation_unit_accessor, complete_flags):
+    self.editor = editor
+    self.translation_unit_accessor = translation_unit_accessor
+    self.complete_flags = complete_flags
 
-def format_results(result):
-  completion = dict()
+  def get_current_completion_results(self, line, column):
+    tu = self.translation_unit_accessor.get_current_translation_unit()
+    current_file = self.editor.current_file()
+    if self.editor.debug_enabled():
+      start = time.time()
+    cr = tu.codeComplete(self.editor.filename, line, column, [current_file],
+        self.complete_flags)
+    if self.editor.debug_enabled():
+      elapsed = (time.time() - start)
+      print "LibClang - Code completion time: " + str(elapsed)
+    return cr
 
-  abbr = get_abbr(result.string)
-  info = filter(lambda x: not x.isKindInformative(), result.string)
-  word = filter(lambda x: not x.isKindResultType(), info)
-  return_value = filter(lambda x: x.isKindResultType(), info)
+  def format_results(self, result):
+    completion = dict()
 
-  if len(return_value) > 0:
-    return_str = return_value[0].spelling + " "
-  else:
-    return_str = ""
+    abbr = self.get_abbr(result.string)
+    info = filter(lambda x: not x.isKindInformative(), result.string)
+    word = filter(lambda x: not x.isKindResultType(), info)
+    return_value = filter(lambda x: x.isKindResultType(), info)
 
-  info = return_str + "".join(map(lambda x: x.spelling, word))
-  word = abbr
+    if len(return_value) > 0:
+      return_str = return_value[0].spelling + " "
+    else:
+      return_str = ""
 
-  completion['word'] = word
-  completion['abbr'] = abbr
-  completion['menu'] = info
-  completion['info'] = info
-  completion['dup'] = 1
+    info = return_str + "".join(map(lambda x: x.spelling, word))
+    word = abbr
 
-  # Replace the number that represents a specific kind with a better
-  # textual representation.
-  completion['kind'] = kinds[result.cursorKind]
+    completion['word'] = word
+    completion['abbr'] = abbr
+    completion['menu'] = info
+    completion['info'] = info
+    completion['dup'] = 1
 
-  return completion
+    # Replace the number that represents a specific kind with a better
+    # textual representation.
+    completion['kind'] = kinds[result.cursorKind]
+
+    return completion
+
+  def get_current_completions(self, base):
+
+    priority = self.editor.sort_algorithm() == 'priority'
+    line = self.editor.current_line()
+    column = self.editor.current_column()
+
+    t = CompleteThread(self, line, column)
+    t.start()
+    while t.is_alive():
+      t.join(0.01)
+      if self.editor.abort_requested():
+        return []
+    cr = t.result
+    if cr is None:
+      return []
+
+    regexp = re.compile("^" + base)
+    filtered_result = filter(lambda x: regexp.match(self.get_abbr(x.string)), cr.results)
+
+    get_priority = lambda x: x.string.priority
+    get_abbreviation = lambda x: self.get_abbr(x.string).lower()
+    if priority:
+      key = get_priority
+    else:
+      key = get_abbreviation
+    sorted_result = sorted(filtered_result, None, key)
+    return map(self.format_results, sorted_result)
+
+  def get_abbr(self, strings):
+    tmplst = filter(lambda x: x.isKindTypedText(), strings)
+    if len(tmplst) == 0:
+      return ""
+    else:
+      return tmplst[0].spelling
 
 
 class CompleteThread(threading.Thread):
   lock = threading.Lock()
 
-  def __init__(self, line, column):
+  def __init__(self, completer, line, column):
     threading.Thread.__init__(self)
+    self.completer = completer
     self.line = line
     self.column = column
     self.result = None
 
   def run(self):
     with CompleteThread.lock:
-      try:
-        self.result = get_current_completion_results(self.line, self.column)
-      except Exception:
-        pass
+      self.result = self.completer.get_current_completion_results(self.line, self.column)
+      #try:
+        #self.result = get_current_completion_results(self.line, self.column)
+      #except Exception:
+        #pass
 
 class DefinitionFinder(object):
 
-  def __init__(self):
+  def __init__(self, editor, translation_unit_accessor):
+    self.editor = editor
     self.referencing_translation_units = {}
+    self.translation_unit_accessor = translation_unit_accessor
 
   class FindDefinitionInTranslationUnit(object):
-    def __init__(self, translation_unit, referencing_translation_units):
+    def __init__(self, editor, translation_unit, referencing_translation_units):
+      self.editor = editor
       self.translation_unit = translation_unit
       self.referencing_translation_units = referencing_translation_units
 
     def get_current_location(self):
-      line = int(vim.eval("line('.')"))
-      column = int(vim.eval("col('.')"))
-      file = self.translation_unit.getFile(editor.filename)
+      line = self.editor.current_line()
+      column = self.editor.current_column()
+      file = self.translation_unit.getFile(self.editor.filename)
       if not file:
         return None
       return self.translation_unit.getLocation(file, line, column)
@@ -257,16 +340,16 @@ class DefinitionFinder(object):
       self.referencing_translation_units[definition_filename] = self.translation_unit
 
   def find_definition_in_translation_unit(self, translation_unit):
-    return self.FindDefinitionInTranslationUnit(translation_unit,
+    return self.FindDefinitionInTranslationUnit(self.editor,
+        translation_unit,
         self.referencing_translation_units).get_definition_cursor()
 
   def jump_to_definition(self):
 
-    definition_cursor = self.find_definition_in_translation_unit(get_current_translation_unit())
-
+    definition_cursor = self.find_definition_in_translation_unit(self.translation_unit_accessor.get_current_translation_unit())
     if not definition_cursor:
       try:
-        referencing_translation_unit = self.referencing_translation_units[editor.filename]
+        referencing_translation_unit = self.referencing_translation_units[self.editor.filename]
         definition_cursor = self.find_definition_in_translation_unit(referencing_translation_unit)
       except KeyError:
         print("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
@@ -274,48 +357,11 @@ class DefinitionFinder(object):
 
     if definition_cursor:
       definition_location = definition_cursor.extent.start
-      editor.open_file(definition_location.file.name.spelling,
+      self.editor.open_file(definition_location.file.name.spelling,
           definition_location.line, definition_location.column)
     else:
       print("No definition available")
 
-def jump_to_definition():
-  return definition_finder.jump_to_definition()
-
-def get_current_completions(base):
-  priority = vim.eval("g:clang_sort_algo") == 'priority'
-  line = int(vim.eval("line('.')"))
-  column = int(vim.eval("b:col"))
-
-  t = CompleteThread(line, column)
-  t.start()
-  while t.is_alive():
-    t.join(0.01)
-    cancel = int(vim.eval('complete_check()'))
-    if cancel != 0:
-      return []
-  cr = t.result
-  if cr is None:
-    return []
-
-  regexp = re.compile("^" + base)
-  filtered_result = filter(lambda x: regexp.match(get_abbr(x.string)), cr.results)
-
-  get_priority = lambda x: x.string.priority
-  get_abbreviation = lambda x: get_abbr(x.string).lower()
-  if priority:
-    key = get_priority
-  else:
-    key = get_abbreviation
-  sorted_result = sorted(filtered_result, None, key)
-  return map(format_results, sorted_result)
-
-def get_abbr(strings):
-  tmplst = filter(lambda x: x.isKindTypedText(), strings)
-  if len(tmplst) == 0:
-    return ""
-  else:
-    return tmplst[0].spelling
 
 kinds = dict({                                                                 \
 # Declarations                                                                 \
