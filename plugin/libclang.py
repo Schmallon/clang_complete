@@ -5,8 +5,8 @@ import re
 import threading
 
 class VimInterface(object):
-# Get a tuple (filename, filecontent) for the file opened in the current
-# vim buffer. The filecontent contains the unsafed buffer content.
+  # Get a tuple (filename, filecontent) for the file opened in the current
+  # vim buffer. The filecontent contains the unsafed buffer content.
   def current_file(self):
     file = "\n".join(vim.eval("getline(1, '$')"))
     return (self.filename, file)
@@ -105,7 +105,7 @@ def get_current_translation_unit(update = False):
 def get_quick_fix(diagnostic):
   # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
   if diagnostic.location.file:
-    filename = diagnostic.location.file.name
+    filename = diagnostic.location.file.name.spelling
   else:
     filename = ""
 
