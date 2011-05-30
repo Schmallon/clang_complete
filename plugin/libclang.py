@@ -1,72 +1,94 @@
 from clang.cindex import *
-import vim
 import time
 import re
 import threading
 
+
 class VimInterface(object):
+
+  def __init__(self):
+    import vim
+    self._vim = vim
+
   # Get a tuple (filename, filecontent) for the file opened in the current
   # vim buffer. The filecontent contains the unsafed buffer content.
   def current_file(self):
-    file = "\n".join(vim.eval("getline(1, '$')"))
+    file = "\n".join(self._vim.eval("getline(1, '$')"))
     return (self.filename, file)
 
   def user_options(self):
-    user_options_global = vim.eval("g:clang_user_options").split(" ")
-    user_options_local = vim.eval("b:clang_user_options").split(" ")
+    user_options_global = self._vim.eval("g:clang_user_options").split(" ")
+    user_options_local = self._vim.eval("b:clang_user_options").split(" ")
     return user_options_global + user_options_local
 
   @property
   def filename(self):
-    return vim.current.buffer.name
+    return self._vim.current.buffer.name
 
   def open_file(self, filename, line, column):
-    vim.command("e +" + str(line) + " " + filename)
+    self._vim.command("e +" + str(line) + " " + filename)
 
   def debug_enabled(self):
-    return int(vim.eval("g:clang_debug")) == 1
+    return int(self._vim.eval("g:clang_debug")) == 1
 
   def current_line(self):
-    return int(vim.eval("line('.')"))
+    return int(self._vim.eval("line('.')"))
 
   def current_column(self):
-    return int(vim.eval("col('.')"))
+    return int(self._vim.eval("col('.')"))
 
   def sort_algorithm(self):
-    return vim.eval("g:clang_sort_algo")
+    return self._vim.eval("g:clang_sort_algo")
 
   def abort_requested(self):
-    return 0 != int(vim.eval('complete_check()'))
+    return 0 != int(self._vim.eval('complete_check()'))
+
+  @property
+  def vim(self):
+    "Will cease to exist once we have generalized diagnostic printing"
+    return self._vim
 
 class EmacsInterface(object):
 
   def __init__(self):
     import pymacs.lisp as emacs
+    self.emacs = emacs
 
   def current_file(self):
     return (self.filename, "")
 
   @property
   def filename(self):
-    return emacs.buffer_file_name()
+    return self.emacs.buffer_file_name()
 
   def user_options(self):
     return ""
 
   def open_file(self, filename, line, column):
-    emacs.find_file(filename)
+    self.emacs.find_file(filename)
 
   def debug_enabled(self):
     return False
 
+
+
 class ClangPlugin(object):
   def __init__(self, clang_complete_flags):
-    self.editor = VimInterface()
+    self._init_editor()
     self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
     self.diagnostics_printer = DiagnosticsPrinter(self.editor,
         self.translation_unit_accessor)
+
+  def _init_editor(self):
+    try:
+      self.editor = VimInterface()
+    except ImportError:
+      try:
+        self.editor = EmacsInterface()
+      except ImportError:
+        raise "Could find neither vim nor emacs"
 
   def jump_to_definition(self):
     self.definition_finder.jump_to_definition()
@@ -133,6 +155,7 @@ class TranslationUnitAccessor(object):
       print "LibClang - First reparse (generate PCH cache): " + str(elapsed)
     return tu
 
+"Currently limited to vim"
 class DiagnosticsPrinter(object):
 
   def __init__(self, editor, translation_unit_accessor):
@@ -153,7 +176,7 @@ class DiagnosticsPrinter(object):
     else:
       return None
 
-    return dict({ 'bufnr' : int(vim.eval("bufnr('" + filename + "', 1)")),
+    return dict({ 'bufnr' : int(self.editor.vim.eval("bufnr('" + filename + "', 1)")),
       'lnum' : diagnostic.location.line,
       'col' : diagnostic.location.column,
       'text' : diagnostic.spelling,
@@ -167,7 +190,7 @@ class DiagnosticsPrinter(object):
         + str(range.start.column) + 'c' + '.*' \
         + '\%' + str(range.end.column) + 'c/'
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-    vim.command(command)
+    self.editor.vim.command(command)
 
   def highlight_diagnostic(self, diagnostic):
     if diagnostic.severity == diagnostic.Warning:
@@ -180,7 +203,7 @@ class DiagnosticsPrinter(object):
     pattern = '/\%' + str(diagnostic.location.line) + 'l\%' \
         + str(diagnostic.location.column) + 'c./'
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-    vim.command(command)
+    self.editor.vim.command(command)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -201,7 +224,6 @@ class DiagnosticsPrinter(object):
     if self.editor.filename in self.translation_unit_accessor.translation_units:
       return self.get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename])
     return []
-
 
 
 class Completer(object):
@@ -469,5 +491,8 @@ kinds = dict({                                                                 \
 502 : '502', # CXCursor_MacroInstantiation                                     \
 503 : '503'  # CXCursor_InclusionDirective                                     \
 })
-
 # vim: set ts=2 sts=2 sw=2 expandtab :
+
+
+
+

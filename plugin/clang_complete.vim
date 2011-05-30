@@ -309,6 +309,7 @@ endfunction
 
 function! s:initClangCompletePython()
   python import sys
+  python import vim
 
   if exists('g:clang_library_path')
     " Load the library from the given library path.
