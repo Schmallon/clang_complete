@@ -48,14 +48,17 @@ class VimInterface(object):
     "Will cease to exist once we have generalized diagnostic printing"
     return self._vim
 
+  def display_message(self, message):
+    print(message)
+
 class EmacsInterface(object):
 
   def __init__(self):
-    import pymacs.lisp as emacs
+    from Pymacs import lisp as emacs
     self.emacs = emacs
 
   def current_file(self):
-    return (self.filename, "")
+    return (self.filename, self.emacs.buffer_string())
 
   @property
   def filename(self):
@@ -66,11 +69,20 @@ class EmacsInterface(object):
 
   def open_file(self, filename, line, column):
     self.emacs.find_file(filename)
+    self.emacs.goto_line(line)
+    self.emacs.move_to_column(column - 1)
 
   def debug_enabled(self):
     return False
 
+  def current_line(self):
+    return self.emacs.line_number_at_pos()
 
+  def current_column(self):
+    return 1 + self.emacs.current_column()
+
+  def display_message(self, message):
+    self.emacs.minibuffer_message(message)
 
 class ClangPlugin(object):
   def __init__(self, clang_complete_flags):
@@ -126,7 +138,7 @@ class TranslationUnitAccessor(object):
         tu.reparse([current_file])
         if self.editor.debug_enabled():
           elapsed = (time.time() - start)
-          print "LibClang - Reparsing: " + str(elapsed)
+          self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
       return tu
 
     if self.editor.debug_enabled():
@@ -135,11 +147,11 @@ class TranslationUnitAccessor(object):
     tu = self.index.parse(filename, args, [current_file], flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
-      print "LibClang - First parse: " + str(elapsed)
+      self.editor.display_message("LibClang - First parse: " + str(elapsed))
 
     if tu == None:
-      print "Cannot parse this source file. The following arguments " \
-          + "are used for clang: " + " ".join(args)
+      self.editor.display_message("Cannot parse this source file. The following arguments " \
+          + "are used for clang: " + " ".join(args))
       return None
 
     self.translation_units[filename] = tu
@@ -152,7 +164,7 @@ class TranslationUnitAccessor(object):
     tu.reparse([current_file])
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
-      print "LibClang - First reparse (generate PCH cache): " + str(elapsed)
+      self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
     return tu
 
 "Currently limited to vim"
@@ -242,7 +254,8 @@ class Completer(object):
         self.complete_flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
-      print "LibClang - Code completion time: " + str(elapsed)
+      self.editor.display_message("LibClang - Code completion time: " +
+          str(elapsed))
     return cr
 
   def format_results(self, result):
@@ -345,12 +358,16 @@ class DefinitionFinder(object):
       column = self.editor.current_column()
       file = self.translation_unit.getFile(self.editor.filename)
       if not file:
+        self.editor.display_message("""Could not find the file at current
+          position in the current translation unit""")
         return None
       return self.translation_unit.getLocation(file, line, column)
 
     def get_definition_cursor(self):
       location = self.get_current_location()
       cursor = self.translation_unit.getCursor(location)
+      if self.editor.debug_enabled():
+        self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
       result = cursor.get_definition()
       if result:
         self.store_referencing_translation_unit(result)
@@ -374,7 +391,7 @@ class DefinitionFinder(object):
         referencing_translation_unit = self.referencing_translation_units[self.editor.filename]
         definition_cursor = self.find_definition_in_translation_unit(referencing_translation_unit)
       except KeyError:
-        print("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
+        self.editor.display_message("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
         pass
 
     if definition_cursor:
@@ -382,7 +399,7 @@ class DefinitionFinder(object):
       self.editor.open_file(definition_location.file.name.spelling,
           definition_location.line, definition_location.column)
     else:
-      print("No definition available")
+      self.editor.display_message("No definition available")
 
 
 kinds = dict({                                                                 \
