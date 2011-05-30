@@ -369,6 +369,9 @@ class DefinitionFinder(object):
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
       result = cursor.get_definition()
+      if not result and cursor.kind.is_reference:
+        self.editor.display_message("Cursor is a reference but we could not find a definition. Try to dereference the cursor.")
+        result = cursor.get_cursor_referenced()
       if result:
         self.store_referencing_translation_unit(result)
       return result
