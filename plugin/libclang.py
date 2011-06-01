@@ -3,6 +3,30 @@ import time
 import re
 import threading
 
+"""
+Ideas:
+
+  - Implement completion and diagnostics for emacs
+  For that to work I should first check which parts that are currently
+  implemented in vimscript are actually vim specific and vice versa.
+
+  - Allow generic configuration for both vim and emacs
+
+  - Integrate with tags
+  For the time that we do not have an index that contains all of a projects
+  files, we could make use of tags (as extracted by ctags) to determine which
+  files to parse next when looking for definitions.
+
+  - Add a "jump to declaration"
+  Often we want to jump to a declaration (e.g. declarations usually a coupled
+  with comments). If there was a way to find all declarations referenced by a
+  cursor, we could use some heuristics to find the declaration that we want to
+  display.
+
+  - Code cleanup
+   - Mark all private methods/fields as such
+   - Decide on when/why to use @property
+"""
 
 class VimInterface(object):
 
@@ -43,13 +67,17 @@ class VimInterface(object):
   def abort_requested(self):
     return 0 != int(self._vim.eval('complete_check()'))
 
-  @property
-  def vim(self):
-    "Will cease to exist once we have generalized diagnostic printing"
-    return self._vim
-
   def display_message(self, message):
     print(message)
+
+  def higlight_range(self, start, end):
+    #We could distinguish different severities
+    hg_group = 'SpellBad'
+    pattern = '/\%' + str(start.line) + 'l' + '\%' \
+        + str(start.column) + 'c' + '.*' \
+        + '\%' + str(end.column + 1) + 'c/'
+    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
+    self._vim.command(command)
 
 class EmacsInterface(object):
 
@@ -90,8 +118,9 @@ class ClangPlugin(object):
     self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
-    self.diagnostics_printer = DiagnosticsPrinter(self.editor,
+    self.quick_fix_list_generator = QuickFixListGenerator(self.editor,
         self.translation_unit_accessor)
+    self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
 
   def _init_editor(self):
     try:
@@ -109,10 +138,12 @@ class ClangPlugin(object):
     self.translation_unit_accessor.get_current_translation_unit(update = True)
 
   def get_current_quickfix_list(self):
-    return self.diagnostics_printer.get_current_quickfix_list()
+    return self.quick_fix_list_generator.get_current_quickfix_list()
 
   def highlight_current_diagnostics(self):
-    self.diagnostics_printer.highlight_current_diagnostics()
+    translation_unit = self.translation_unit_accessor.get_current_translation_unit(update = True)
+    if self.editor.filename in self.translation_unit_accessor.translation_units:
+      self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
 
   def get_current_completions(self, base):
     return self.completer.get_current_completions(base)
@@ -167,14 +198,38 @@ class TranslationUnitAccessor(object):
       self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
     return tu
 
-"Currently limited to vim"
-class DiagnosticsPrinter(object):
+
+class DiagnosticsHighlighter(object):
+
+  def __init__(self, editor):
+    self.editor = editor
+
+  def _highlight_diagnostic(self, diagnostic):
+
+    if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
+      return
+
+    self.editor.higlight_range(diagnostic.location, diagnostic.location)
+
+    # Use this wired kind of iterator as the python clang libraries
+          # have a bug in the range iterator that stops us to use:
+          #
+          # | for range in diagnostic.ranges
+          #
+    for i in range(len(diagnostic.ranges)):
+      range_i = diagnostic.ranges[i]
+      self.editor.higlight_range(range_i.start, range_i.end)
+
+  def highlight_in_translation_unit(self, translation_unit):
+    map(self._highlight_diagnostic, translation_unit.diagnostics)
+
+class QuickFixListGenerator(object):
 
   def __init__(self, editor, translation_unit_accessor):
     self.editor = editor
     self.translation_unit_accessor = translation_unit_accessor
 
-  def get_quick_fix(self, diagnostic):
+  def _get_quick_fix(self, diagnostic):
     # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
     if diagnostic.location.file:
       filename = diagnostic.location.file.name.spelling
@@ -188,53 +243,18 @@ class DiagnosticsPrinter(object):
     else:
       return None
 
-    return dict({ 'bufnr' : int(self.editor.vim.eval("bufnr('" + filename + "', 1)")),
+    return dict({ 'filename' : filename,
       'lnum' : diagnostic.location.line,
       'col' : diagnostic.location.column,
       'text' : diagnostic.spelling,
       'type' : type})
 
-  def get_quick_fix_list(self, tu):
-    return filter (None, map (self.get_quick_fix, tu.diagnostics))
-
-  def highlight_range(self, range, hg_group):
-    pattern = '/\%' + str(range.start.line) + 'l' + '\%' \
-        + str(range.start.column) + 'c' + '.*' \
-        + '\%' + str(range.end.column) + 'c/'
-    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-    self.editor.vim.command(command)
-
-  def highlight_diagnostic(self, diagnostic):
-    if diagnostic.severity == diagnostic.Warning:
-      hg_group = 'SpellLocal'
-    elif diagnostic.severity == diagnostic.Error:
-      hg_group = 'SpellBad'
-    else:
-      return
-
-    pattern = '/\%' + str(diagnostic.location.line) + 'l\%' \
-        + str(diagnostic.location.column) + 'c./'
-    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-    self.editor.vim.command(command)
-
-    # Use this wired kind of iterator as the python clang libraries
-          # have a bug in the range iterator that stops us to use:
-          #
-          # | for range in diagnostic.ranges
-          #
-    for i in range(len(diagnostic.ranges)):
-      self.highlight_range(diagnostic.ranges[i], hg_group)
-
-  def highlight_diagnostics(self, tu):
-    map (self.highlight_diagnostic, tu.diagnostics)
-
-  def highlight_current_diagnostics(self):
-    if self.editor.filename in self.translation_unit_accessor.translation_units:
-      self.highlight_diagnostics(self.translation_unit_accessor.translation_units[self.editor.filename])
+  def _get_quick_fix_list(self, tu):
+    return filter (None, map (self._get_quick_fix, tu.diagnostics))
 
   def get_current_quickfix_list(self):
     if self.editor.filename in self.translation_unit_accessor.translation_units:
-      return self.get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename])
+      return self._get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename])
     return []
 
 
