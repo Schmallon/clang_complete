@@ -25,7 +25,6 @@ Ideas:
 
   - Code cleanup
    - Mark all private methods/fields as such
-   - Decide on when/why to use @property
 """
 
 class VimInterface(object):
@@ -38,14 +37,13 @@ class VimInterface(object):
   # vim buffer. The filecontent contains the unsafed buffer content.
   def current_file(self):
     file = "\n".join(self._vim.eval("getline(1, '$')"))
-    return (self.filename, file)
+    return (self.filename(), file)
 
   def user_options(self):
     user_options_global = self._vim.eval("g:clang_user_options").split(" ")
     user_options_local = self._vim.eval("b:clang_user_options").split(" ")
     return user_options_global + user_options_local
 
-  @property
   def filename(self):
     return self._vim.current.buffer.name
 
@@ -86,9 +84,8 @@ class EmacsInterface(object):
     self.emacs = emacs
 
   def current_file(self):
-    return (self.filename, self.emacs.buffer_string())
+    return (self.filename(), self.emacs.buffer_string())
 
-  @property
   def filename(self):
     return self.emacs.buffer_file_name()
 
@@ -142,7 +139,7 @@ class ClangPlugin(object):
 
   def highlight_current_diagnostics(self):
     translation_unit = self.translation_unit_accessor.get_current_translation_unit(update = True)
-    if self.editor.filename in self.translation_unit_accessor.translation_units:
+    if self.editor.filename() in self.translation_unit_accessor.translation_units:
       self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
 
   def get_current_completions(self, base):
@@ -156,17 +153,25 @@ class TranslationUnitAccessor(object):
     self.editor = editor
 
   def get_current_translation_unit(self, update = False):
+    current_file = self.editor.current_file()
+    return self.get_translation_unit(current_file, update)
+
+  def get_current_translation_unit_for_filename(self, filename):
+    file = (filename, open(filename, 'r').read())
+    self.editor.display_message("Trying in file named" + file[0])
+    return self.get_translation_unit(file, True)
+
+  def get_translation_unit(self, file, update = False):
     args = self.editor.user_options()
 
-    current_file = self.editor.current_file()
-    filename = self.editor.filename
+    filename = file[0]
 
     if filename in self.translation_units:
       tu = self.translation_units[filename]
       if update:
         if self.editor.debug_enabled():
           start = time.time()
-        tu.reparse([current_file])
+        tu.reparse([file])
         if self.editor.debug_enabled():
           elapsed = (time.time() - start)
           self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
@@ -175,7 +180,7 @@ class TranslationUnitAccessor(object):
     if self.editor.debug_enabled():
       start = time.time()
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
-    tu = self.index.parse(filename, args, [current_file], flags)
+    tu = self.index.parse(filename, args, [file], flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
       self.editor.display_message("LibClang - First parse: " + str(elapsed))
@@ -192,7 +197,7 @@ class TranslationUnitAccessor(object):
     # So we need to reparse ourselves.
     if self.editor.debug_enabled():
       start = time.time()
-    tu.reparse([current_file])
+    tu.reparse([file])
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
       self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
@@ -253,8 +258,8 @@ class QuickFixListGenerator(object):
     return filter (None, map (self._get_quick_fix, tu.diagnostics))
 
   def get_current_quickfix_list(self):
-    if self.editor.filename in self.translation_unit_accessor.translation_units:
-      return self._get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename])
+    if self.editor.filename() in self.translation_unit_accessor.translation_units:
+      return self._get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename()])
     return []
 
 
@@ -270,7 +275,7 @@ class Completer(object):
     current_file = self.editor.current_file()
     if self.editor.debug_enabled():
       start = time.time()
-    completionResult = translation_unit.codeComplete(self.editor.filename, line, column, [current_file],
+    completionResult = translation_unit.codeComplete(self.editor.filename(), line, column, [current_file],
         self.complete_flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
@@ -378,7 +383,7 @@ class DefinitionFinder(object):
     def get_current_location(self):
       line = self.editor.current_line()
       column = self.editor.current_column()
-      file = self.translation_unit.getFile(self.editor.filename)
+      file = self.translation_unit.getFile(self.editor.filename())
       if not file:
         self.editor.display_message("""Could not find the file at current
           position in the current translation unit""")
@@ -408,16 +413,32 @@ class DefinitionFinder(object):
         translation_unit,
         self.referencing_translation_units).get_definition_cursor()
 
+
   def jump_to_definition(self):
 
-    definition_cursor = self.find_definition_in_translation_unit(self.translation_unit_accessor.get_current_translation_unit())
-    if not definition_cursor:
+    def current_translation_unit():
+      return self.translation_unit_accessor.get_current_translation_unit()
+
+    def referencing_translation_unit():
       try:
-        referencing_translation_unit = self.referencing_translation_units[self.editor.filename]
-        definition_cursor = self.find_definition_in_translation_unit(referencing_translation_unit)
+        return self.referencing_translation_units[self.editor.filename()]
       except KeyError:
-        self.editor.display_message("No definition could be found by parsing this file on its own. We also didn't jump here from another parsed file.")
-        pass
+        return None
+
+    def guess_definition_translation_unit():
+      guessed_header_name = self.editor.filename().replace(".h", ".cpp")
+      return self.translation_unit_accessor.get_current_translation_unit_for_filename(guessed_header_name)
+
+    definition_cursor = None
+    for get_translation_unit in [
+        current_translation_unit,
+        referencing_translation_unit,
+        guess_definition_translation_unit]:
+      translation_unit = get_translation_unit()
+      if translation_unit:
+        definition_cursor =  self.find_definition_in_translation_unit(translation_unit)
+        if definition_cursor:
+          break
 
     if definition_cursor:
       definition_location = definition_cursor.extent.start
