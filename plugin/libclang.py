@@ -266,17 +266,17 @@ class Completer(object):
     self.complete_flags = complete_flags
 
   def get_current_completion_results(self, line, column):
-    tu = self.translation_unit_accessor.get_current_translation_unit()
+    translation_unit = self.translation_unit_accessor.get_current_translation_unit()
     current_file = self.editor.current_file()
     if self.editor.debug_enabled():
       start = time.time()
-    cr = tu.codeComplete(self.editor.filename, line, column, [current_file],
+    completionResult = translation_unit.codeComplete(self.editor.filename, line, column, [current_file],
         self.complete_flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
       self.editor.display_message("LibClang - Code completion time: " +
           str(elapsed))
-    return cr
+    return completionResult
 
   def format_results(self, result):
     completion = dict()
@@ -308,26 +308,28 @@ class Completer(object):
 
   def get_current_completions(self, base):
 
-    priority = self.editor.sort_algorithm() == 'priority'
-    line = self.editor.current_line()
-    column = self.editor.current_column()
+    sort_by_priority = self.editor.sort_algorithm() == 'priority'
 
-    t = CompleteThread(self, line, column)
-    t.start()
-    while t.is_alive():
-      t.join(0.01)
+    thread = CompleteThread(self,
+        self.editor.current_line(),
+        self.editor.current_column())
+
+    thread.start()
+    while thread.is_alive():
+      thread.join(0.01)
       if self.editor.abort_requested():
         return []
-    cr = t.result
-    if cr is None:
+    completionResult = thread.result
+    if completionResult is None:
       return []
 
     regexp = re.compile("^" + base)
-    filtered_result = filter(lambda x: regexp.match(self.get_abbr(x.string)), cr.results)
+    filtered_result = filter(lambda x: regexp.match(self.get_abbr(x.string)),
+        completionResult.results)
 
     get_priority = lambda x: x.string.priority
     get_abbreviation = lambda x: self.get_abbr(x.string).lower()
-    if priority:
+    if sort_by_priority:
       key = get_priority
     else:
       key = get_abbreviation
