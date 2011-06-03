@@ -652,6 +652,12 @@ class Cursor(Structure):
         Cursor_visit(self, Cursor_visit_callback(visitor), children)
         return iter(children)
 
+    def get_semantic_parent(self):
+      return Cursor_semantic_parent(self)
+
+    def get_canonical(self):
+      return Cursor_canonical(self)
+
     @staticmethod
     def from_result(res, fn, args):
         assert isinstance(res, Cursor)
@@ -1209,6 +1215,13 @@ Cursor_def.argtypes = [Cursor]
 Cursor_def.restype = Cursor
 Cursor_def.errcheck = Cursor.from_result
 
+Cursor_semantic_parent = lib.clang_getCursorSemanticParent
+Cursor_semantic_parent.argtypes = [Cursor]
+Cursor_semantic_parent.restype = Cursor
+
+Cursor_canonical = lib.clang_getCanonicalCursor
+Cursor_canonical.argtypes = [Cursor]
+Cursor_canonical.restype = Cursor
 
 Cursor_spelling = lib.clang_getCursorSpelling
 Cursor_spelling.argtypes = [Cursor]

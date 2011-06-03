@@ -26,6 +26,10 @@ Ideas:
   - Code cleanup
    - Mark all private methods/fields as such
    - Decide on when/why to use @property
+   - There seems to be some confusion between returning NULL or nullCursor
+     - get_semantic_parent returns nullCursor
+     - get_definition returns NULL
+   - Declaration/Definition finding share lots of code.
 """
 
 class VimInterface(object):
@@ -117,6 +121,7 @@ class ClangPlugin(object):
     self._init_editor()
     self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
+    self.declaration_finder = DeclarationFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
     self.quick_fix_list_generator = QuickFixListGenerator(self.editor,
         self.translation_unit_accessor)
@@ -133,6 +138,9 @@ class ClangPlugin(object):
 
   def jump_to_definition(self):
     self.definition_finder.jump_to_definition()
+
+  def jump_to_declaration(self):
+    self.declaration_finder.jump_to_declaration()
 
   def update_current_diagnostics(self):
     self.translation_unit_accessor.get_current_translation_unit(update = True)
@@ -361,6 +369,51 @@ class CompleteThread(threading.Thread):
         #self.result = get_current_completion_results(self.line, self.column)
       #except Exception:
         #pass
+
+class DeclarationFinder(object):
+
+  def __init__(self, editor, translation_unit_accessor):
+    self._editor = editor
+    self._translation_unit_accessor = translation_unit_accessor
+
+  class FindDeclarationInTranslationUnit(object):
+    def __init__(self, editor, translation_unit):
+      self._editor = editor
+      self._translation_unit = translation_unit
+
+    def _get_current_location(self):
+      line = self._editor.current_line()
+      column = self._editor.current_column()
+      file = self._translation_unit.getFile(self._editor.filename)
+      if not file:
+        self._editor.display_message("""Could not find the file at current
+          position in the current translation unit""")
+        return None
+      return self._translation_unit.getLocation(file, line, column)
+
+    def get_declaration_cursor(self):
+      location = self._get_current_location()
+      current_location_cursor = self._translation_unit.getCursor(location)
+      parent_cursor = current_location_cursor.get_semantic_parent()
+      if parent_cursor == Cursor.nullCursor():
+        return None
+      for child_cursor in parent_cursor.get_children():
+        if child_cursor.get_canonical() == current_location_cursor.get_canonical():
+          return child_cursor
+      return None
+
+  def _find_declaration_in_translation_unit(self, translation_unit):
+    return self.FindDeclarationInTranslationUnit(self._editor,
+        translation_unit).get_declaration_cursor()
+
+  def jump_to_declaration(self):
+    declaration_cursor = self._find_declaration_in_translation_unit(self._translation_unit_accessor.get_current_translation_unit())
+    if declaration_cursor:
+      declaration_location = declaration_cursor.extent.start
+      self._editor.open_file(declaration_location.file.name.spelling,
+          declaration_location.line, declaration_location.column)
+    else:
+      self._editor.display_message("No declaration available")
 
 class DefinitionFinder(object):
 
