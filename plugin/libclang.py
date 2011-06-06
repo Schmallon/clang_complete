@@ -156,10 +156,12 @@ class TranslationUnitAccessor(object):
     current_file = self.editor.current_file()
     return self.get_translation_unit(current_file, update)
 
-  def get_current_translation_unit_for_filename(self, filename):
-    file = (filename, open(filename, 'r').read())
-    self.editor.display_message("Trying in file named" + file[0])
-    return self.get_translation_unit(file, True)
+  def get_translation_unit_for_filename(self, filename):
+    try:
+      file = (filename, open(filename, 'r').read())
+      return self.get_translation_unit(file, True)
+    except IOError:
+      return None
 
   def get_translation_unit(self, file, update = False):
     args = self.editor.user_options()
@@ -425,15 +427,22 @@ class DefinitionFinder(object):
       except KeyError:
         return None
 
-    def guess_definition_translation_unit():
-      guessed_header_name = self.editor.filename().replace(".h", ".cpp")
-      return self.translation_unit_accessor.get_current_translation_unit_for_filename(guessed_header_name)
+    def guess_alternate_translation_unit():
+      filename = self.editor.filename()
+      if ".h" in filename:
+        guessed_header_name = self.editor.filename().replace(".h", ".cpp")
+      elif ".cpp" in filename:
+        guessed_header_name = self.editor.filename().replace(".cpp", ".h")
+      else:
+        return None
+      return self.translation_unit_accessor.get_translation_unit_for_filename(guessed_header_name)
 
     definition_cursor = None
     for get_translation_unit in [
+        guess_alternate_translation_unit,
         current_translation_unit,
         referencing_translation_unit,
-        guess_definition_translation_unit]:
+        ]:
       translation_unit = get_translation_unit()
       if translation_unit:
         definition_cursor =  self.find_definition_in_translation_unit(translation_unit)
