@@ -2,6 +2,7 @@ from clang.cindex import *
 import time
 import re
 import threading
+import os
 
 """
 Ideas:
@@ -435,7 +436,7 @@ class DefinitionFinder(object):
       self.translation_unit = translation_unit
       self.referencing_translation_units = referencing_translation_units
 
-    def get_current_location(self):
+    def _get_current_location(self):
       line = self.editor.current_line()
       column = self.editor.current_column()
       file = self.translation_unit.getFile(self.editor.filename())
@@ -445,8 +446,8 @@ class DefinitionFinder(object):
         return None
       return self.translation_unit.getLocation(file, line, column)
 
-    def get_definition_cursor(self):
-      location = self.get_current_location()
+    def _get_definition_cursor(self):
+      location = self._get_current_location()
       cursor = self.translation_unit.getCursor(location)
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
@@ -455,52 +456,56 @@ class DefinitionFinder(object):
         self.editor.display_message("Cursor is a reference but we could not find a definition. Try to dereference the cursor.")
         result = cursor.get_cursor_referenced()
       if result:
-        self.store_referencing_translation_unit(result)
+        self._store_referencing_translation_unit(result)
       return result
 
-    def store_referencing_translation_unit(self, definition_cursor):
+    def _store_referencing_translation_unit(self, definition_cursor):
       definition_location = definition_cursor.extent.start
       definition_filename = definition_location.file.name.spelling
       self.referencing_translation_units[definition_filename] = self.translation_unit
 
-  def find_definition_in_translation_unit(self, translation_unit):
+  def _find_definition_in_translation_unit(self, translation_unit):
     return self.FindDefinitionInTranslationUnit(self.editor,
         translation_unit,
-        self.referencing_translation_units).get_definition_cursor()
+        self.referencing_translation_units)._get_definition_cursor()
 
+  def _find_first_definition_cursor(self):
+    """
+    Tries to find a definition looking in various translation units. Returns the
+    first valid one found
+    """
 
-  def jump_to_definition(self):
-
-    def current_translation_unit():
-      return self.translation_unit_accessor.get_current_translation_unit()
+    def current_translation_units():
+      return [self.translation_unit_accessor.get_current_translation_unit()]
 
     def referencing_translation_unit():
       try:
         return self.referencing_translation_units[self.editor.filename()]
       except KeyError:
-        return None
+        return []
 
-    def guess_alternate_translation_unit():
+    def guess_alternate_translation_units():
       filename = self.editor.filename()
-      if ".h" in filename:
-        guessed_header_name = self.editor.filename().replace(".h", ".cpp")
-      elif ".cpp" in filename:
-        guessed_header_name = self.editor.filename().replace(".cpp", ".h")
-      else:
-        return None
-      return self.translation_unit_accessor.get_translation_unit_for_filename(guessed_header_name)
+      finder = DefinitionFileFinder(self.editor, filename)
+      return filter(lambda x: x is not None,
+          map(self.translation_unit_accessor.get_translation_unit_for_filename,
+            finder.definition_files()))
 
-    definition_cursor = None
-    for get_translation_unit in [
-        guess_alternate_translation_unit,
-        current_translation_unit,
+    for get_translation_units in [
+        guess_alternate_translation_units,
+        current_translation_units,
         referencing_translation_unit,
         ]:
-      translation_unit = get_translation_unit()
-      if translation_unit:
-        definition_cursor =  self.find_definition_in_translation_unit(translation_unit)
+      for translation_unit in get_translation_units():
+        definition_cursor =  self._find_definition_in_translation_unit(translation_unit)
         if definition_cursor:
-          break
+          return definition_cursor
+    return None
+
+
+  def jump_to_definition(self):
+
+    definition_cursor = self._find_first_definition_cursor()
 
     if definition_cursor:
       definition_location = definition_cursor.extent.start
@@ -508,6 +513,56 @@ class DefinitionFinder(object):
           definition_location.line, definition_location.column)
     else:
       self.editor.display_message("No definition available")
+
+class DefinitionFileFinder(object):
+  """
+  Given the name of a header file (foo.h), tries to find the corresponding definition
+  file (e.g. foo.cpp) somewhere nearby in the file system.
+  """
+  def __init__(self, editor, target_file_name):
+    self.editor = editor
+    self.target_file_name = target_file_name
+    self.split_target = os.path.splitext(os.path.basename(self.target_file_name))
+    self.visited_directories = set()
+    self.search_limit = 50
+    self.num_directories_searched = 0
+
+  def definition_files(self):
+    directory_name = os.path.dirname(self.target_file_name)
+    for result in self._search_directory_and_parent_directories(directory_name):
+      yield result
+
+  def _search_directory_and_parent_directories(self, directory_name):
+    for result in self._search_directory_and_subdirectories(directory_name):
+      yield result
+    parent_directory_name = os.path.abspath(os.path.join(directory_name, '..'))
+    if parent_directory_name != directory_name:
+      for result in self._search_directory_and_parent_directories(parent_directory_name):
+        yield result
+
+  def _search_directory_and_subdirectories(self, directory_name):
+    self.num_directories_searched = 1 + self.num_directories_searched
+    if self.num_directories_searched > self.search_limit:
+      return
+    self.visited_directories.add(os.path.abspath(directory_name))
+    try:
+      for file_name in os.listdir(directory_name):
+        absolute_name = os.path.abspath(os.path.join(directory_name, file_name))
+        if os.path.isdir(absolute_name):
+          if absolute_name not in self.visited_directories:
+            for result in self._search_directory_and_subdirectories(absolute_name):
+              yield result
+        else:
+          if self._is_definition_file_name(file_name):
+            self.editor.display_message("Guessing definition file is " + absolute_name)
+            yield absolute_name
+    except OSError:
+      pass
+
+  def _is_definition_file_name(self, file_name):
+    split_file_name = os.path.splitext(file_name)
+    return (split_file_name[0] == self.split_target[0] and
+        split_file_name[1] in ('.cpp', 'c'))
 
 
 kinds = dict({                                                                 \
