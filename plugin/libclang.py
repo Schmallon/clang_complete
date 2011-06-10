@@ -46,6 +46,10 @@ class Editor(object):
       return None
     return translation_unit.getLocation(file, self.current_line(), self.current_column())
 
+  def jump_to_cursor(self, cursor):
+    location = cursor.extent.start
+    self.open_file(location.file.name.spelling, location.line, location.column)
+
 class VimInterface(Editor):
 
   def __init__(self):
@@ -398,32 +402,21 @@ class DeclarationFinder(object):
     self._editor = editor
     self._translation_unit_accessor = translation_unit_accessor
 
-  class FindDeclarationInTranslationUnit(object):
-    def __init__(self, editor, translation_unit):
-      self._editor = editor
-      self._translation_unit = translation_unit
-
-    def get_declaration_cursor(self):
-      location = self._editor.get_current_location_in_translation_unit(self._translation_unit)
-      current_location_cursor = self._translation_unit.getCursor(location)
-      parent_cursor = current_location_cursor.get_semantic_parent()
-      if parent_cursor == Cursor.nullCursor():
-        return None
-      for child_cursor in parent_cursor.get_children():
-        if child_cursor.get_canonical() == current_location_cursor.get_canonical():
-          return child_cursor
-      return None
-
   def _find_declaration_in_translation_unit(self, translation_unit):
-    return self.FindDeclarationInTranslationUnit(self._editor,
-        translation_unit).get_declaration_cursor()
+    location = self._editor.get_current_location_in_translation_unit(translation_unit)
+    current_location_cursor = translation_unit.getCursor(location)
+    parent_cursor = current_location_cursor.get_semantic_parent()
+    if parent_cursor == Cursor.nullCursor():
+      return None
+    for child_cursor in parent_cursor.get_children():
+      if child_cursor.get_canonical() == current_location_cursor.get_canonical():
+        return child_cursor
+    return None
 
   def jump_to_declaration(self):
     declaration_cursor = self._find_declaration_in_translation_unit(self._translation_unit_accessor.get_current_translation_unit())
     if declaration_cursor:
-      declaration_location = declaration_cursor.extent.start
-      self._editor.open_file(declaration_location.file.name.spelling,
-          declaration_location.line, declaration_location.column)
+      self._editor.jump_to_cursor(declaration_cursor)
     else:
       self._editor.display_message("No declaration available")
 
@@ -497,12 +490,9 @@ class DefinitionFinder(object):
     return None
 
   def jump_to_definition(self):
-
     definition_cursor = self._find_first_definition_cursor()
     if definition_cursor:
-      definition_location = definition_cursor.extent.start
-      self.editor.open_file(definition_location.file.name.spelling,
-          definition_location.line, definition_location.column)
+      self.editor.jump_to_cursor(definition_cursor)
     else:
       self.editor.display_message("No definition available")
 
