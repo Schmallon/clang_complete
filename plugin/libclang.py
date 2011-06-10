@@ -46,6 +46,10 @@ class Editor(object):
       return None
     return translation_unit.getLocation(file, self.current_line(), self.current_column())
 
+  def get_current_cursor_in_translation_unit(self, translation_unit):
+    location = self.get_current_location_in_translation_unit(translation_unit)
+    return translation_unit.getCursor(location)
+
   def jump_to_cursor(self, cursor):
     location = cursor.extent.start
     self.open_file(location.file.name.spelling, location.line, location.column)
@@ -403,8 +407,7 @@ class DeclarationFinder(object):
     self._translation_unit_accessor = translation_unit_accessor
 
   def _find_declaration_in_translation_unit(self, translation_unit):
-    location = self._editor.get_current_location_in_translation_unit(translation_unit)
-    current_location_cursor = translation_unit.getCursor(location)
+    current_location_cursor = self._editor.get_current_cursor_in_translation_unit(translation_unit)
     parent_cursor = current_location_cursor.get_semantic_parent()
     if parent_cursor == Cursor.nullCursor():
       return None
@@ -434,8 +437,7 @@ class DefinitionFinder(object):
       self.referencing_translation_units = referencing_translation_units
 
     def _get_definition_cursor(self):
-      location = self.editor.get_current_location_in_translation_unit(self.translation_unit)
-      cursor = self.translation_unit.getCursor(location)
+      cursor = self.editor.get_current_cursor_in_translation_unit(self.translation_unit)
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
       result = cursor.get_definition()
