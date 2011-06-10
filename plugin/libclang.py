@@ -30,9 +30,23 @@ Ideas:
      - get_semantic_parent returns nullCursor
      - get_definition returns NULL
    - Declaration/Definition finding share lots of code.
+    - both implementations consist out of two classes
+     - find the cursor
+     - jump to the cursor
+
 """
 
-class VimInterface(object):
+class Editor(object):
+
+  def get_current_location_in_translation_unit(self, translation_unit):
+    file = translation_unit.getFile(self.filename())
+    if not file:
+      self.display_message("""Could not find the file at current position in the current
+      translation unit""")
+      return None
+    return translation_unit.getLocation(file, self.current_line(), self.current_column())
+
+class VimInterface(Editor):
 
   def __init__(self):
     import vim
@@ -82,7 +96,7 @@ class VimInterface(object):
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
     self._vim.command(command)
 
-class EmacsInterface(object):
+class EmacsInterface(Editor):
 
   def __init__(self):
     from Pymacs import lisp as emacs
@@ -389,18 +403,8 @@ class DeclarationFinder(object):
       self._editor = editor
       self._translation_unit = translation_unit
 
-    def _get_current_location(self):
-      line = self._editor.current_line()
-      column = self._editor.current_column()
-      file = self._translation_unit.getFile(self._editor.filename())
-      if not file:
-        self._editor.display_message("""Could not find the file at current
-          position in the current translation unit""")
-        return None
-      return self._translation_unit.getLocation(file, line, column)
-
     def get_declaration_cursor(self):
-      location = self._get_current_location()
+      location = self._editor.get_current_location_in_translation_unit(self._translation_unit)
       current_location_cursor = self._translation_unit.getCursor(location)
       parent_cursor = current_location_cursor.get_semantic_parent()
       if parent_cursor == Cursor.nullCursor():
@@ -436,18 +440,8 @@ class DefinitionFinder(object):
       self.translation_unit = translation_unit
       self.referencing_translation_units = referencing_translation_units
 
-    def _get_current_location(self):
-      line = self.editor.current_line()
-      column = self.editor.current_column()
-      file = self.translation_unit.getFile(self.editor.filename())
-      if not file:
-        self.editor.display_message("""Could not find the file at current
-          position in the current translation unit""")
-        return None
-      return self.translation_unit.getLocation(file, line, column)
-
     def _get_definition_cursor(self):
-      location = self._get_current_location()
+      location = self.editor.get_current_location_in_translation_unit(self.translation_unit)
       cursor = self.translation_unit.getCursor(location)
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
@@ -502,11 +496,9 @@ class DefinitionFinder(object):
           return definition_cursor
     return None
 
-
   def jump_to_definition(self):
 
     definition_cursor = self._find_first_definition_cursor()
-
     if definition_cursor:
       definition_location = definition_cursor.extent.start
       self.editor.open_file(definition_location.file.name.spelling,
