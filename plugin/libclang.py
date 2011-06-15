@@ -78,9 +78,28 @@ class VimInterface(Editor):
     except vim.error:
       return default_value
 
+  def _split_options(self, options):
+    optsList = []
+    opt = ""
+    quoted = False
+
+    for char in options:
+      if char == ' ' and not quoted:
+        if opt != "":
+          optsList += [opt]
+          opt = ""
+        continue
+      elif char == '"':
+        quoted = not quoted
+      opt += char
+
+    if opt != "":
+      optsList += [opt]
+    return optsList
+
   def user_options(self):
-    user_options_global = self._get_variable("g:clang_user_options").split(" ")
-    user_options_local = self._get_variable("b:clang_user_options").split(" ")
+    user_options_global = self._split_options(self._get_variable("g:clang_user_options"))
+    user_options_local = self._split_options(self._get_variable("b:clang_user_options"))
     return user_options_global + user_options_local
 
   def filename(self):
@@ -367,7 +386,8 @@ class Completer(object):
 
     sort_by_priority = self.editor.sort_algorithm() == 'priority'
 
-    thread = CompleteThread(self,
+    thread = CompleteThread(self.editor,
+        self,
         self.editor.current_line(),
         self.editor.current_column())
 
@@ -404,20 +424,22 @@ class Completer(object):
 class CompleteThread(threading.Thread):
   lock = threading.Lock()
 
-  def __init__(self, completer, line, column):
+  def __init__(self, editor, completer, line, column):
     threading.Thread.__init__(self)
+    self.editor = editor
     self.completer = completer
     self.line = line
     self.column = column
     self.result = None
 
   def run(self):
-    with CompleteThread.lock:
+    try:
+      CompleteThread.lock.acquire()
       self.result = self.completer.get_current_completion_results(self.line, self.column)
-      #try:
-        #self.result = get_current_completion_results(self.line, self.column)
-      #except Exception:
-        #pass
+    except Exception:
+      self.editor.display_message("Exception occurred in completion thread")
+    CompleteThread.lock.release()
+
 
 class DeclarationFinder(object):
 
@@ -678,7 +700,7 @@ kinds = dict({                                                                 \
                                                                                \
 # Preprocessing                                                                \
 500 : '500', # CXCursor_PreprocessingDirective                                 \
-501 : 'm',   # CXCursor_MacroDefinition                                        \
+501 : 'd',   # CXCursor_MacroDefinition                                        \
 502 : '502', # CXCursor_MacroInstantiation                                     \
 503 : '503'  # CXCursor_InclusionDirective                                     \
 })
