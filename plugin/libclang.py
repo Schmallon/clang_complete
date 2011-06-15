@@ -33,10 +33,16 @@ Ideas:
     - both implementations consist out of two classes
      - find the cursor
      - jump to the cursor
+  - When jumping to definitions, print a debug message that explains how the definition
+    was found (through which file)
+  - Allow jumping through pimpls
 
 """
 
 class Editor(object):
+  """
+  These aren't really properties of an editor.
+  """
 
   def get_current_location_in_translation_unit(self, translation_unit):
     file = translation_unit.getFile(self.filename())
@@ -66,9 +72,15 @@ class VimInterface(Editor):
     file = "\n".join(self._vim.eval("getline(1, '$')"))
     return (self.filename(), file)
 
+  def _get_variable(self, variable_name, default_value = ""):
+    try:
+      return self._vim.eval(variable_name)
+    except vim.error:
+      return default_value
+
   def user_options(self):
-    user_options_global = self._vim.eval("g:clang_user_options").split(" ")
-    user_options_local = self._vim.eval("b:clang_user_options").split(" ")
+    user_options_global = self._get_variable("g:clang_user_options").split(" ")
+    user_options_local = self._get_variable("b:clang_user_options").split(" ")
     return user_options_global + user_options_local
 
   def filename(self):
@@ -176,6 +188,9 @@ class ClangPlugin(object):
   def get_current_completions(self, base):
     return self.completer.get_current_completions(base)
 
+class NoCurrentTranslationUnit(Exception):
+  pass
+
 class TranslationUnitAccessor(object):
 
   def __init__(self, editor):
@@ -185,7 +200,10 @@ class TranslationUnitAccessor(object):
 
   def get_current_translation_unit(self, update = False):
     current_file = self.editor.current_file()
-    return self.get_translation_unit(current_file, update)
+    result = self.get_translation_unit(current_file, update)
+    if result:
+      return result
+    raise NoCurrentTranslationUnit
 
   def get_translation_unit_for_filename(self, filename):
     try:
@@ -272,6 +290,8 @@ class QuickFixListGenerator(object):
     if diagnostic.location.file:
       filename = diagnostic.location.file.name.spelling
     else:
+      "hack: report errors without files. should nevertheless be in quickfix list"
+      print diagnostic.spelling
       filename = ""
 
     if diagnostic.severity == diagnostic.Warning:
@@ -294,7 +314,6 @@ class QuickFixListGenerator(object):
     if self.editor.filename() in self.translation_unit_accessor.translation_units:
       return self._get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename()])
     return []
-
 
 class Completer(object):
 
@@ -440,10 +459,15 @@ class DefinitionFinder(object):
       cursor = self.editor.get_current_cursor_in_translation_unit(self.translation_unit)
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
+
+      if cursor.kind.is_unexposed:
+        self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
+
       result = cursor.get_definition()
       if not result and cursor.kind.is_reference:
-        self.editor.display_message("Cursor is a reference but we could not find a definition. Try to dereference the cursor.")
         result = cursor.get_cursor_referenced()
+        if result:
+          self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
       if result:
         self._store_referencing_translation_unit(result)
       return result
@@ -465,11 +489,14 @@ class DefinitionFinder(object):
     """
 
     def current_translation_units():
-      return [self.translation_unit_accessor.get_current_translation_unit()]
+      try:
+        return [self.translation_unit_accessor.get_current_translation_unit()]
+      except NoCurrentTranslationUnit:
+        return []
 
     def referencing_translation_unit():
       try:
-        return self.referencing_translation_units[self.editor.filename()]
+        return [self.referencing_translation_units[self.editor.filename()]]
       except KeyError:
         return []
 
