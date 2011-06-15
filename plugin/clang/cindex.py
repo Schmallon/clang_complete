@@ -330,6 +330,10 @@ class CursorKind(object):
         """Test if this is an invalid kind."""
         return CursorKind_is_inv(self)
 
+    def is_unexposed(self):
+        """Test if this is an unexposed kind."""
+        return CursorKind_is_unexposed(self)
+
     def __repr__(self):
         return 'CursorKind.%s' % (self.name,)
 
@@ -979,7 +983,7 @@ class TranslationUnit(ClangObject):
     CacheCompletionResults = 0x08
     CXXPrecompiledPreamble = 0x10
     CXXChainedPCH = 0x20
-    
+
     def __init__(self, ptr):
         ClangObject.__init__(self, ptr)
 
@@ -1186,6 +1190,10 @@ CursorKind_is_stmt.restype = bool
 CursorKind_is_inv = lib.clang_isInvalid
 CursorKind_is_inv.argtypes = [CursorKind]
 CursorKind_is_inv.restype = bool
+
+CursorKind_is_unexposed = lib.clang_isUnexposed
+CursorKind_is_unexposed.argtypes = [CursorKind]
+CursorKind_is_unexposed.restype = bool
 
 Cursor_get = lib.clang_getCursor
 Cursor_get.argtypes = [TranslationUnit, SourceLocation]
