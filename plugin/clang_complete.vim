@@ -228,7 +228,8 @@ function! s:initClangCompletePython()
 
   exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
   exe 'pyfile ' . s:plugin_path . '/libclang.py'
-  python clang_plugin = ClangPlugin(vim.eval('g:clang_complete_lib_flags'))
+  python vim_interface = VimInterface()
+  python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
 endfunction
 
 function! s:GetKind(proto)

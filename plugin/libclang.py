@@ -36,6 +36,15 @@ Ideas:
   - When jumping to definitions, print a debug message that explains how the definition
     was found (through which file)
   - Allow jumping through pimpls
+  - When opening a new file, right away get possible translation units
+   - keep a set of translation unit (name -> translation unit)
+    - ensure that accessing this set always uses the most current version of the file
+   - the current file
+   - an alternate file (.h -> .cpp)
+   - *not required* referencing translation unit, as we already were there
+
+  - Test this code
+   - build a testing-editor infrastructure
 
 """
 
@@ -43,7 +52,6 @@ class Editor(object):
   """
   These aren't really properties of an editor.
   """
-
   def get_current_location_in_translation_unit(self, translation_unit):
     file = translation_unit.getFile(self.filename())
     if not file:
@@ -168,8 +176,8 @@ class EmacsInterface(Editor):
     self.emacs.minibuffer_message(message)
 
 class ClangPlugin(object):
-  def __init__(self, clang_complete_flags):
-    self._init_editor()
+  def __init__(self, editor, clang_complete_flags):
+    self.editor = editor
     self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
     self.declaration_finder = DeclarationFinder(self.editor, self.translation_unit_accessor)
@@ -177,15 +185,6 @@ class ClangPlugin(object):
     self.quick_fix_list_generator = QuickFixListGenerator(self.editor,
         self.translation_unit_accessor)
     self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
-
-  def _init_editor(self):
-    try:
-      self.editor = VimInterface()
-    except ImportError:
-      try:
-        self.editor = EmacsInterface()
-      except ImportError:
-        raise "Could find neither vim nor emacs"
 
   def jump_to_definition(self):
     self.definition_finder.jump_to_definition()
