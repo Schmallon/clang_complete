@@ -524,15 +524,16 @@ class DefinitionFinder(object):
       except KeyError:
         return []
 
-    def guess_alternate_translation_units():
-      filename = self.editor.filename()
-      finder = DefinitionFileFinder(self.editor, filename)
-      return filter(lambda x: x is not None,
-          map(self.translation_unit_accessor.get_translation_unit_for_filename,
-            finder.definition_files()))
+    def guess_alternate_translation_units(filename):
+      def f():
+        finder = DefinitionFileFinder(self.editor, filename)
+        return filter(lambda x: x is not None,
+            map(self.translation_unit_accessor.get_translation_unit_for_filename,
+              finder.definition_files()))
+      return f
 
     for get_translation_units in [
-        guess_alternate_translation_units,
+        guess_alternate_translation_units(self.editor.filename()),
         current_translation_units,
         referencing_translation_unit,
         ]:
