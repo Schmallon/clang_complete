@@ -536,7 +536,11 @@ class DefinitionFinder(object):
       for translation_unit in get_translation_units():
         definition_cursor =  self._find_definition_in_translation_unit(translation_unit)
         if definition_cursor:
-          return definition_cursor
+          if definition_cursor.is_definition():
+            return definition_cursor
+          else:
+            #find a definition of the reference at the cursor
+            return definition_cursor
     return None
 
   def jump_to_definition(self):
