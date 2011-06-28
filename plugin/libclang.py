@@ -471,13 +471,14 @@ class DefinitionFinder(object):
     self.translation_unit_accessor = translation_unit_accessor
 
   class FindDefinitionInTranslationUnit(object):
-    def __init__(self, editor, translation_unit, referencing_translation_units):
+    def __init__(self, editor, translation_unit, referencing_translation_units, location):
       self.editor = editor
       self.translation_unit = translation_unit
       self.referencing_translation_units = referencing_translation_units
+      self.location = location
 
     def _get_definition_cursor(self):
-      cursor = self.editor.get_current_cursor_in_translation_unit(self.translation_unit)
+      cursor = self.translation_unit.getCursor(self.location)
       if self.editor.debug_enabled():
         self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
 
@@ -498,10 +499,12 @@ class DefinitionFinder(object):
       definition_filename = definition_location.file.name.spelling
       self.referencing_translation_units[definition_filename] = self.translation_unit
 
-  def _find_definition_in_translation_unit(self, translation_unit):
-    return self.FindDefinitionInTranslationUnit(self.editor,
+  def _find_definition_in_translation_unit(self, translation_unit, location):
+    return self.FindDefinitionInTranslationUnit(
+        self.editor,
         translation_unit,
-        self.referencing_translation_units)._get_definition_cursor()
+        self.referencing_translation_units,
+        location)._get_definition_cursor()
 
   def _find_first_definition_cursor(self):
     """
@@ -534,7 +537,8 @@ class DefinitionFinder(object):
         referencing_translation_unit,
         ]:
       for translation_unit in get_translation_units():
-        definition_cursor =  self._find_definition_in_translation_unit(translation_unit)
+        current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
+        definition_cursor =  self._find_definition_in_translation_unit(translation_unit, current_location)
         if definition_cursor:
           if definition_cursor.is_definition():
             return definition_cursor
