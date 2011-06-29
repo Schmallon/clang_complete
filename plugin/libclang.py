@@ -539,13 +539,16 @@ class DefinitionFinder(object):
         ]:
       for translation_unit in get_translation_units():
         current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
-        definition_cursor =  self._find_definition_in_translation_unit(translation_unit, current_location)
+        definition_cursor = self._find_definition_in_translation_unit(translation_unit, current_location)
         if definition_cursor:
           if definition_cursor.is_definition():
             return definition_cursor
           else:
-            #find a definition of the reference at the cursor
-            return definition_cursor
+            declaration_location = definition_cursor.extent.start
+            for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
+              declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
+              definition_cursor = self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
+              return definition_cursor
     return None
 
   def jump_to_definition(self):
