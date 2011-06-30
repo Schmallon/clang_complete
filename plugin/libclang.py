@@ -470,6 +470,9 @@ class DefinitionFinder(object):
     self.referencing_translation_units = {}
     self.translation_unit_accessor = translation_unit_accessor
 
+  class NoDefinitionFound(Exception):
+    pass
+
   class FindDefinitionInTranslationUnit(object):
     def __init__(self, editor, translation_unit, referencing_translation_units, location):
       self.editor = editor
@@ -512,6 +515,7 @@ class DefinitionFinder(object):
     first valid one found
     """
 
+
     def current_translation_units():
       try:
         return [self.translation_unit_accessor.get_current_translation_unit()]
@@ -532,23 +536,32 @@ class DefinitionFinder(object):
               finder.definition_files()))
       return f
 
+    def definition_cursor_of_current_cursor(translation_unit):
+      current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
+      return self._find_definition_in_translation_unit(translation_unit, current_location)
+
+    def find_definition_in(translation_unit):
+      definition_or_declaration_cursor = definition_cursor_of_current_cursor(translation_unit)
+      if definition_or_declaration_cursor:
+        if definition_or_declaration_cursor.is_definition():
+          return definition_or_declaration_cursor
+        else:
+          declaration_location = definition_or_declaration_cursor.extent.start
+          for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
+            declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
+            return self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
+      raise NoDefinitionFound
+
     for get_translation_units in [
         guess_alternate_translation_units(self.editor.filename()),
         current_translation_units,
         referencing_translation_unit,
         ]:
       for translation_unit in get_translation_units():
-        current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
-        definition_cursor = self._find_definition_in_translation_unit(translation_unit, current_location)
-        if definition_cursor:
-          if definition_cursor.is_definition():
-            return definition_cursor
-          else:
-            declaration_location = definition_cursor.extent.start
-            for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
-              declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
-              definition_cursor = self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
-              return definition_cursor
+        try:
+          return find_definition_in(translation_unit)
+        except NoDefinitionFound:
+          pass
     return None
 
   def jump_to_definition(self):
