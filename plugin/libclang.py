@@ -536,20 +536,23 @@ class DefinitionFinder(object):
               finder.definition_files()))
       return f
 
-    def definition_cursor_of_current_cursor(translation_unit):
+    def definition_or_declaration_cursor_of_current_cursor(translation_unit):
       current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
       return self._find_definition_in_translation_unit(translation_unit, current_location)
 
-    def find_definition_in(translation_unit):
-      definition_or_declaration_cursor = definition_cursor_of_current_cursor(translation_unit)
+    def definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor):
+      declaration_location = definition_or_declaration_cursor.extent.start
+      for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
+        declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
+        return self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
+
+    def find_definition_of_current_cusor_in(translation_unit):
+      definition_or_declaration_cursor = definition_or_declaration_cursor_of_current_cursor(translation_unit)
       if definition_or_declaration_cursor:
         if definition_or_declaration_cursor.is_definition():
           return definition_or_declaration_cursor
         else:
-          declaration_location = definition_or_declaration_cursor.extent.start
-          for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
-            declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
-            return self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
+          return definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
       raise NoDefinitionFound
 
     for get_translation_units in [
@@ -559,7 +562,7 @@ class DefinitionFinder(object):
         ]:
       for translation_unit in get_translation_units():
         try:
-          return find_definition_in(translation_unit)
+          return find_definition_of_current_cusor_in(translation_unit)
         except NoDefinitionFound:
           pass
     return None
