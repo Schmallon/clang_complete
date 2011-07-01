@@ -66,7 +66,7 @@ class Editor(object):
 
   def jump_to_cursor(self, cursor):
     location = cursor.extent.start
-    self.open_file(location.file.name.spelling, location.line, location.column)
+    self.open_file(location.file.name, location.line, location.column)
 
 class VimInterface(Editor):
 
@@ -306,7 +306,7 @@ class QuickFixListGenerator(object):
   def _get_quick_fix(self, diagnostic):
     # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
     if diagnostic.location.file:
-      filename = diagnostic.location.file.name.spelling
+      filename = diagnostic.location.file.name
     else:
       "hack: report errors without files. should nevertheless be in quickfix list"
       print diagnostic.spelling
@@ -499,7 +499,7 @@ class DefinitionFinder(object):
 
     def _store_referencing_translation_unit(self, definition_cursor):
       definition_location = definition_cursor.extent.start
-      definition_filename = definition_location.file.name.spelling
+      definition_filename = definition_location.file.name
       self.referencing_translation_units[definition_filename] = self.translation_unit
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
@@ -542,7 +542,7 @@ class DefinitionFinder(object):
 
     def definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor):
       declaration_location = definition_or_declaration_cursor.extent.start
-      for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name.spelling)():
+      for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name)():
         declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
         return self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
 

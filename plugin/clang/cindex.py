@@ -95,7 +95,7 @@ lib = get_cindex_library()
 class _CXString(Structure):
     """Helper for transforming CXString results."""
 
-    _fields_ = [("spelling", c_char_p), ("free", c_int)]
+    _fields_ = [("data", c_char_p), ("private_flags", c_int)]
 
     def __del__(self):
         _CXString_dispose(self)
@@ -1315,6 +1315,7 @@ TranslationUnit_includes.argtypes = [TranslationUnit,
 File_name = lib.clang_getFileName
 File_name.argtypes = [File]
 File_name.restype = _CXString
+File_name.errcheck = _CXString.from_result
 
 File_time = lib.clang_getFileTime
 File_time.argtypes = [File]
