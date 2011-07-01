@@ -51,18 +51,22 @@ class TestClangPlugin(unittest.TestCase):
   def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
     self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_definition()
-    self.assertTrue(self.editor.filename().endswith(expected_filename))
+    if not self.editor.filename().endswith(expected_filename):
+      self.fail(self.editor.filename() + " does not end with " + expected_filename)
     self.assertEquals(self.editor.current_column(), expected_column)
     self.assertEquals(self.editor.current_line(), expected_line)
 
   def test_jump_to_definition_in_same_file(self):
-    self.assert_jumps_to_definition("a.cpp", 8, 3, "a.cpp", 13, 1)
+    self.assert_jumps_to_definition("test_defined_in_same_file.cpp", 7, 3, "test_defined_in_same_file.cpp", 1, 1)
 
-  def test_jump_to_definition_in_another_file(self):
-    self.assert_jumps_to_definition("a.cpp", 9, 3, "b.cpp", 3, 1)
+  def test_jump_to_definition_in_header(self):
+    self.assert_jumps_to_definition("test_defined_in_header.cpp", 5, 3, "defined_in_header.h", 1, 1)
+
+  def test_jump_to_definition_in_another_source(self):
+    self.assert_jumps_to_definition("test_defined_in_another_source.cpp", 5, 3, "defined_in_source.cpp", 3, 1)
 
   def test_jump_to_definition_default_to_declaration_if_no_definition_available(self):
-    self.assert_jumps_to_definition("a.cpp", 10, 3, "a.cpp", 4, 1)
+    self.assert_jumps_to_definition("test_declared_in_header.cpp", 5, 3, "declared_in_header.h", 1, 1)
 
 if __name__ == '__main__':
     unittest.main()
