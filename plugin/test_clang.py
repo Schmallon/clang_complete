@@ -1,5 +1,6 @@
 import sys
-sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
+#sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
+sys.argv = ["/Users/mkl/projects/llvm/debug_build/Debug+Asserts/lib"]
 import libclang
 import unittest
 
@@ -55,10 +56,13 @@ class TestClangPlugin(unittest.TestCase):
     self.assertEquals(self.editor.current_line(), expected_line)
 
   def test_jump_to_definition_in_same_file(self):
-    self.assert_jumps_to_definition("a.cpp", 6, 3, "a.cpp", 10, 1)
+    self.assert_jumps_to_definition("a.cpp", 8, 3, "a.cpp", 13, 1)
 
   def test_jump_to_definition_in_another_file(self):
-    self.assert_jumps_to_definition("a.cpp", 7, 3, "b.cpp", 3, 1)
+    self.assert_jumps_to_definition("a.cpp", 9, 3, "b.cpp", 3, 1)
+
+  def test_jump_to_definition_default_to_declaration_if_no_definition_available(self):
+    self.assert_jumps_to_definition("a.cpp", 10, 3, "a.cpp", 4, 1)
 
 if __name__ == '__main__':
     unittest.main()
