@@ -48,9 +48,12 @@ class TestClangPlugin(unittest.TestCase):
     self.editor = TestEditor()
     self.clang_plugin = libclang.ClangPlugin(self.editor, 0)
 
-  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
+  def jump_to_definition(self, source_file_name, start_line, start_column):
     self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_definition()
+
+  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
+    self.jump_to_definition(source_file_name, start_line, start_column)
     if not self.editor.filename().endswith(expected_filename):
       self.fail(self.editor.filename() + " does not end with " + expected_filename)
     self.assertEquals(self.editor.current_column(), expected_column)
@@ -67,6 +70,11 @@ class TestClangPlugin(unittest.TestCase):
 
   def test_jump_to_definition_default_to_declaration_if_no_definition_available(self):
     self.assert_jumps_to_definition("test_declared_in_header.cpp", 5, 3, "declared_in_header.h", 1, 1)
+
+  def test_expression_in_macro(self):
+    # For now ensure that we don't crash
+    self.jump_to_definition("test_reference_in_macro.cpp", 9, 9)
+    #self.assert_jumps_to_definition("test_reference_in_macro.cpp", 9, 9, "test_reference_in_macro.h", 3, 1)
 
 if __name__ == '__main__':
     unittest.main()

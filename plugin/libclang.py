@@ -452,15 +452,15 @@ class DeclarationFinder(object):
     else:
       self._editor.display_message("No declaration available")
 
+class NoDefinitionFound(Exception):
+  pass
+
 class DefinitionFinder(object):
 
   def __init__(self, editor, translation_unit_accessor):
     self.editor = editor
     self.referencing_translation_units = {}
     self.translation_unit_accessor = translation_unit_accessor
-
-  class NoDefinitionFound(Exception):
-    pass
 
   class FindDefinitionInTranslationUnit(object):
     def __init__(self, editor, translation_unit, referencing_translation_units, location):
