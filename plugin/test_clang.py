@@ -12,6 +12,12 @@ class TestEditor(libclang.Editor):
     self._filename = 'invalid filename'
     self._contents = 'invalid contents'
 
+  def sort_algorithm(self):
+    return 'priority'
+
+  def abort_requested(self):
+    return False
+
   def current_line(self):
     return self._current_line
 
@@ -48,8 +54,11 @@ class TestClangPlugin(unittest.TestCase):
     self.editor = TestEditor()
     self.clang_plugin = libclang.ClangPlugin(self.editor, 0)
 
-  def jump_to_definition(self, source_file_name, start_line, start_column):
+  def open_test_file(self, source_file_name, start_line, start_column):
     self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
+
+  def jump_to_definition(self, source_file_name, start_line, start_column):
+    self.open_test_file(source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_definition()
 
   def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
@@ -75,6 +84,11 @@ class TestClangPlugin(unittest.TestCase):
     # For now ensure that we don't crash
     self.jump_to_definition("test_reference_in_macro.cpp", 9, 9)
     #self.assert_jumps_to_definition("test_reference_in_macro.cpp", 9, 9, "test_reference_in_macro.h", 3, 1)
+
+  def test_completion_triggers(self):
+    # For now ensure that we don't crash
+    self.open_test_file("test_incomplete.cpp", 7, 7)
+    self.clang_plugin.get_current_completions("")
 
 if __name__ == '__main__':
     unittest.main()

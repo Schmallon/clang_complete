@@ -762,7 +762,7 @@ class CompletionChunk:
 
     @property
     def spelling(self):
-        return _clang_getCompletionChunkText(self.cs, self.key).spelling
+        return _clang_getCompletionChunkText(self.cs, self.key)
 
     @property
     def kind(self):
@@ -1337,6 +1337,7 @@ _clang_codeCompleteGetDiagnostic.restype = Diagnostic
 _clang_getCompletionChunkText = lib.clang_getCompletionChunkText
 _clang_getCompletionChunkText.argtypes = [c_void_p, c_int]
 _clang_getCompletionChunkText.restype = _CXString
+_clang_getCompletionChunkText.errcheck = _CXString.from_result
 
 _clang_getCompletionChunkKind = lib.clang_getCompletionChunkKind
 _clang_getCompletionChunkKind.argtypes = [c_void_p, c_int]
