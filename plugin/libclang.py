@@ -541,7 +541,11 @@ class DefinitionFinder(object):
         if definition_or_declaration_cursor.is_definition():
           return definition_or_declaration_cursor
         else:
-          return definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
+          alternate_result = definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
+          if alternate_result:
+            return alternate_result
+          else:
+            return definition_or_declaration_cursor
       raise NoDefinitionFound
 
     for get_translation_units in [
