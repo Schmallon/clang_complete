@@ -303,7 +303,7 @@ class QuickFixListGenerator(object):
 
     if diagnostic.severity == diagnostic.Warning:
       type = 'W'
-    elif diagnostic.severity == diagnostic.Error:
+    elif diagnostic.severity == diagnostic.Error or diagnostic.severity == diagnostic.Fatal:
       type = 'E'
     else:
       return None
