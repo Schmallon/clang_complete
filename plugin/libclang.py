@@ -202,6 +202,8 @@ class ClangPlugin(object):
     translation_unit = self.translation_unit_accessor.get_current_translation_unit(update = True)
     if self.editor.filename() in self.translation_unit_accessor.translation_units:
       self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
+    else:
+      self.editor.display_message("File was not found in current translation unit")
 
   def get_current_completions(self, base):
     return self.completer.get_current_completions(base)
@@ -298,7 +300,7 @@ class QuickFixListGenerator(object):
       filename = diagnostic.location.file.name
     else:
       "hack: report errors without files. should nevertheless be in quickfix list"
-      print diagnostic.spelling
+      self.editor.display_message(diagnostic.spelling)
       filename = ""
 
     if diagnostic.severity == diagnostic.Warning:
@@ -320,7 +322,9 @@ class QuickFixListGenerator(object):
   def get_current_quickfix_list(self):
     if self.editor.filename() in self.translation_unit_accessor.translation_units:
       return self._get_quick_fix_list(self.translation_unit_accessor.translation_units[self.editor.filename()])
-    return []
+    else:
+      self.editor.display_message("File was not found in current translation unit")
+      return []
 
 class Completer(object):
 
