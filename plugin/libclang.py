@@ -237,6 +237,17 @@ class TranslationUnitAccessor(object):
 
     filename = file[0]
 
+    if filename in self.translation_units:
+      tu = self.translation_units[filename]
+      if update:
+        if self.editor.debug_enabled():
+          start = time.time()
+        tu.reparse([file])
+        if self.editor.debug_enabled():
+          elapsed = (time.time() - start)
+          self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
+      return tu
+
     if self.editor.debug_enabled():
       start = time.time()
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
