@@ -90,5 +90,14 @@ class TestClangPlugin(unittest.TestCase):
     self.open_test_file("test_incomplete.cpp", 7, 7)
     self.clang_plugin.get_current_completions("")
 
+  def test_repeated_tests(self):
+    "There are/used to be some memory allocation problems when re-parsing source files."
+    for i in range(1, 25):
+      self.jump_to_definition("test_defined_in_another_source.cpp", 5, 3)
+      self.jump_to_definition("test_defined_in_same_file.cpp", 7, 3)
+      self.jump_to_definition("test_defined_in_header.cpp", 5, 3)
+      self.jump_to_definition("test_declared_in_header.cpp", 5, 3)
+      self.jump_to_definition("test_reference_in_macro.cpp", 9, 9)
+
 if __name__ == '__main__':
     unittest.main()
