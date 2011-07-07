@@ -493,7 +493,7 @@ class DefinitionFinder(object):
         self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
 
       result = cursor.get_definition()
-      if not result and cursor.kind.is_reference:
+      if not result and cursor.get_cursor_referenced():
         result = cursor.get_cursor_referenced()
         if result:
           self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
