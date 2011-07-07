@@ -99,5 +99,10 @@ class TestClangPlugin(unittest.TestCase):
       self.jump_to_definition("test_declared_in_header.cpp", 5, 3)
       self.jump_to_definition("test_reference_in_macro.cpp", 9, 9)
 
+  def test_defined_in_another_source_declaration_starting_with_other_reference(self):
+    self.assert_jumps_to_definition(
+        "test_defined_in_another_source_declaration_starting_with_other_reference.cpp", 5, 3,
+        "defined_in_another_source_declaration_starting_with_other_reference.cpp", 3, 1)
+
 if __name__ == '__main__':
     unittest.main()
