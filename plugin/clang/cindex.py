@@ -659,6 +659,9 @@ class Cursor(Structure):
     def get_semantic_parent(self):
       return Cursor_semantic_parent(self)
 
+    def get_lexical_parent(self):
+      return Cursor_lexical_parent(self)
+
     def get_canonical(self):
       return Cursor_canonical(self)
 
@@ -1226,6 +1229,10 @@ Cursor_def.errcheck = Cursor.from_result
 Cursor_semantic_parent = lib.clang_getCursorSemanticParent
 Cursor_semantic_parent.argtypes = [Cursor]
 Cursor_semantic_parent.restype = Cursor
+
+Cursor_lexical_parent = lib.clang_getCursorLexicalParent
+Cursor_lexical_parent.argtypes = [Cursor]
+Cursor_lexical_parent.restype = Cursor
 
 Cursor_canonical = lib.clang_getCanonicalCursor
 Cursor_canonical.argtypes = [Cursor]
