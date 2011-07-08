@@ -1101,6 +1101,9 @@ class TranslationUnit(ClangObject):
     def getLocation(self, file, line, column):
         return TranslationUnit_getLocation(self, file, line, column)
 
+    def getLocationForOffset(self, file, offset):
+        return TranslationUnit_getLocationForOffset(self, file, offset)
+
     def getFile(self, filename):
         file =  TranslationUnit_getFile(self, filename)
         return File(file)
@@ -1301,6 +1304,11 @@ TranslationUnit_spelling.errcheck = _CXString.from_result
 TranslationUnit_getLocation = lib.clang_getLocation
 TranslationUnit_getLocation.argtypes = [TranslationUnit, File, c_uint, c_uint]
 TranslationUnit_getLocation.restype = SourceLocation
+
+TranslationUnit_getLocationForOffset = lib.clang_getLocationForOffset
+TranslationUnit_getLocationForOffset.argtypes = [TranslationUnit, File, c_uint]
+TranslationUnit_getLocationForOffset.restype = SourceLocation
+
 
 TranslationUnit_getFile = lib.clang_getFile
 TranslationUnit_getFile.argtypes = [TranslationUnit, c_char_p]
