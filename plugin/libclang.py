@@ -3,6 +3,7 @@ import time
 import re
 import threading
 import os
+import sys
 
 """
 Ideas:
@@ -47,6 +48,12 @@ Ideas:
    - build a testing-editor infrastructure
 
 """
+
+def print_cursor_with_children(self, cursor, n = 0):
+  sys.stdout.write(n * " ")
+  print(str(cursor.kind.name))
+  for child in cursor.get_children():
+    print_cursor_with_children(child, n + 1)
 
 class Editor(object):
   """
@@ -499,6 +506,7 @@ class DefinitionFinder(object):
           self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
       if result:
         self._store_referencing_translation_unit(result)
+
       return result
 
     def _store_referencing_translation_unit(self, definition_cursor):
