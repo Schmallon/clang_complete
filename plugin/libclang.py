@@ -527,7 +527,6 @@ class DefinitionFinder(object):
     first valid one found
     """
 
-
     def current_translation_units():
       try:
         return [self.translation_unit_accessor.get_current_translation_unit()]
@@ -552,11 +551,21 @@ class DefinitionFinder(object):
       current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
       return self._find_definition_in_translation_unit(translation_unit, current_location)
 
-    def definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor):
-      declaration_location = definition_or_declaration_cursor.extent.start
-      for alternate_translation_unit in guess_alternate_translation_units(declaration_location.file.name)():
-        declaration_location_in_alternate_translation_unit = alternate_translation_unit.getLocation(declaration_location.file, declaration_location.line, declaration_location.column)
-        return self._find_definition_in_translation_unit(alternate_translation_unit, declaration_location_in_alternate_translation_unit)
+    def find_corresponding_cursor(cursor, other_translation_unit):
+      file = cursor.extent.start.file
+      for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
+        position = other_translation_unit.getLocationForOffset(file, offset)
+        cursor_at_position = other_translation_unit.getCursor(position)
+        if cursor_at_position.get_usr() == cursor.get_usr():
+          return cursor_at_position
+      return None
+
+    def find_corresponding_cursor_in_alternate_translation_unit(cursor):
+      for alternate_translation_unit in guess_alternate_translation_units(cursor.extent.start.file.name)():
+        result = find_corresponding_cursor(cursor, alternate_translation_unit)
+        if result:
+          return result
+      return None
 
     def definition_of_current_cusor_in(translation_unit):
       definition_or_declaration_cursor = definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
@@ -564,9 +573,9 @@ class DefinitionFinder(object):
         if definition_or_declaration_cursor.is_definition():
           return definition_or_declaration_cursor
         else:
-          alternate_result = definition_or_declaration_cursor_of_current_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
+          alternate_result = find_corresponding_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
           if alternate_result:
-            return alternate_result
+            return alternate_result.get_definition()
           else:
             return definition_or_declaration_cursor
       raise NoDefinitionFound
