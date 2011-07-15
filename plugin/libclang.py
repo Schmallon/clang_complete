@@ -482,14 +482,12 @@ class DefinitionFinder(object):
 
   def __init__(self, editor, translation_unit_accessor):
     self.editor = editor
-    self.referencing_translation_units = {}
     self.translation_unit_accessor = translation_unit_accessor
 
   class FindDefinitionInTranslationUnit(object):
-    def __init__(self, editor, translation_unit, referencing_translation_units, location):
+    def __init__(self, editor, translation_unit, location):
       self.editor = editor
       self.translation_unit = translation_unit
-      self.referencing_translation_units = referencing_translation_units
       self.location = location
 
     def _get_definition_cursor(self):
@@ -505,21 +503,13 @@ class DefinitionFinder(object):
         result = cursor.get_cursor_referenced()
         if result:
           self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
-      if result:
-        self._store_referencing_translation_unit(result)
 
       return result
-
-    def _store_referencing_translation_unit(self, definition_cursor):
-      definition_location = definition_cursor.extent.start
-      definition_filename = definition_location.file.name
-      self.referencing_translation_units[definition_filename] = self.translation_unit
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
     return self.FindDefinitionInTranslationUnit(
         self.editor,
         translation_unit,
-        self.referencing_translation_units,
         location)._get_definition_cursor()
 
   def _find_first_definition_cursor(self):
@@ -532,12 +522,6 @@ class DefinitionFinder(object):
       try:
         return [self.translation_unit_accessor.get_current_translation_unit()]
       except NoCurrentTranslationUnit:
-        return []
-
-    def referencing_translation_unit():
-      try:
-        return [self.referencing_translation_units[self.editor.filename()]]
-      except KeyError:
         return []
 
     def guess_alternate_translation_units(filename):
@@ -584,7 +568,6 @@ class DefinitionFinder(object):
     for get_translation_units in [
         guess_alternate_translation_units(self.editor.filename()),
         current_translation_units,
-        referencing_translation_unit,
         ]:
       for translation_unit in get_translation_units():
         try:
