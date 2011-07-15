@@ -235,7 +235,8 @@ class TranslationUnitAccessor(object):
   def get_translation_unit_for_filename(self, filename):
     try:
       file = (filename, open(filename, 'r').read())
-      return self.get_translation_unit(file, True)
+      "We must not update translation units while others are still referencing them"
+      return self.get_translation_unit(file, update = False)
     except IOError:
       return None
 
