@@ -478,11 +478,22 @@ class DeclarationFinder(object):
 class NoDefinitionFound(Exception):
   pass
 
+
+def get_definition_or_reference(cursor):
+  result = cursor.get_definition()
+  if not result and cursor.get_cursor_referenced():
+    #self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
+    result = cursor.get_cursor_referenced()
+  return result
+
+
 class DefinitionFinder(object):
 
   def __init__(self, editor, translation_unit_accessor):
     self.editor = editor
     self.translation_unit_accessor = translation_unit_accessor
+
+
 
   class FindDefinitionInTranslationUnit(object):
     def __init__(self, editor, translation_unit, location):
@@ -498,13 +509,7 @@ class DefinitionFinder(object):
       if cursor.kind.is_unexposed:
         self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
 
-      result = cursor.get_definition()
-      if not result and cursor.get_cursor_referenced():
-        result = cursor.get_cursor_referenced()
-        if result:
-          self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
-
-      return result
+      return get_definition_or_reference(cursor)
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
     return self.FindDefinitionInTranslationUnit(
@@ -555,13 +560,17 @@ class DefinitionFinder(object):
     def definition_of_current_cusor_in(translation_unit):
       definition_or_declaration_cursor = definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
       if definition_or_declaration_cursor:
+        self.editor.display_message("Found either a definition or a declaration")
         if definition_or_declaration_cursor.is_definition():
           return definition_or_declaration_cursor
         else:
+          self.editor.display_message("The first result is not a definition. Searching for definition of first result")
           alternate_result = find_corresponding_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
           if alternate_result:
-            return alternate_result.get_definition()
+            self.editor.display_message("Jumping to alternate result")
+            return get_definition_or_reference(alternate_result)
           else:
+            self.editor.display_message("Did not find an alternate result. Jumping to initial result.")
             return definition_or_declaration_cursor
       raise NoDefinitionFound
 
