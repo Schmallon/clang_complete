@@ -194,9 +194,11 @@ class ClangPlugin(object):
     self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
 
   def jump_to_definition(self):
+    self.translation_unit_accessor.clear_caches()
     self.definition_finder.jump_to_definition()
 
   def jump_to_declaration(self):
+    self.translation_unit_accessor.clear_caches()
     self.declaration_finder.jump_to_declaration()
 
   def update_current_diagnostics(self):
@@ -239,6 +241,9 @@ class TranslationUnitAccessor(object):
       return self.get_translation_unit(file, update = False)
     except IOError:
       return None
+
+  def clear_caches(self):
+    self.translation_units = dict()
 
   def get_translation_unit(self, file, update = False):
     args = self.editor.user_options()
