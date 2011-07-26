@@ -548,8 +548,9 @@ class DefinitionFinder(object):
 
     def find_corresponding_cursor(cursor, other_translation_unit):
       file = cursor.extent.start.file
+      other_file = other_translation_unit.getFile(file.name)
       for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-        position = other_translation_unit.getLocationForOffset(file, offset)
+        position = other_translation_unit.getLocationForOffset(other_file, offset)
         cursor_at_position = other_translation_unit.getCursor(position)
         if cursor_at_position.get_usr() == cursor.get_usr():
           return cursor_at_position
