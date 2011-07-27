@@ -139,6 +139,14 @@ class VimInterface(Editor):
     return 0 != int(self._vim.eval('complete_check()'))
 
   def display_message(self, message):
+    self._print_to_file(message)
+
+  def _print_to_file(self, message):
+    f = open("log.txt", "a")
+    f.write(message + "\n")
+    f.close()
+
+  def _display_in_editor(self, message):
     print(message)
 
   def higlight_range(self, start, end):
@@ -263,7 +271,7 @@ class TranslationUnitAccessor(object):
 
     if self.editor.debug_enabled():
       start = time.time()
-    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble # | TranslationUnit.CacheCompletionResults
+    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
     tu = self.index.parse(filename, args, [file], flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
@@ -358,6 +366,7 @@ class Completer(object):
     self.complete_flags = complete_flags
 
   def get_current_completion_results(self, line, column):
+    self.editor.display_message("Getting completions")
     translation_unit = self.translation_unit_accessor.get_current_translation_unit()
     current_file = self.editor.current_file()
     if self.editor.debug_enabled():
