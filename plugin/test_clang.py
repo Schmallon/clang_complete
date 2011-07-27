@@ -54,11 +54,11 @@ class TestClangPlugin(unittest.TestCase):
     self.editor = TestEditor()
     self.clang_plugin = libclang.ClangPlugin(self.editor, 0)
 
-  def open_test_file(self, source_file_name, start_line, start_column):
+  def open_source_file(self, source_file_name, start_line, start_column):
     self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
 
   def jump_to_definition(self, source_file_name, start_line, start_column):
-    self.open_test_file(source_file_name, start_line, start_column)
+    self.open_source_file(source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_definition()
 
   def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
@@ -87,7 +87,7 @@ class TestClangPlugin(unittest.TestCase):
 
   def test_completion_triggers(self):
     # For now ensure that we don't crash
-    self.open_test_file("test_incomplete.cpp", 7, 7)
+    self.open_source_file("test_incomplete.cpp", 7, 7)
     self.clang_plugin.get_current_completions("")
 
   def test_repeated_tests(self):
