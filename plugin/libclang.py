@@ -609,8 +609,8 @@ class DefinitionFinder(object):
 
 class DefinitionFileFinder(object):
   """
-  Given the name of a header file (foo.h), tries to find the corresponding definition
-  file (e.g. foo.cpp) somewhere nearby in the file system.
+  Given the name of a file (e.g. foo.h), finds similarly named files (e.g. foo.cpp,
+  fooI.cpp) somewhere nearby in the file system.
   """
   def __init__(self, editor, target_file_name):
     self.editor = editor
@@ -651,9 +651,30 @@ class DefinitionFileFinder(object):
     except OSError:
       pass
 
+  def _distance(self, a, b):
+    "Calculates the Levenshtein distance between a and b."
+    "Taken from http://www.koders.com/python/fid508C865D6E926EC0C45A7C4872E4F57AB33381B0.aspx?s=crawler"
+    n, m = len(a), len(b)
+    if n > m:
+        # Make sure n <= m, to use O(min(n,m)) space
+        a,b = b,a
+        n,m = m,n
+
+    current = range(n+1)
+    for i in range(1,m+1):
+        previous, current = current, [i]+[0]*m
+        for j in range(1,n+1):
+            add, delete = previous[j]+1, current[j-1]+1
+            change = previous[j-1]
+            if a[j-1] != b[i-1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+
+    return current[n]
+
   def _is_definition_file_name(self, file_name):
     split_file_name = os.path.splitext(file_name)
-    return (split_file_name[0] == self.split_target[0] and
+    return (self._distance(split_file_name[0], self.split_target[0]) < 3 and
         split_file_name[1] in ('.cpp', 'c'))
 
 

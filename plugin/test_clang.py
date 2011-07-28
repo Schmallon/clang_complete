@@ -1,6 +1,6 @@
 import sys
-#sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
-sys.argv = ["/Users/mkl/projects/llvm/debug_build/Debug+Asserts/lib"]
+sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
+#sys.argv = ["/Users/mkl/projects/llvm/debug_build/Debug+Asserts/lib"]
 import libclang
 import unittest
 
@@ -103,6 +103,11 @@ class TestClangPlugin(unittest.TestCase):
     self.assert_jumps_to_definition(
         "test_defined_in_another_source_declaration_starting_with_other_reference.cpp", 5, 3,
         "defined_in_another_source_declaration_starting_with_other_reference.cpp", 3, 1)
+
+  def test_jump_from_source_included_by_header(self):
+    self.assert_jumps_to_definition(
+        "defined_in_source_included_by_headerX.cpp", 3, 3,
+        "defined_in_source_included_by_header.cpp", 3, 1)
 
 if __name__ == '__main__':
     unittest.main()
