@@ -201,12 +201,15 @@ class ClangPlugin(object):
         self.translation_unit_accessor)
     self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
 
-  def jump_to_definition(self):
+  def file_changed(self):
+    self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
+    pass
+
+  def jump_to_definition(self):
     self.definition_finder.jump_to_definition()
 
   def jump_to_declaration(self):
-    self.translation_unit_accessor.clear_caches()
     self.declaration_finder.jump_to_declaration()
 
   def update_current_diagnostics(self):

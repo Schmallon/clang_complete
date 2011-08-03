@@ -100,9 +100,9 @@ function! s:ClangCompleteInit()
   endif
 
   " Disable every autocmd that could have been set.
-  augroup ClangComplete
-    autocmd!
-  augroup end
+  "augroup ClangComplete
+    "autocmd!
+  "augroup end
 
   let b:should_overload = 0
   let b:my_changedtick = b:changedtick
@@ -230,6 +230,13 @@ function! s:initClangCompletePython()
   exe 'pyfile ' . s:plugin_path . '/libclang.py'
   python vim_interface = VimInterface()
   python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
+
+  augroup ClangComplete
+    "Does not really detect all changes, e.g. yanks. Any better ideas?
+    autocmd FileChangedShellPost * python clang_plugin.file_changed()
+    autocmd BufWritePost * python clang_plugin.file_changed()
+    autocmd InsertEnter * python clang_plugin.file_changed()
+  augroup end
 endfunction
 
 function! s:GetKind(proto)
