@@ -44,9 +44,9 @@ Ideas:
    - an alternate file (.h -> .cpp)
    - *not required* referencing translation unit, as we already were there
 
-  - Test this code
-   - build a testing-editor infrastructure
-
+  - Integrate Jump-To-Definition with tags-based searching
+   - Allow finding definitions of commented code
+   - Macros
 """
 
 def print_cursor_with_children(self, cursor, n = 0):
@@ -207,8 +207,11 @@ class ClangPlugin(object):
     pass
 
   def file_opened(self):
-    self.editor.display_message("Noticed opening of new file")
+    self.editor.display_message("Noticed opening of new file, TODO: Ensure we don't try to produce TUs for the same file at the same time")
     self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file(), False)
+    finder = DefinitionFileFinder(self.editor, self.editor.filename())
+    for file_name in finder.definition_files():
+      self.translation_unit_accessor.start_get_translation_unit_thread(self.translation_unit_accessor.get_file_for_filename(file_name), False)
 
   def jump_to_definition(self):
     definition_cursor = self.definition_finder.find_first_definition_cursor()
@@ -547,8 +550,6 @@ class DefinitionFinder(object):
   def __init__(self, editor, translation_unit_accessor):
     self.editor = editor
     self.translation_unit_accessor = translation_unit_accessor
-
-
 
   class FindDefinitionInTranslationUnit(object):
     def __init__(self, editor, translation_unit, location):
