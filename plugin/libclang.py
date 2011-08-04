@@ -235,6 +235,61 @@ class ClangPlugin(object):
 class NoCurrentTranslationUnit(Exception):
   pass
 
+class TranslationUnitParserThread(threading.Thread):
+  def __init__(self, translation_unit_accessor, file, update):
+    threading.Thread.__init__(self)
+    self.file = file
+    self.update = update
+    self.result = None
+    self.translation_unit_accessor = translation_unit_accessor
+    self.editor = translation_unit_accessor.editor
+    self.index = translation_unit_accessor.index
+    self.translation_units = translation_unit_accessor.translation_units
+
+  def run(self):
+    args = self.editor.user_options()
+
+    filename = self.file[0]
+
+    self.editor.display_message("Getting translation unit for " + filename)
+
+    if filename in self.translation_units:
+      tu = self.translation_units[filename]
+      if self.update:
+        if self.editor.debug_enabled():
+          start = time.time()
+        tu.reparse([self.file])
+        if self.editor.debug_enabled():
+          elapsed = (time.time() - start)
+          self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
+      return tu
+
+    if self.editor.debug_enabled():
+      start = time.time()
+    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
+    tu = self.index.parse(filename, args, [self.file], flags)
+    if self.editor.debug_enabled():
+      elapsed = (time.time() - start)
+      self.editor.display_message("LibClang - First parse: " + str(elapsed))
+
+    if tu == None:
+      self.editor.display_message("Cannot parse this source file. The following arguments " \
+          + "are used for clang: " + " ".join(args))
+      return None
+
+    self.translation_units[filename] = tu
+
+    # Reparse to initialize the PCH cache even for auto completion
+    # This should be done by index.parse(), however it is not.
+    # So we need to reparse ourselves.
+    if self.editor.debug_enabled():
+      start = time.time()
+    tu.reparse([self.file])
+    if self.editor.debug_enabled():
+      elapsed = (time.time() - start)
+      self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
+    self.result = tu
+
 class TranslationUnitAccessor(object):
 
   def __init__(self, editor):
@@ -261,47 +316,12 @@ class TranslationUnitAccessor(object):
     self.translation_units = dict()
 
   def get_translation_unit(self, file, update = False):
-    args = self.editor.user_options()
+    thread = TranslationUnitParserThread(self, file, update)
 
-    filename = file[0]
-
-    if filename in self.translation_units:
-      tu = self.translation_units[filename]
-      if update:
-        if self.editor.debug_enabled():
-          start = time.time()
-        tu.reparse([file])
-        if self.editor.debug_enabled():
-          elapsed = (time.time() - start)
-          self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
-      return tu
-
-    if self.editor.debug_enabled():
-      start = time.time()
-    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
-    tu = self.index.parse(filename, args, [file], flags)
-    if self.editor.debug_enabled():
-      elapsed = (time.time() - start)
-      self.editor.display_message("LibClang - First parse: " + str(elapsed))
-
-    if tu == None:
-      self.editor.display_message("Cannot parse this source file. The following arguments " \
-          + "are used for clang: " + " ".join(args))
-      return None
-
-    self.translation_units[filename] = tu
-
-    # Reparse to initialize the PCH cache even for auto completion
-    # This should be done by index.parse(), however it is not.
-    # So we need to reparse ourselves.
-    if self.editor.debug_enabled():
-      start = time.time()
-    tu.reparse([file])
-    if self.editor.debug_enabled():
-      elapsed = (time.time() - start)
-      self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
-    return tu
-
+    thread.start()
+    while thread.is_alive():
+      thread.join(0.01)
+    return thread.result
 
 class DiagnosticsHighlighter(object):
 
