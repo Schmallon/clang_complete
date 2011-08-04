@@ -207,7 +207,11 @@ class ClangPlugin(object):
     pass
 
   def jump_to_definition(self):
-    self.definition_finder.jump_to_definition()
+    definition_cursor = self.definition_finder.find_first_definition_cursor()
+    if definition_cursor:
+      self.editor.jump_to_cursor(definition_cursor)
+    else:
+      self.editor.display_message("No definition available")
 
   def jump_to_declaration(self):
     self.declaration_finder.jump_to_declaration()
@@ -534,7 +538,7 @@ class DefinitionFinder(object):
         translation_unit,
         location)._get_definition_cursor()
 
-  def _find_first_definition_cursor(self):
+  def find_first_definition_cursor(self):
     """
     Tries to find a definition looking in various translation units. Returns the
     first valid one found
@@ -602,13 +606,6 @@ class DefinitionFinder(object):
         except NoDefinitionFound:
           pass
     return None
-
-  def jump_to_definition(self):
-    definition_cursor = self._find_first_definition_cursor()
-    if definition_cursor:
-      self.editor.jump_to_cursor(definition_cursor)
-    else:
-      self.editor.display_message("No definition available")
 
 class DefinitionFileFinder(object):
   """
