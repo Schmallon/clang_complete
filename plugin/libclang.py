@@ -208,10 +208,10 @@ class ClangPlugin(object):
 
   def file_opened(self):
     self.editor.display_message("Noticed opening of new file, TODO: Ensure we don't try to produce TUs for the same file at the same time")
-    self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file(), False)
+    self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file())
     finder = DefinitionFileFinder(self.editor, self.editor.filename())
     for file_name in finder.definition_files():
-      self.translation_unit_accessor.start_get_translation_unit_thread(self.translation_unit_accessor.get_file_for_filename(file_name), False)
+      self.translation_unit_accessor.start_get_translation_unit_thread(self.translation_unit_accessor.get_file_for_filename(file_name))
 
   def jump_to_definition(self):
     definition_cursor = self.definition_finder.find_first_definition_cursor()
@@ -224,13 +224,15 @@ class ClangPlugin(object):
     self.declaration_finder.jump_to_declaration()
 
   def update_current_diagnostics(self):
-    self.translation_unit_accessor.get_current_translation_unit(update = True)
+    self.translation_unit_accessor.clear_caches()
+    self.translation_unit_accessor.get_current_translation_unit()
 
   def get_current_quickfix_list(self):
     return self.quick_fix_list_generator.get_current_quickfix_list()
 
   def highlight_current_diagnostics(self):
-    translation_unit = self.translation_unit_accessor.get_current_translation_unit(update = True)
+    self.translation_unit_accessor.clear_caches()
+    translation_unit = self.translation_unit_accessor.get_current_translation_unit()
     if self.editor.filename() in self.translation_unit_accessor.translation_units:
       self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
     else:
@@ -243,19 +245,20 @@ class NoCurrentTranslationUnit(Exception):
   pass
 
 class TranslationUnitParserThread(threading.Thread):
-  def __init__(self, translation_unit_accessor, file, update):
+  def __init__(self, translation_unit_accessor, file):
     threading.Thread.__init__(self)
     self.file = file
-    self.update = update
     self.result = None
     self.translation_unit_accessor = translation_unit_accessor
     self.editor = translation_unit_accessor.editor
     self.index = translation_unit_accessor.index
     self.translation_units = translation_unit_accessor.translation_units
+    self.up_to_date = translation_unit_accessor.up_to_date
 
   def run(self):
     self.result = self._get_translation_unit()
     self.editor.display_message("Finished getting translation unit")
+    self.up_to_date.add(self._filename())
 
   def _get_translation_unit(self):
     self.editor.display_message("Getting translation unit for " + self._filename())
@@ -269,7 +272,8 @@ class TranslationUnitParserThread(threading.Thread):
 
   def _reuse_existing_translation_unit(self):
     tu = self.translation_units[self._filename()]
-    if self.update:
+    if self._filename() not in self.up_to_date:
+      self.editor.display_message("Translation unit is possibly not up to date. Reparse is due")
       if self.editor.debug_enabled():
         start = time.time()
       tu.reparse([self.file])
@@ -306,16 +310,19 @@ class TranslationUnitParserThread(threading.Thread):
       self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
     return tu
 
+
+
 class TranslationUnitAccessor(object):
 
   def __init__(self, editor):
     self.index = Index.create()
     self.translation_units = dict()
+    self.up_to_date = set()
     self.editor = editor
 
-  def get_current_translation_unit(self, update = False):
+  def get_current_translation_unit(self):
     current_file = self.editor.current_file()
-    result = self.get_translation_unit(current_file, update)
+    result = self.get_translation_unit(current_file)
     if result:
       return result
     raise NoCurrentTranslationUnit
@@ -326,21 +333,20 @@ class TranslationUnitAccessor(object):
   def get_translation_unit_for_filename(self, filename):
     try:
       file = self.get_file_for_filename(filename)
-      "We must not update translation units while others are still referencing them"
-      return self.get_translation_unit(file, update = False)
+      return self.get_translation_unit(file)
     except IOError:
       return None
 
   def clear_caches(self):
-    self.translation_units = dict()
+    self.up_to_date = set()
 
-  def start_get_translation_unit_thread(self, file, update):
-    thread = TranslationUnitParserThread(self, file, update)
+  def start_get_translation_unit_thread(self, file):
+    thread = TranslationUnitParserThread(self, file)
     thread.start()
     return thread
 
-  def get_translation_unit(self, file, update = False):
-    thread = self.start_get_translation_unit_thread(file, update)
+  def get_translation_unit(self, file):
+    thread = self.start_get_translation_unit_thread(file)
     while thread.is_alive():
       thread.join(0.01)
     return thread.result
