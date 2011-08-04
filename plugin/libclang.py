@@ -254,10 +254,10 @@ class TranslationUnitParserThread(threading.Thread):
     self.translation_units = translation_unit_accessor.translation_units
 
   def run(self):
-    self.result = self.get_translation_unit()
+    self.result = self._get_translation_unit()
     self.editor.display_message("Finished getting translation unit")
 
-  def get_translation_unit(self):
+  def _get_translation_unit(self):
     args = self.editor.user_options()
 
     filename = self.file[0]
