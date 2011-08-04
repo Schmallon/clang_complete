@@ -236,6 +236,7 @@ function! s:initClangCompletePython()
     autocmd FileChangedShellPost * python clang_plugin.file_changed()
     autocmd BufWritePost * python clang_plugin.file_changed()
     autocmd InsertEnter * python clang_plugin.file_changed()
+    autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
   augroup end
 endfunction
 

@@ -206,6 +206,10 @@ class ClangPlugin(object):
     self.translation_unit_accessor.clear_caches()
     pass
 
+  def file_opened(self):
+    self.editor.display_message("Noticed opening of new file")
+    self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file(), False)
+
   def jump_to_definition(self):
     definition_cursor = self.definition_finder.find_first_definition_cursor()
     if definition_cursor:
@@ -247,6 +251,10 @@ class TranslationUnitParserThread(threading.Thread):
     self.translation_units = translation_unit_accessor.translation_units
 
   def run(self):
+    self.result = self.get_translation_unit()
+    self.editor.display_message("Finished getting translation unit")
+
+  def get_translation_unit(self):
     args = self.editor.user_options()
 
     filename = self.file[0]
@@ -288,7 +296,7 @@ class TranslationUnitParserThread(threading.Thread):
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
       self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
-    self.result = tu
+    return tu
 
 class TranslationUnitAccessor(object):
 
