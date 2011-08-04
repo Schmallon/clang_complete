@@ -258,27 +258,32 @@ class TranslationUnitParserThread(threading.Thread):
     self.editor.display_message("Finished getting translation unit")
 
   def _get_translation_unit(self):
-    args = self.editor.user_options()
+    self.editor.display_message("Getting translation unit for " + self._filename())
+    if self._filename() in self.translation_units:
+      return self._reuse_existing_translation_unit()
+    else:
+      return self._read_new_translation_unit()
 
-    filename = self.file[0]
+  def _filename(self):
+    return self.file[0]
 
-    self.editor.display_message("Getting translation unit for " + filename)
+  def _reuse_existing_translation_unit(self):
+    tu = self.translation_units[self._filename()]
+    if self.update:
+      if self.editor.debug_enabled():
+        start = time.time()
+      tu.reparse([self.file])
+      if self.editor.debug_enabled():
+        elapsed = (time.time() - start)
+        self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
+    return tu
 
-    if filename in self.translation_units:
-      tu = self.translation_units[filename]
-      if self.update:
-        if self.editor.debug_enabled():
-          start = time.time()
-        tu.reparse([self.file])
-        if self.editor.debug_enabled():
-          elapsed = (time.time() - start)
-          self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
-      return tu
-
+  def _read_new_translation_unit(self):
     if self.editor.debug_enabled():
       start = time.time()
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
-    tu = self.index.parse(filename, args, [self.file], flags)
+    args = self.editor.user_options()
+    tu = self.index.parse(self._filename(), args, [self.file], flags)
     if self.editor.debug_enabled():
       elapsed = (time.time() - start)
       self.editor.display_message("LibClang - First parse: " + str(elapsed))
@@ -288,7 +293,7 @@ class TranslationUnitParserThread(threading.Thread):
           + "are used for clang: " + " ".join(args))
       return None
 
-    self.translation_units[filename] = tu
+    self.translation_units[self._filename()] = tu
 
     # Reparse to initialize the PCH cache even for auto completion
     # This should be done by index.parse(), however it is not.
