@@ -312,9 +312,12 @@ class TranslationUnitAccessor(object):
       return result
     raise NoCurrentTranslationUnit
 
+  def get_file_for_filename(self, filename):
+    return (filename, open(filename, 'r').read())
+
   def get_translation_unit_for_filename(self, filename):
     try:
-      file = (filename, open(filename, 'r').read())
+      file = self.get_file_for_filename(filename)
       "We must not update translation units while others are still referencing them"
       return self.get_translation_unit(file, update = False)
     except IOError:
