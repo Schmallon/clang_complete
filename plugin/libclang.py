@@ -315,10 +315,13 @@ class TranslationUnitAccessor(object):
   def clear_caches(self):
     self.translation_units = dict()
 
-  def get_translation_unit(self, file, update = False):
+  def start_get_translation_unit_thread(self, file, update):
     thread = TranslationUnitParserThread(self, file, update)
-
     thread.start()
+    return thread
+
+  def get_translation_unit(self, file, update = False):
+    thread = self.start_get_translation_unit_thread(file, update)
     while thread.is_alive():
       thread.join(0.01)
     return thread.result
