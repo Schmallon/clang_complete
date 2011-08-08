@@ -4,6 +4,7 @@ import re
 import threading
 import os
 import sys
+import Levenshtein
 
 """
 Ideas:
@@ -698,25 +699,7 @@ class DefinitionFileFinder(object):
       pass
 
   def _distance(self, a, b):
-    "Calculates the Levenshtein distance between a and b."
-    "Taken from http://www.koders.com/python/fid508C865D6E926EC0C45A7C4872E4F57AB33381B0.aspx?s=crawler"
-    n, m = len(a), len(b)
-    if n > m:
-        # Make sure n <= m, to use O(min(n,m)) space
-        a,b = b,a
-        n,m = m,n
-
-    current = range(n+1)
-    for i in range(1,m+1):
-        previous, current = current, [i]+[0]*m
-        for j in range(1,n+1):
-            add, delete = previous[j]+1, current[j-1]+1
-            change = previous[j-1]
-            if a[j-1] != b[i-1]:
-                change = change + 1
-            current[j] = min(add, delete, change)
-
-    return current[n]
+    return Levenshtein.distance(a, b)
 
   def _is_definition_file_name(self, file_name):
     split_file_name = os.path.splitext(file_name)
