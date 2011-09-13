@@ -12,6 +12,9 @@ class TestEditor(libclang.Editor):
     self._filename = 'invalid filename'
     self._contents = 'invalid contents'
 
+  def excluded_directories(self):
+    return []
+
   def sort_algorithm(self):
     return 'priority'
 

@@ -118,6 +118,9 @@ class VimInterface(Editor):
     user_options_local = self._split_options(self._get_variable("b:clang_user_options"))
     return user_options_global + user_options_local
 
+  def excluded_directories(self):
+    return self._split_options(self._get_variable("g:clang_excluded_directories"))
+
   def filename(self):
     return self._vim.current.buffer.name
 
@@ -688,7 +691,7 @@ class DefinitionFileFinder(object):
     try:
       for file_name in os.listdir(directory_name):
         absolute_name = os.path.abspath(os.path.join(directory_name, file_name))
-        if os.path.isdir(absolute_name):
+        if os.path.isdir(absolute_name) and file_name not in self.editor.excluded_directories():
           if absolute_name not in self.visited_directories:
             for result in self._search_directory_and_subdirectories(absolute_name):
               yield result
