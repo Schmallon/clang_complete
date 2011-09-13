@@ -593,71 +593,71 @@ class DefinitionFinder(object):
         translation_unit,
         location)._get_definition_cursor()
 
+  def _current_translation_units(self):
+    try:
+      return [self.translation_unit_accessor.get_current_translation_unit()]
+    except NoCurrentTranslationUnit:
+      return []
+
+  def _guess_alternate_translation_units(self, filename):
+    def f():
+      finder = DefinitionFileFinder(self.editor, filename)
+      return filter(lambda x: x is not None,
+          map(self.translation_unit_accessor.get_translation_unit_for_filename,
+            finder.definition_files()))
+    return f
+
+  def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
+    current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
+    return self._find_definition_in_translation_unit(translation_unit, current_location)
+
+  def _find_corresponding_cursor(self, cursor, other_translation_unit):
+    file = cursor.extent.start.file
+    other_file = other_translation_unit.getFile(file.name)
+    for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
+      position = other_translation_unit.getLocationForOffset(other_file, offset)
+      cursor_at_position = other_translation_unit.getCursor(position)
+      if cursor_at_position.get_usr() == cursor.get_usr():
+        return cursor_at_position
+    return None
+
+  def _find_corresponding_cursor_in_alternate_translation_unit(self, cursor):
+    for alternate_translation_unit in self._guess_alternate_translation_units(cursor.extent.start.file.name)():
+      result = self._find_corresponding_cursor(cursor, alternate_translation_unit)
+      if result:
+        return result
+    return None
+
+  def _definition_of_current_cusor_in(self, translation_unit):
+    definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
+    if definition_or_declaration_cursor:
+      self.editor.display_message("Found either a definition or a declaration")
+      if definition_or_declaration_cursor.is_definition():
+        return definition_or_declaration_cursor
+      else:
+        self.editor.display_message("The first result is not a definition. Searching for definition of first result")
+        alternate_result = self._find_corresponding_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
+        if alternate_result:
+          self.editor.display_message("Jumping to alternate result")
+          return get_definition_or_reference(alternate_result)
+        else:
+          self.editor.display_message("Did not find an alternate result. Jumping to initial result.")
+          return definition_or_declaration_cursor
+    raise NoDefinitionFound
+
   def find_first_definition_cursor(self):
     """
     Tries to find a definition looking in various translation units. Returns the
     first valid one found
     """
 
-    def current_translation_units():
-      try:
-        return [self.translation_unit_accessor.get_current_translation_unit()]
-      except NoCurrentTranslationUnit:
-        return []
-
-    def guess_alternate_translation_units(filename):
-      def f():
-        finder = DefinitionFileFinder(self.editor, filename)
-        return filter(lambda x: x is not None,
-            map(self.translation_unit_accessor.get_translation_unit_for_filename,
-              finder.definition_files()))
-      return f
-
-    def definition_or_declaration_cursor_of_current_cursor_in(translation_unit):
-      current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
-      return self._find_definition_in_translation_unit(translation_unit, current_location)
-
-    def find_corresponding_cursor(cursor, other_translation_unit):
-      file = cursor.extent.start.file
-      other_file = other_translation_unit.getFile(file.name)
-      for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-        position = other_translation_unit.getLocationForOffset(other_file, offset)
-        cursor_at_position = other_translation_unit.getCursor(position)
-        if cursor_at_position.get_usr() == cursor.get_usr():
-          return cursor_at_position
-      return None
-
-    def find_corresponding_cursor_in_alternate_translation_unit(cursor):
-      for alternate_translation_unit in guess_alternate_translation_units(cursor.extent.start.file.name)():
-        result = find_corresponding_cursor(cursor, alternate_translation_unit)
-        if result:
-          return result
-      return None
-
-    def definition_of_current_cusor_in(translation_unit):
-      definition_or_declaration_cursor = definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
-      if definition_or_declaration_cursor:
-        self.editor.display_message("Found either a definition or a declaration")
-        if definition_or_declaration_cursor.is_definition():
-          return definition_or_declaration_cursor
-        else:
-          self.editor.display_message("The first result is not a definition. Searching for definition of first result")
-          alternate_result = find_corresponding_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
-          if alternate_result:
-            self.editor.display_message("Jumping to alternate result")
-            return get_definition_or_reference(alternate_result)
-          else:
-            self.editor.display_message("Did not find an alternate result. Jumping to initial result.")
-            return definition_or_declaration_cursor
-      raise NoDefinitionFound
-
     for get_translation_units in [
-        guess_alternate_translation_units(self.editor.filename()),
-        current_translation_units,
+        self._guess_alternate_translation_units(self.editor.filename()),
+        self._current_translation_units,
         ]:
       for translation_unit in get_translation_units():
         try:
-          return definition_of_current_cusor_in(translation_unit)
+          return self._definition_of_current_cusor_in(translation_unit)
         except NoDefinitionFound:
           pass
     return None
