@@ -212,10 +212,11 @@ class ClangPlugin(object):
 
   def file_opened(self):
     self.editor.display_message("Noticed opening of new file, TODO: Ensure we don't try to produce TUs for the same file at the same time")
-    self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file())
-    finder = DefinitionFileFinder(self.editor, self.editor.filename())
-    for file_name in finder.definition_files():
-      self.translation_unit_accessor.start_get_translation_unit_thread(self.translation_unit_accessor.get_file_for_filename(file_name))
+    # Clang cannot handle multi-threaded access, "Concurrent access to ASTUnit!"
+    #self.translation_unit_accessor.start_get_translation_unit_thread(self.editor.current_file())
+    #finder = DefinitionFileFinder(self.editor, self.editor.filename())
+    #for file_name in finder.definition_files():
+    #  self.translation_unit_accessor.start_get_translation_unit_thread(self.translation_unit_accessor.get_file_for_filename(file_name))
 
   def jump_to_definition(self):
     definition_cursor = self.definition_finder.find_first_definition_cursor()
