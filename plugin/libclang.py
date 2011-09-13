@@ -575,23 +575,11 @@ class DefinitionFinder(object):
     self.editor = editor
     self.translation_unit_accessor = translation_unit_accessor
 
-  class FindDefinitionInTranslationUnit(object):
-    def __init__(self, editor, translation_unit, location):
-      self.editor = editor
-      self.translation_unit = translation_unit
-      self.location = location
-
-    def _get_definition_cursor(self):
-      cursor = self.translation_unit.getCursor(self.location)
-      if cursor.kind.is_unexposed:
-        self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
-      return get_definition_or_reference(cursor)
-
   def _find_definition_in_translation_unit(self, translation_unit, location):
-    return self.FindDefinitionInTranslationUnit(
-        self.editor,
-        translation_unit,
-        location)._get_definition_cursor()
+    cursor = translation_unit.getCursor(location)
+    if cursor.kind.is_unexposed:
+      self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
+    return get_definition_or_reference(cursor)
 
   def _current_translation_units(self):
     try:
