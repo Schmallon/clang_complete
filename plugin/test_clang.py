@@ -57,6 +57,9 @@ class TestClangPlugin(unittest.TestCase):
     self.editor = TestEditor()
     self.clang_plugin = libclang.ClangPlugin(self.editor, 0)
 
+  def tearDown(self):
+    self.clang_plugin.terminate()
+
   def open_source_file(self, source_file_name, start_line, start_column):
     self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
 

@@ -237,6 +237,7 @@ function! s:initClangCompletePython()
     autocmd BufWritePost * python clang_plugin.file_changed()
     autocmd InsertEnter * python clang_plugin.file_changed()
     autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
+    autocmd VimLeave * python clang_plugin.terminate()
   augroup end
 endfunction
 

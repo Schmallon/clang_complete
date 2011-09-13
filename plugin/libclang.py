@@ -206,6 +206,9 @@ class ClangPlugin(object):
         self.translation_unit_accessor)
     self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
 
+  def terminate(self):
+    self.translation_unit_accessor.terminate()
+
   def file_changed(self):
     self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
@@ -261,9 +264,14 @@ class TranslationUnitParserThread(threading.Thread):
     self.remaining_files = Queue.PriorityQueue()
     self.resulting_translation_units = Queue.Queue()
     self.current_file = None
+    self.termination_requested = False
 
   def clear_caches(self):
     self.up_to_date = set()
+
+  def terminate(self):
+    self.termination_requested = True
+    self.remaining_files.put((-1, None))
 
   def enqueue_file(self, file, high_priority = True):
     if high_priority:
@@ -281,9 +289,12 @@ class TranslationUnitParserThread(threading.Thread):
   def run(self):
     while True:
       ignored_priority, self.current_file = self.remaining_files.get()
+      if self.termination_requested:
+        return
       translation_unit = self._get_translation_unit()
       self.up_to_date.add(self._filename())
       self.resulting_translation_units.put(translation_unit)
+      self.remaining_files.task_done()
 
   def _get_translation_unit(self):
     self.editor.display_message("Getting translation unit for " + self._filename())
@@ -350,6 +361,9 @@ class TranslationUnitAccessor(object):
 
   def clear_caches(self):
     self.thread.clear_caches()
+
+  def terminate(self):
+    self.thread.terminate()
 
   def _get_translation_unit(self, file):
     self.thread.enqueue_file(file)
