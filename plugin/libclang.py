@@ -5,6 +5,7 @@ import threading
 import os
 import sys
 import Levenshtein
+import Queue
 
 """
 Ideas:
@@ -250,20 +251,39 @@ class NoCurrentTranslationUnit(Exception):
   pass
 
 class TranslationUnitParserThread(threading.Thread):
-  def __init__(self, translation_unit_accessor, file):
+  def __init__(self, translation_unit_accessor):
     threading.Thread.__init__(self)
-    self.file = file
-    self.result = None
-    self.translation_unit_accessor = translation_unit_accessor
     self.editor = translation_unit_accessor.editor
     self.index = translation_unit_accessor.index
     self.translation_units = translation_unit_accessor.translation_units
-    self.up_to_date = translation_unit_accessor.up_to_date
+
+    self.up_to_date = set()
+    self.remaining_files = Queue.PriorityQueue()
+    self.resulting_translation_units = Queue.Queue()
+    self.current_file = None
+
+  def clear_caches(self):
+    self.up_to_date = set()
+
+  def enqueue_file(self, file, high_priority = True):
+    if high_priority:
+      priority = 0
+    else:
+      priority = 1
+    self.remaining_files.put((priority, file))
+
+  def wait_and_get_translation_unit(self, file_name):
+    while True:
+      translation_unit = self.resulting_translation_units.get()
+      if file_name == translation_unit.spelling:
+        return translation_unit
 
   def run(self):
-    self.result = self._get_translation_unit()
-    self.editor.display_message("Finished getting translation unit")
-    self.up_to_date.add(self._filename())
+    while True:
+      ignored_priority, self.current_file = self.remaining_files.get()
+      translation_unit = self._get_translation_unit()
+      self.up_to_date.add(self._filename())
+      self.resulting_translation_units.put(translation_unit)
 
   def _get_translation_unit(self):
     self.editor.display_message("Getting translation unit for " + self._filename())
@@ -273,19 +293,19 @@ class TranslationUnitParserThread(threading.Thread):
       return self._read_new_translation_unit()
 
   def _filename(self):
-    return self.file[0]
+    return self.current_file[0]
 
   def _reuse_existing_translation_unit(self):
     tu = self.translation_units[self._filename()]
     if self._filename() not in self.up_to_date:
       self.editor.display_message("Translation unit is possibly not up to date. Reparse is due")
-      tu.reparse([self.file])
+      tu.reparse([self.current_file])
     return tu
 
   def _read_new_translation_unit(self):
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
     args = self.editor.user_options()
-    tu = self.index.parse(self._filename(), args, [self.file], flags)
+    tu = self.index.parse(self._filename(), args, [self.current_file], flags)
 
     if tu == None:
       self.editor.display_message("Cannot parse this source file. The following arguments " \
@@ -297,7 +317,7 @@ class TranslationUnitParserThread(threading.Thread):
     # Reparse to initialize the PCH cache even for auto completion
     # This should be done by index.parse(), however it is not.
     # So we need to reparse ourselves.
-    tu.reparse([self.file])
+    tu.reparse([self.current_file])
     return tu
 
 
@@ -307,39 +327,33 @@ class TranslationUnitAccessor(object):
   def __init__(self, editor):
     self.index = Index.create()
     self.translation_units = dict()
-    self.up_to_date = set()
     self.editor = editor
-
-  def get_current_translation_unit(self):
-    current_file = self.editor.current_file()
-    result = self.get_translation_unit(current_file)
-    if result:
-      return result
-    raise NoCurrentTranslationUnit
+    self.thread = TranslationUnitParserThread(self)
+    self.thread.start()
 
   def get_file_for_filename(self, filename):
     return (filename, open(filename, 'r').read())
 
+  def get_current_translation_unit(self):
+    current_file = self.editor.current_file()
+    result = self._get_translation_unit(current_file)
+    if result:
+      return result
+    raise NoCurrentTranslationUnit
+
   def get_translation_unit_for_filename(self, filename):
     try:
       file = self.get_file_for_filename(filename)
-      return self.get_translation_unit(file)
+      return self._get_translation_unit(file)
     except IOError:
       return None
 
   def clear_caches(self):
-    self.up_to_date = set()
+    self.thread.clear_caches()
 
-  def start_get_translation_unit_thread(self, file):
-    thread = TranslationUnitParserThread(self, file)
-    thread.start()
-    return thread
-
-  def get_translation_unit(self, file):
-    thread = self.start_get_translation_unit_thread(file)
-    while thread.is_alive():
-      thread.join(0.01)
-    return thread.result
+  def _get_translation_unit(self, file):
+    self.thread.enqueue_file(file)
+    return self.thread.wait_and_get_translation_unit(file[0])
 
 class DiagnosticsHighlighter(object):
 
