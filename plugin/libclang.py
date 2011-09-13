@@ -575,11 +575,32 @@ class DefinitionFinder(object):
     self.editor = editor
     self.translation_unit_accessor = translation_unit_accessor
 
+  def _find_corresponding_cursor_in_alternate_translation_unit(self, cursor, other_translation_unit):
+    file = cursor.extent.start.file
+    other_file = other_translation_unit.getFile(file.name)
+    for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
+      position = other_translation_unit.getLocationForOffset(other_file, offset)
+      cursor_at_position = other_translation_unit.getCursor(position)
+      if cursor_at_position.get_usr() == cursor.get_usr():
+        return cursor_at_position
+    return None
+
+  def _find_corresponding_cursor_in_any_alternate_translation_unit(self, cursor):
+    for alternate_translation_unit in self._guess_alternate_translation_units(cursor.extent.start.file.name)():
+      result = self._find_corresponding_cursor_in_alternate_translation_unit(cursor, alternate_translation_unit)
+      if result:
+        return result
+    return None
+
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
     if cursor.kind.is_unexposed:
       self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
     return get_definition_or_reference(cursor)
+
+  def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
+    current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
+    return self._find_definition_in_translation_unit(translation_unit, current_location)
 
   def _current_translation_units(self):
     try:
@@ -595,27 +616,6 @@ class DefinitionFinder(object):
             finder.definition_files()))
     return f
 
-  def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
-    current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
-    return self._find_definition_in_translation_unit(translation_unit, current_location)
-
-  def _find_corresponding_cursor(self, cursor, other_translation_unit):
-    file = cursor.extent.start.file
-    other_file = other_translation_unit.getFile(file.name)
-    for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-      position = other_translation_unit.getLocationForOffset(other_file, offset)
-      cursor_at_position = other_translation_unit.getCursor(position)
-      if cursor_at_position.get_usr() == cursor.get_usr():
-        return cursor_at_position
-    return None
-
-  def _find_corresponding_cursor_in_alternate_translation_unit(self, cursor):
-    for alternate_translation_unit in self._guess_alternate_translation_units(cursor.extent.start.file.name)():
-      result = self._find_corresponding_cursor(cursor, alternate_translation_unit)
-      if result:
-        return result
-    return None
-
   def _definition_of_current_cusor_in(self, translation_unit):
     definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
     if definition_or_declaration_cursor:
@@ -624,7 +624,7 @@ class DefinitionFinder(object):
         return definition_or_declaration_cursor
       else:
         self.editor.display_message("The first result is not a definition. Searching for definition of first result")
-        alternate_result = self._find_corresponding_cursor_in_alternate_translation_unit(definition_or_declaration_cursor)
+        alternate_result = self._find_corresponding_cursor_in_any_alternate_translation_unit(definition_or_declaration_cursor)
         if alternate_result:
           self.editor.display_message("Jumping to alternate result")
           return get_definition_or_reference(alternate_result)
