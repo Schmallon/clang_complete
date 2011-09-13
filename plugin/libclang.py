@@ -279,23 +279,13 @@ class TranslationUnitParserThread(threading.Thread):
     tu = self.translation_units[self._filename()]
     if self._filename() not in self.up_to_date:
       self.editor.display_message("Translation unit is possibly not up to date. Reparse is due")
-      if self.editor.debug_enabled():
-        start = time.time()
       tu.reparse([self.file])
-      if self.editor.debug_enabled():
-        elapsed = (time.time() - start)
-        self.editor.display_message("LibClang - Reparsing: " + str(elapsed))
     return tu
 
   def _read_new_translation_unit(self):
-    if self.editor.debug_enabled():
-      start = time.time()
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
     args = self.editor.user_options()
     tu = self.index.parse(self._filename(), args, [self.file], flags)
-    if self.editor.debug_enabled():
-      elapsed = (time.time() - start)
-      self.editor.display_message("LibClang - First parse: " + str(elapsed))
 
     if tu == None:
       self.editor.display_message("Cannot parse this source file. The following arguments " \
@@ -307,12 +297,7 @@ class TranslationUnitParserThread(threading.Thread):
     # Reparse to initialize the PCH cache even for auto completion
     # This should be done by index.parse(), however it is not.
     # So we need to reparse ourselves.
-    if self.editor.debug_enabled():
-      start = time.time()
     tu.reparse([self.file])
-    if self.editor.debug_enabled():
-      elapsed = (time.time() - start)
-      self.editor.display_message("LibClang - First reparse (generate PCH cache): " + str(elapsed))
     return tu
 
 
@@ -429,15 +414,8 @@ class Completer(object):
     self.editor.display_message("Getting completions")
     translation_unit = self.translation_unit_accessor.get_current_translation_unit()
     current_file = self.editor.current_file()
-    if self.editor.debug_enabled():
-      start = time.time()
-    completionResult = translation_unit.codeComplete(self.editor.filename(), line, column, [current_file],
+    return translation_unit.codeComplete(self.editor.filename(), line, column, [current_file],
         self.complete_flags)
-    if self.editor.debug_enabled():
-      elapsed = (time.time() - start)
-      self.editor.display_message("LibClang - Code completion time: " +
-          str(elapsed))
-    return completionResult
 
   def format_results(self, result):
     completion = dict()
@@ -575,12 +553,8 @@ class DefinitionFinder(object):
 
     def _get_definition_cursor(self):
       cursor = self.translation_unit.getCursor(self.location)
-      if self.editor.debug_enabled():
-        self.editor.display_message("Cursor type at current position " + str(cursor.kind.name))
-
       if cursor.kind.is_unexposed:
         self.editor.display_message("Item at current position is not exposed. Are you in a Macro?")
-
       return get_definition_or_reference(cursor)
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
