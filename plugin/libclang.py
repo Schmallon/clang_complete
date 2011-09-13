@@ -396,7 +396,7 @@ class QuickFixListGenerator(object):
     elif diagnostic.severity == diagnostic.Error or diagnostic.severity == diagnostic.Fatal:
       type = 'E'
     else:
-      return None
+      type = 'O'
 
     return dict({ 'filename' : filename,
       'lnum' : diagnostic.location.line,
