@@ -410,9 +410,15 @@ class QuickFixListGenerator(object):
       self.editor.display_message(diagnostic.spelling)
       filename = ""
 
-    if diagnostic.severity == diagnostic.Warning:
+    if diagnostic.severity == diagnostic.Ignored:
+      type = 'I'
+    elif diagnostic.severity == diagnostic.Note:
+      type = 'I'
+    elif diagnostic.severity == diagnostic.Warning:
       type = 'W'
-    elif diagnostic.severity == diagnostic.Error or diagnostic.severity == diagnostic.Fatal:
+    elif diagnostic.severity == diagnostic.Error:
+      type = 'E'
+    elif diagnostic.severity == diagnostic.Fatal:
       type = 'E'
     else:
       type = 'O'
