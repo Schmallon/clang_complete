@@ -232,14 +232,12 @@ class ClangPlugin(object):
     self.declaration_finder.jump_to_declaration()
 
   def update_current_diagnostics(self):
-    self.translation_unit_accessor.clear_caches()
     self.translation_unit_accessor.get_current_translation_unit()
 
   def get_current_quickfix_list(self):
     return self.quick_fix_list_generator.get_current_quickfix_list()
 
   def highlight_current_diagnostics(self):
-    self.translation_unit_accessor.clear_caches()
     translation_unit = self.translation_unit_accessor.get_current_translation_unit()
     if self.editor.filename() in self.translation_unit_accessor.translation_units:
       self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
