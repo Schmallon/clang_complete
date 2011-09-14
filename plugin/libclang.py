@@ -291,23 +291,23 @@ class TranslationUnitParserThread(threading.Thread):
       if self.termination_requested:
         return
       translation_unit = self._get_translation_unit()
-      self.up_to_date.add(self._filename())
+      self.up_to_date.add(self._current_file_name())
       self.resulting_translation_units.put(translation_unit)
       self.remaining_files.task_done()
 
   def _get_translation_unit(self):
-    self.editor.display_message("Getting translation unit for " + self._filename())
-    if self._filename() in self.translation_units:
+    self.editor.display_message("Getting translation unit for " + self._current_file_name())
+    if self._current_file_name() in self.translation_units:
       return self._reuse_existing_translation_unit()
     else:
       return self._read_new_translation_unit()
 
-  def _filename(self):
+  def _current_file_name(self):
     return self.current_file[0]
 
   def _reuse_existing_translation_unit(self):
-    tu = self.translation_units[self._filename()]
-    if self._filename() not in self.up_to_date:
+    tu = self.translation_units[self._current_file_name()]
+    if self._current_file_name() not in self.up_to_date:
       self.editor.display_message("Translation unit is possibly not up to date. Reparse is due")
       tu.reparse([self.current_file])
     return tu
@@ -315,14 +315,14 @@ class TranslationUnitParserThread(threading.Thread):
   def _read_new_translation_unit(self):
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
     args = self.editor.user_options()
-    tu = self.index.parse(self._filename(), args, [self.current_file], flags)
+    tu = self.index.parse(self._current_file_name(), args, [self.current_file], flags)
 
     if tu == None:
       self.editor.display_message("Cannot parse this source file. The following arguments " \
           + "are used for clang: " + " ".join(args))
       return None
 
-    self.translation_units[self._filename()] = tu
+    self.translation_units[self._current_file_name()] = tu
 
     # Reparse to initialize the PCH cache even for auto completion
     # This should be done by index.parse(), however it is not.
