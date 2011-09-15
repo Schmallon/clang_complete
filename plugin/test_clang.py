@@ -12,6 +12,12 @@ class TestEditor(libclang.Editor):
     self._filename = 'invalid filename'
     self._contents = 'invalid contents'
 
+  def display_diagnostics(self, quickfix_list):
+    pass
+
+  def higlight_range(self, start, end):
+    pass
+
   def excluded_directories(self):
     return []
 

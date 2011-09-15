@@ -268,14 +268,6 @@ function! s:CallClangBinaryForDiagnostics(tempfile)
   return l:clang_output
 endfunction
 
-function! s:CallClangForDiagnostics(tempfile)
-  if g:clang_use_library == 1
-    python clang_plugin.update_current_diagnostics()
-  else
-    return s:CallClangBinaryForDiagnostics(a:tempfile)
-  endif
-endfunction
-
 function! s:DoPeriodicQuickFix()
   " Don't do any superfluous reparsing.
   if b:my_changedtick == b:changedtick
@@ -283,22 +275,13 @@ function! s:DoPeriodicQuickFix()
   endif
   let b:my_changedtick = b:changedtick
 
-  " Create tempfile name for clang/clang++ executable mode
-  let b:my_changedtick = b:changedtick
-  let l:tempfile = expand('%:p:h') . '/' . localtime() . expand('%:t')
-
-  let l:clang_output = s:CallClangForDiagnostics(l:tempfile)
-
-  call s:ClangQuickFix(l:clang_output, l:tempfile)
+  python clang_plugin.file_changed()
 endfunction
 
-function! s:ClangQuickFix(clang_output, tempfname)
+function! g:ClangDisplayQuickFix(quick_fix)
   " Clear the bad spell, the user may have corrected them.
   syntax clear SpellBad
   syntax clear SpellLocal
-
-  python vim.command('let l:list = ' + str(clang_plugin.get_current_quickfix_list()))
-  python clang_plugin.highlight_current_diagnostics()
 
   if g:clang_complete_copen == 1
     " We should get back to the original buffer
@@ -306,7 +289,7 @@ function! s:ClangQuickFix(clang_output, tempfname)
 
     " Workaround:
     " http://vim.1045645.n5.nabble.com/setqflist-inconsistency-td1211423.html
-    if l:list == []
+    if a:quick_fix == []
       cclose
     else
       copen
@@ -315,7 +298,7 @@ function! s:ClangQuickFix(clang_output, tempfname)
     let l:winbufnr = bufwinnr(l:bufnr)
     exe l:winbufnr . 'wincmd w'
   endif
-  call setqflist(l:list)
+  call setqflist(a:quick_fix)
   doautocmd QuickFixCmdPost make
 endfunction
 
@@ -416,7 +399,6 @@ function! s:ClangCompleteBinary(base)
   let l:clang_output = split(system(l:command), "\n")
   call delete(l:tempfile)
 
-  call s:ClangQuickFix(l:clang_output, l:tempfile)
   if v:shell_error
     return []
   endif

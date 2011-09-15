@@ -169,6 +169,11 @@ class VimInterface(Editor):
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
     self._vim.command(command)
 
+  def display_diagnostics(self, quickfix_list):
+    self.display_message("Updating quickfix list")
+    self.display_message("call g:ClangUpdateQuickFix(" + str(quickfix_list) + ")")
+    self._vim.command("call g:ClangDisplayQuickFix(" + str(quickfix_list) + ")")
+
 class EmacsInterface(Editor):
 
   def __init__(self):
@@ -209,16 +214,17 @@ class ClangPlugin(object):
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
     self.declaration_finder = DeclarationFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
-    self.quick_fix_list_generator = QuickFixListGenerator(self.editor,
-        self.translation_unit_accessor)
-    self.diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
+    self.idle_diagnostics_generator_thread = IdleDiagnosticsGeneratorThread(self.editor, self.synchronized_do, self.translation_unit_accessor)
+    self.idle_diagnostics_generator_thread.start()
 
   def terminate(self):
     self.translation_unit_accessor.terminate()
+    self.idle_diagnostics_generator_thread.terminate()
 
   def file_changed(self):
     self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
+    self.idle_diagnostics_generator_thread.update()
 
   def file_opened(self):
     try:
@@ -241,19 +247,6 @@ class ClangPlugin(object):
 
   def jump_to_declaration(self):
     self.synchronized_do.do(self.declaration_finder.jump_to_declaration)
-
-  def update_current_diagnostics(self):
-    self.synchronized_do.do(self.translation_unit_accessor.get_current_translation_unit)
-
-  def get_current_quickfix_list(self):
-    return self.synchronized_do.do(self.quick_fix_list_generator.get_current_quickfix_list)
-
-  def highlight_current_diagnostics(self):
-    translation_unit = self.translation_unit_accessor.get_current_translation_unit()
-    if self.editor.filename() in self.translation_unit_accessor.translation_units():
-      self.diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
-    else:
-      self.editor.display_message("File was not found in current translation unit")
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -469,6 +462,38 @@ class QuickFixListGenerator(object):
     else:
       self.editor.display_message("File was not found in current translation unit")
       return []
+
+class IdleDiagnosticsGeneratorThread(threading.Thread):
+  def __init__(self, editor, synchronized_do, translation_unit_accessor):
+    threading.Thread.__init__(self)
+    self._editor = editor
+    self._termination_requested = False
+    self._event = threading.Event()
+    self._synchronized_do = synchronized_do
+    self._translation_unit_accessor = translation_unit_accessor
+    self._quick_fix_list_generator = QuickFixListGenerator(self._editor, translation_unit_accessor)
+    self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
+
+  def terminate(self):
+    self._termination_requested = True
+    self.update()
+
+  def update(self):
+    self._event.set()
+
+  def run(self):
+    while True:
+      self._event.wait()
+      self._event.clear()
+      self._synchronized_do.do(self._update_diagnostics)
+      if self._termination_requested:
+        return
+
+  def _update_diagnostics(self):
+    self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quickfix_list())
+    translation_unit = self._translation_unit_accessor.get_current_translation_unit()
+    if self._editor.filename() in self._translation_unit_accessor.translation_units():
+      self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
 
 class Completer(object):
 
