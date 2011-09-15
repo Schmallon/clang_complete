@@ -233,9 +233,9 @@ function! s:initClangCompletePython()
 
   augroup ClangComplete
     "Does not really detect all changes, e.g. yanks. Any better ideas?
-    autocmd FileChangedShellPost * python clang_plugin.file_changed()
-    autocmd BufWritePost * python clang_plugin.file_changed()
-    autocmd InsertEnter * python clang_plugin.file_changed()
+    autocmd FileChangedShellPost *.cpp,*.c,*.h python clang_plugin.file_changed()
+    autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
+    autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
     autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
     autocmd VimLeave * python clang_plugin.terminate()
   augroup end
