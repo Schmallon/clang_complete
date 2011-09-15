@@ -317,6 +317,9 @@ class SynchronizedTranslationUnitParser(object):
   def clear_caches(self):
     self.up_to_date.clear()
 
+  def is_parsed(self, file_name):
+    return file_name in self.up_to_date
+
 
 class IdleTranslationUnitParserThread(threading.Thread):
   def __init__(self, editor, translation_unit_parser):
@@ -372,6 +375,9 @@ class TranslationUnitAccessor(object):
 
   def translation_units(self):
     return self.parser.translation_units
+
+  def is_parsed(self, file_name):
+    return self.parser.is_parsed(file_name)
 
   def get_file_for_filename(self, filename):
     return (filename, open(filename, 'r').read())
