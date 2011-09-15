@@ -313,6 +313,9 @@ class SynchronizedTranslationUnitParser(object):
       return action.run()
     return self._synchronized_do.do(_unsynchronized_parse)
 
+  def clear_caches(self):
+    self.up_to_date.clear()
+
 
 class IdleTranslationUnitParserThread(threading.Thread):
   def __init__(self, editor, translation_unit_parser):
