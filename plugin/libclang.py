@@ -224,17 +224,18 @@ class ClangPlugin(object):
   def file_changed(self):
     self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
+    self._load_files_in_background()
     self.idle_diagnostics_generator_thread.update()
 
   def file_opened(self):
-    try:
-      self.editor.display_message("Noticed opening of new file")
-      self.translation_unit_accessor.enqueue_translation_unit_creation(self.editor.current_file())
-      finder = DefinitionFileFinder(self.editor, self.editor.filename())
-      for file_name in finder.definition_files():
-        self.translation_unit_accessor.enqueue_translation_unit_creation(self.translation_unit_accessor.get_file_for_filename(file_name))
-    except Exception:
-      self.editor.display_message("Exception thrown on reacting to file opening")
+    self.editor.display_message("Noticed opening of new file")
+    self._load_files_in_background()
+
+  def _load_files_in_background(self):
+    self.translation_unit_accessor.enqueue_translation_unit_creation(self.editor.current_file())
+    finder = DefinitionFileFinder(self.editor, self.editor.filename())
+    for file_name in finder.definition_files():
+      self.translation_unit_accessor.enqueue_translation_unit_creation(self.translation_unit_accessor.get_file_for_filename(file_name))
 
   def jump_to_definition(self):
     def do_it():
