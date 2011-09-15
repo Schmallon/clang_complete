@@ -215,7 +215,7 @@ class ClangPlugin(object):
     self.declaration_finder = DeclarationFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
     self.idle_diagnostics_generator_thread = IdleDiagnosticsGeneratorThread(self.editor, self.synchronized_do, self.translation_unit_accessor)
-    self.idle_diagnostics_generator_thread.start()
+    #self.idle_diagnostics_generator_thread.start()
 
   def terminate(self):
     self.translation_unit_accessor.terminate()
@@ -225,7 +225,21 @@ class ClangPlugin(object):
     self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
     self._load_files_in_background()
-    self.idle_diagnostics_generator_thread.update()
+    #self.idle_diagnostics_generator_thread.update()
+    #Don't run in parallel for now. Vim can't handle GUI update from another thread.
+    #self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
+
+  def try_update_diagnostics(self):
+    if self.translation_unit_accessor.is_parsed(self.editor.filename()):
+      self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
+      self.editor.display_message("Can update")
+      return 1
+    else:
+      self.editor.display_message("Cannot update")
+      return 0
+
+  def update_diagnostics(self):
+    self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
 
   def file_opened(self):
     self.editor.display_message("Noticed opening of new file")

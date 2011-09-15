@@ -12,6 +12,8 @@ au FileType c,cpp,objc,objcpp call <SID>ClangCompleteInit()
 let b:clang_parameters = ''
 let b:clang_user_options = ''
 let b:my_changedtick = 0
+let b:update_succeeded = 0
+
 let b:clang_type_complete = 0
 
 let s:python_for_clang_loaded = 0
@@ -101,6 +103,7 @@ function! s:ClangCompleteInit()
 
   let b:should_overload = 0
   let b:my_changedtick = b:changedtick
+  let b:update_succeeded = 0
   let b:clang_parameters = '-x c'
   let b:clang_type_complete = 0
 
@@ -226,6 +229,7 @@ function! s:initClangCompletePython()
     autocmd FileChangedShellPost *.cpp,*.c,*.h python clang_plugin.file_changed()
     autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
     autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
+    "autocmd InsertCharPre * python clang_plugin.file_changed()
     autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
     autocmd VimLeave * python clang_plugin.terminate()
   augroup end
@@ -269,13 +273,20 @@ function! s:CallClangBinaryForDiagnostics(tempfile)
 endfunction
 
 function! s:DoPeriodicQuickFix()
-  " Don't do any superfluous reparsing.
-  if b:my_changedtick == b:changedtick
-    return
+  if b:my_changedtick != b:changedtick
+    python clang_plugin.file_changed()
+    let b:my_changedtick = b:changedtick
   endif
-  let b:my_changedtick = b:changedtick
 
-  python clang_plugin.file_changed()
+  if !b:update_succeeded
+    python vim.command('let b:update_succeeded = ' + str(clang_plugin.try_update_diagnostics()))
+  endif
+
+  if !b:update_succeeded
+    "Results in another update
+    "Does work only for CursorHold, not CursorHoldI
+    call feedkeys("f\e")
+  endif
 endfunction
 
 function! g:ClangDisplayQuickFix(quick_fix)
