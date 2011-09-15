@@ -57,11 +57,6 @@ function! s:ClangCompleteInit()
     let g:clang_user_options = ''
   endif
 
-  " Only use libclang if the user clearly show intent to do so for now
-  if !exists('g:clang_use_library')
-    let g:clang_use_library = (has('python') && exists('g:clang_library_path'))
-  endif
-
   if !exists('g:clang_complete_macros')
     let g:clang_complete_macros = 0
   endif
@@ -143,20 +138,15 @@ function! s:ClangCompleteInit()
   endif
 
   " Load the python bindings of libclang
-  if g:clang_use_library == 1
-    if has('python')
+  if has('python')
 
-      if s:python_for_clang_loaded == 0
-        exe s:initClangCompletePython()
-        let s:python_for_clang_loaded = 1
-      endif
-    else
-      echoe 'clang_complete: No python support available.'
-      echoe 'Cannot use clang library, using executable'
-      echoe 'Compile vim with python support to use libclang'
-      let g:clang_use_library = 0
-      return
+    if s:python_for_clang_loaded == 0
+      exe s:initClangCompletePython()
+      let s:python_for_clang_loaded = 1
     endif
+  else
+    echoe 'clang_complete: No python support available.'
+    return
   endif
 endfunction
 
@@ -307,12 +297,8 @@ function! s:ClangQuickFix(clang_output, tempfname)
   syntax clear SpellBad
   syntax clear SpellLocal
 
-  if g:clang_use_library == 0
-    let l:list = s:ClangUpdateQuickFix(a:clang_output, a:tempfname)
-  else
-    python vim.command('let l:list = ' + str(clang_plugin.get_current_quickfix_list()))
-    python clang_plugin.highlight_current_diagnostics()
-  endif
+  python vim.command('let l:list = ' + str(clang_plugin.get_current_quickfix_list()))
+  python clang_plugin.highlight_current_diagnostics()
 
   if g:clang_complete_copen == 1
     " We should get back to the original buffer
@@ -534,11 +520,7 @@ function! ClangComplete(findstart, base)
       call eval('snippets#' . g:clang_snippets_engine . '#reset()')
     endif
 
-    if g:clang_use_library == 1
-      python vim.command('let l:res = ' + str(clang_plugin.get_current_completions(vim.eval('a:base'))))
-    else
-      let l:res = s:ClangCompleteBinary(a:base)
-    endif
+    python vim.command('let l:res = ' + str(clang_plugin.get_current_completions(vim.eval('a:base'))))
 
     if g:clang_snippets == 1
       for item in l:res
@@ -553,7 +535,7 @@ function! ClangComplete(findstart, base)
   endif
 
   if g:clang_debug == 1
-    echom 'clang_complete: completion time (' . (g:clang_use_library == 1 ? 'library' : 'binary') . ') '. split(reltimestr(reltime(l:time_start)))[0]
+    echom 'clang_complete: completion time '. split(reltimestr(reltime(l:time_start)))[0]
   endif
   return l:res
 endif
