@@ -284,6 +284,7 @@ function! s:DoPeriodicQuickFix()
   if b:my_changedtick != b:changedtick
     python clang_plugin.file_changed()
     let b:my_changedtick = b:changedtick
+    let b:update_succeeded = 0
   endif
 
   if !b:update_succeeded
