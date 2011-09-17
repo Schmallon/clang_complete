@@ -272,6 +272,14 @@ function! s:CallClangBinaryForDiagnostics(tempfile)
   return l:clang_output
 endfunction
 
+function! s:NoopKeypress()
+  if mode() == "n"
+    call feedkeys("f\e", "n")
+  elseif mode() == "i"
+    call feedkeys("\<C-R>\e", "n")
+  endif
+endfunction
+
 function! s:DoPeriodicQuickFix()
   if b:my_changedtick != b:changedtick
     python clang_plugin.file_changed()
@@ -284,8 +292,7 @@ function! s:DoPeriodicQuickFix()
 
   if !b:update_succeeded
     "Results in another update
-    "Does work only for CursorHold, not CursorHoldI
-    call feedkeys("f\e")
+    call s:NoopKeypress()
   endif
 endfunction
 
