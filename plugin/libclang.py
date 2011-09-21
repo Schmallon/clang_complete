@@ -366,6 +366,11 @@ class IdleTranslationUnitParserThread(threading.Thread):
     except Exception:
       self.editor.display_message("Exception thrown in idle thread")
 
+
+
+class AlreadyLocked(Exception):
+  pass
+
 class SynchronizedDo(object):
   def __init__(self):
     self._lock = threading.RLock()
@@ -376,6 +381,15 @@ class SynchronizedDo(object):
       return action()
     finally:
       self._lock.release()
+
+  def do_if_not_locked(self, action):
+    if self._lock.acquire(blocking = 0):
+      try:
+        return action()
+      finally:
+        self._lock.release()
+    else:
+      raise AlreadyLocked()
 
 class TranslationUnitAccessor(object):
   def __init__(self, editor, synchronized_do):
