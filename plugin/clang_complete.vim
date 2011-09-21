@@ -280,7 +280,23 @@ function! s:NoopKeypress()
   endif
 endfunction
 
+function! g:TogglePeriodicQuickfix()
+  let g:clang_periodic_quickfix = !g:clang_periodic_quickfix
+  if g:clang_periodic_quickfix
+    echo "Auto-Quickfix on"
+  else
+    echo "Auto-Quickfix off"
+  endif
+
+endfunction
+
+
 function! s:DoPeriodicQuickFix()
+
+  if !g:clang_periodic_quickfix
+    return
+  endif
+
   if b:my_changedtick != b:changedtick
     python clang_plugin.file_changed()
     let b:my_changedtick = b:changedtick
