@@ -230,16 +230,20 @@ class ClangPlugin(object):
     #self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
 
   def try_update_diagnostics(self):
-    if self.translation_unit_accessor.is_parsed(self.editor.filename()):
-      self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
-      self.editor.display_message("Can update")
-      return 1
-    else:
-      self.editor.display_message("Cannot update")
-      return 0
+    self.editor.display_message("Trying to update the diagnostics")
 
-  def update_diagnostics(self):
-    self.synchronized_do.do(self.idle_diagnostics_generator_thread._update_diagnostics)
+    def do_it():
+      if self.translation_unit_accessor.is_parsed(self.editor.filename()):
+        self.idle_diagnostics_generator_thread._update_diagnostics()
+        self.editor.display_message("Can update")
+        return 1
+      else:
+        return 0
+
+    try:
+      return self.synchronized_do.do_if_not_locked(do_it)
+    except AlreadyLocked:
+      return 0
 
   def file_opened(self):
     self.editor.display_message("Noticed opening of new file")
