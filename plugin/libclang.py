@@ -153,7 +153,7 @@ class VimInterface(Editor):
     self._print_to_file(message)
 
   def _print_to_file(self, message):
-    f = open("log.txt", "a")
+    f = open("clang_log.txt", "a")
     f.write(message + "\n")
     f.close()
 
