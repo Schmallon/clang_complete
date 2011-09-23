@@ -524,12 +524,16 @@ class IdleDiagnosticsGeneratorThread(threading.Thread):
     self._event.set()
 
   def run(self):
-    while True:
-      self._event.wait()
-      self._event.clear()
-      self._synchronized_do.do(self._update_diagnostics)
-      if self._termination_requested:
-        return
+    try:
+      while True:
+        self._event.wait()
+        self._event.clear()
+        self._synchronized_do.do(self._update_diagnostics)
+        if self._termination_requested:
+          return
+    except Exception:
+      self.editor.display_message("Exception occurred in idle diagnostics thread")
+
 
   def _update_diagnostics(self):
     self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quickfix_list())
