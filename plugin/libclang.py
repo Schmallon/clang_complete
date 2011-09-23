@@ -282,7 +282,7 @@ class TranslationParsingAction(object):
     self.up_to_date = up_to_date
     self._file = file
 
-  def run(self):
+  def parse(self):
     if self._file_name() in self.translation_units:
       result = self._reuse_existing_translation_unit()
     else:
@@ -329,7 +329,7 @@ class SynchronizedTranslationUnitParser(object):
   def parse(self, file):
     def _unsynchronized_parse():
       action = TranslationParsingAction(self.editor, self.index, self.translation_units, self.up_to_date, file)
-      return action.run()
+      return action.parse()
     return self._synchronized_do.do(_unsynchronized_parse)
 
   def clear_caches(self):
