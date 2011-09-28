@@ -151,6 +151,10 @@ function! s:ClangCompleteInit()
     echoe 'clang_complete: No python support available.'
     return
   endif
+
+  "Ensure we have a location list
+  call setloclist(0, [])
+
 endfunction
 
 function! LoadUserOptions()
@@ -325,16 +329,16 @@ function! g:ClangDisplayQuickFix(quick_fix)
     " Workaround:
     " http://vim.1045645.n5.nabble.com/setqflist-inconsistency-td1211423.html
     if a:quick_fix == []
-      cclose
+      echo "No Errors"
+      lclose
     else
-      copen
+      lopen
     endif
 
     let l:winbufnr = bufwinnr(l:bufnr)
     exe l:winbufnr . 'wincmd w'
   endif
-  call setqflist(a:quick_fix)
-  doautocmd QuickFixCmdPost make
+  call setloclist(0, a:quick_fix)
 endfunction
 
 function! s:ClangUpdateQuickFix(clang_output, tempfname)
