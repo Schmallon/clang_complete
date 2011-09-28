@@ -176,8 +176,19 @@ class VimInterface(Editor):
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
     self._vim.command(command)
 
-  def display_diagnostics(self, quickfix_list):
-    self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + str(quickfix_list) + ")")
+  def _python_dict_to_vim_dict(self, dictionary):
+    def escape(entry):
+      return str(entry).replace('"', '\\"')
+
+    def translate_entry(entry):
+      return '"' + escape(entry) + '" : "' + escape(dictionary[entry]) + '"'
+    return '{' + ','.join(map(translate_entry, dictionary)) + '}'
+
+  def _quick_fix_list_to_str(self, quick_fix_list):
+    return '[' + ','.join(map(self._python_dict_to_vim_dict, quick_fix_list)) + ']'
+
+  def display_diagnostics(self, quick_fix_list):
+    self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + self._quick_fix_list_to_str(quick_fix_list) + ")")
 
 class EmacsInterface(Editor):
 
