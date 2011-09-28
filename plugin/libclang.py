@@ -502,7 +502,7 @@ class QuickFixListGenerator(object):
   def _get_quick_fix_list(self, tu):
     return filter (None, map (self._get_quick_fix, tu.diagnostics))
 
-  def get_current_quickfix_list(self):
+  def get_current_quick_fix_list(self):
     if self.editor.filename() in self.translation_unit_accessor.translation_units():
       return self._get_quick_fix_list(self.translation_unit_accessor.translation_units()[self.editor.filename()])
     else:
@@ -538,9 +538,8 @@ class IdleDiagnosticsGeneratorThread(threading.Thread):
     except Exception:
       self.editor.display_message("Exception occurred in idle diagnostics thread")
 
-
   def _update_diagnostics(self):
-    self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quickfix_list())
+    self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quick_fix_list())
     translation_unit = self._translation_unit_accessor.get_current_translation_unit()
     if self._editor.filename() in self._translation_unit_accessor.translation_units():
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
