@@ -170,9 +170,7 @@ class VimInterface(Editor):
     self._vim.command(command)
 
   def display_diagnostics(self, quickfix_list):
-    self.display_message("Updating quickfix list")
-    self.display_message("call g:ClangUpdateQuickFix(" + str(quickfix_list) + ")")
-    self._vim.command("call g:ClangDisplayQuickFix(" + str(quickfix_list) + ")")
+    self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + str(quickfix_list) + ")")
 
 class EmacsInterface(Editor):
 

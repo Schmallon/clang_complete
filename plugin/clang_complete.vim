@@ -317,7 +317,7 @@ function! s:DoPeriodicQuickFix()
   endif
 endfunction
 
-function! g:ClangDisplayQuickFix(quick_fix)
+function! g:CalledFromPythonClangDisplayQuickFix(quick_fix)
   " Clear the bad spell, the user may have corrected them.
   syntax clear SpellBad
   syntax clear SpellLocal
