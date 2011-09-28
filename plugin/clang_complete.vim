@@ -239,43 +239,6 @@ function! s:initClangCompletePython()
   augroup end
 endfunction
 
-function! s:GetKind(proto)
-  if a:proto == ''
-    return 't'
-  endif
-  let l:ret = match(a:proto, '^\[#')
-  let l:params = match(a:proto, '(')
-  if l:ret == -1 && l:params == -1
-    return 't'
-  endif
-  if l:ret != -1 && l:params == -1
-    return 'v'
-  endif
-  if l:params != -1
-    return 'f'
-  endif
-  return 'm'
-endfunction
-
-function! s:CallClangBinaryForDiagnostics(tempfile)
-  let l:escaped_tempfile = shellescape(a:tempfile)
-  let l:buf = getline(1, '$')
-  try
-    call writefile(l:buf, a:tempfile)
-  catch /^Vim\%((\a\+)\)\=:E482/
-    return
-  endtry
-
-  let l:command = g:clang_exec . ' -cc1 -fsyntax-only'
-        \ . ' -fno-caret-diagnostics -fdiagnostics-print-source-range-info'
-        \ . ' ' . l:escaped_tempfile
-        \ . ' ' . b:clang_parameters . ' ' . b:clang_user_options . ' ' . g:clang_user_options
-
-  let l:clang_output = split(system(l:command), "\n")
-  call delete(a:tempfile)
-  return l:clang_output
-endfunction
-
 function! s:NoopKeypress()
   if mode() == "n"
     call feedkeys("f\e", "n")
@@ -296,7 +259,6 @@ endfunction
 
 
 function! s:DoPeriodicQuickFix()
-
   if !g:clang_periodic_quickfix
     return
   endif
@@ -341,170 +303,8 @@ function! g:CalledFromPythonClangDisplayQuickFix(quick_fix)
   call setloclist(0, a:quick_fix)
 endfunction
 
-function! s:ClangUpdateQuickFix(clang_output, tempfname)
-  let l:list = []
-  for l:line in a:clang_output
-    let l:erridx = match(l:line, '\%(error\|warning\): ')
-    if l:erridx == -1
-      " Error are always at the beginning.
-      if l:line[:11] == 'COMPLETION: ' || l:line[:9] == 'OVERLOAD: '
-        break
-      endif
-      continue
-    endif
-    let l:pattern = '^\(.*\):\(\d*\):\(\d*\):\(\%({\d\+:\d\+-\d\+:\d\+}\)*\)'
-    let l:tmp = matchstr(l:line, l:pattern)
-    let l:fname = substitute(l:tmp, l:pattern, '\1', '')
-    if l:fname == a:tempfname
-      let l:fname = '%'
-    endif
-    let l:bufnr = bufnr(l:fname, 1)
-    let l:lnum = substitute(l:tmp, l:pattern, '\2', '')
-    let l:col = substitute(l:tmp, l:pattern, '\3', '')
-    let l:errors = substitute(l:tmp, l:pattern, '\4', '')
-    if l:line[l:erridx] == 'e'
-      let l:text = l:line[l:erridx + 7:]
-      let l:type = 'E'
-      let l:hlgroup = ' SpellBad '
-    else
-      let l:text = l:line[l:erridx + 9:]
-      let l:type = 'W'
-      let l:hlgroup = ' SpellLocal '
-    endif
-    let l:item = {
-          \ 'bufnr': l:bufnr,
-          \ 'lnum': l:lnum,
-          \ 'col': l:col,
-          \ 'text': l:text,
-          \ 'type': l:type }
-    let l:list = add(l:list, l:item)
-
-    if g:clang_hl_errors == 0 || l:fname != '%'
-      continue
-    endif
-
-    " Highlighting the ^
-    let l:pat = '/\%' . l:lnum . 'l' . '\%' . l:col . 'c./'
-    exe 'syntax match' . l:hlgroup . l:pat
-
-    if l:errors == ''
-      continue
-    endif
-    let l:ranges = split(l:errors, '}')
-    for l:range in l:ranges
-      " Doing precise error and warning handling.
-      " The highlight will be the same as clang's carets.
-      let l:pattern = '{\%(\d\+\):\(\d\+\)-\%(\d\+\):\(\d\+\)'
-      let l:tmp = matchstr(l:range, l:pattern)
-      let l:startcol = substitute(l:tmp, l:pattern, '\1', '')
-      let l:endcol = substitute(l:tmp, l:pattern, '\2', '')
-      " Highlighting the ~~~~
-      let l:pat = '/\%' . l:lnum . 'l'
-            \ . '\%' . l:startcol . 'c'
-            \ . '.*'
-            \ . '\%' . l:endcol . 'c/'
-      exe 'syntax match' . l:hlgroup . l:pat
-    endfor
-  endfor
-  return l:list
-endfunction
-
-function! s:DemangleProto(prototype)
-  let l:proto = substitute(a:prototype, '[#', '', 'g')
-  let l:proto = substitute(l:proto, '#]', ' ', 'g')
-  let l:proto = substitute(l:proto, '#>', '', 'g')
-  let l:proto = substitute(l:proto, '<#', '', 'g')
-  let l:proto = substitute(l:proto, '{#.*#}', '', 'g')
-  return l:proto
-endfunction
 
 let b:col = 0
-
-function! s:ClangCompleteBinary(base)
-  let l:buf = getline(1, '$')
-  let l:tempfile = expand('%:p:h') . '/' . localtime() . expand('%:t')
-  try
-    call writefile(l:buf, l:tempfile)
-  catch /^Vim\%((\a\+)\)\=:E482/
-    return {}
-  endtry
-  let l:escaped_tempfile = shellescape(l:tempfile)
-
-  let l:command = g:clang_exec . ' -cc1 -fsyntax-only'
-        \ . ' -fno-caret-diagnostics -fdiagnostics-print-source-range-info'
-        \ . ' -code-completion-at=' . l:escaped_tempfile . ':'
-        \ . line('.') . ':' . b:col . ' ' . l:escaped_tempfile
-        \ . ' ' . b:clang_parameters . ' ' . b:clang_user_options . ' ' . g:clang_user_options
-  let l:clang_output = split(system(l:command), "\n")
-  call delete(l:tempfile)
-
-  if v:shell_error
-    return []
-  endif
-  if l:clang_output == []
-    return []
-  endif
-
-  let l:filter_str = "v:val =~ '^COMPLETION: " . a:base . "\\|^OVERLOAD: '"
-  call filter(l:clang_output, l:filter_str)
-
-  let l:res = []
-  for l:line in l:clang_output
-
-    if l:line[:11] == 'COMPLETION: ' && b:should_overload != 1
-
-      let l:value = l:line[12:]
-
-      let l:colonidx = stridx(l:value, ' : ')
-      if l:colonidx == -1
-        let l:wabbr = s:DemangleProto(l:value)
-        let l:word = l:value
-        let l:proto = l:value
-      else
-        let l:word = l:value[:l:colonidx - 1]
-        " WTF is that?
-        if l:word =~ '(Hidden)'
-          let l:word = l:word[:-10]
-        endif
-        let l:wabbr = l:word
-        let l:proto = l:value[l:colonidx + 3:]
-      endif
-
-      let l:kind = s:GetKind(l:proto)
-      if l:kind == 't' && b:clang_complete_type == 0
-        continue
-      endif
-
-      let l:word = l:wabbr
-      let l:proto = s:DemangleProto(l:proto)
-
-    elseif l:line[:9] == 'OVERLOAD: ' && b:should_overload == 1
-
-      let l:value = l:line[10:]
-      if match(l:value, '<#') == -1
-        continue
-      endif
-      let l:word = substitute(l:value, '.*<#', '<#', 'g')
-      let l:word = substitute(l:word, '#>.*', '#>', 'g')
-      let l:wabbr = substitute(l:word, '<#\([^#]*\)#>', '\1', 'g')
-      let l:proto = s:DemangleProto(l:value)
-      let l:kind = ''
-    else
-      continue
-    endif
-
-    let l:item = {
-          \ 'word': l:word,
-          \ 'abbr': l:wabbr,
-          \ 'menu': l:proto,
-          \ 'info': l:proto,
-          \ 'dup': 1,
-          \ 'kind': l:kind }
-
-    call add(l:res, l:item)
-  endfor
-  return l:res
-endfunction
 
 function! ClangComplete(findstart, base)
   if a:findstart
@@ -644,12 +444,6 @@ function! s:CompleteColon()
     return ':'
   endif
   return ':' . s:LaunchCompletion()
-endfunction
-
-" May be used in a mapping to update the quickfix window.
-function! g:ClangUpdateQuickFix()
-  call s:DoPeriodicQuickFix()
-  return ''
 endfunction
 
 " vim: set ts=2 sts=2 sw=2 expandtab :
