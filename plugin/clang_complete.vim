@@ -81,11 +81,11 @@ function! s:ClangCompleteInit()
 
   call LoadUserOptions()
 
-  inoremap <expr> <buffer> <C-X><C-U> <SID>LaunchCompletion()
-  inoremap <expr> <buffer> . <SID>CompleteDot()
-  inoremap <expr> <buffer> > <SID>CompleteArrow()
-  inoremap <expr> <buffer> : <SID>CompleteColon()
-  inoremap <expr> <buffer> <CR> <SID>HandlePossibleSelectionEnter()
+  "inoremap <expr> <buffer> <C-X><C-U> <SID>LaunchCompletion()
+  "inoremap <expr> <buffer> . <SID>CompleteDot()
+  "inoremap <expr> <buffer> > <SID>CompleteArrow()
+  "inoremap <expr> <buffer> : <SID>CompleteColon()
+  "inoremap <expr> <buffer> <CR> <SID>HandlePossibleSelectionEnter()
 
   if g:clang_snippets == 1
     try
