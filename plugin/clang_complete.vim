@@ -7,7 +7,7 @@
 " Help: Use :help clang_complete
 "
 
-au FileType c,cpp,objc,objcpp call <SID>ClangCompleteInit()
+autocmd FileType c,cpp,objc,objcpp call <SID>ClangCompleteInit()
 
 let b:clang_parameters = ''
 let b:clang_user_options = ''
@@ -136,7 +136,7 @@ function! s:ClangCompleteInit()
 
   if g:clang_periodic_quickfix == 1
     augroup ClangComplete
-      au CursorHold,CursorHoldI <buffer> call <SID>DoPeriodicQuickFix()
+      autocmd CursorHold,CursorHoldI <buffer> call <SID>DoPeriodicQuickFix()
     augroup end
   endif
 
@@ -349,7 +349,7 @@ function! ClangComplete(findstart, base)
       endfor
       inoremap <expr> <buffer> <C-Y> <SID>HandlePossibleSelectionCtrlY()
       augroup ClangComplete
-        au CursorMovedI <buffer> call <SID>TriggerSnippet()
+        autocmd CursorMovedI <buffer> call <SID>TriggerSnippet()
       augroup end
       let b:snippet_chosen = 0
     endif
@@ -386,7 +386,7 @@ function! s:TriggerSnippet()
   " Stop monitoring as we'll trigger a snippet
   silent! iunmap <buffer> <C-Y>
   augroup ClangComplete
-    au! CursorMovedI <buffer>
+    autocmd! CursorMovedI <buffer>
   augroup end
 
   " Trigger the snippet
