@@ -296,6 +296,7 @@ function! g:CalledFromPythonClangDisplayQuickFix(quick_fix)
       lclose
     else
       lopen
+      setlocal nospell
     endif
 
     let l:winbufnr = bufwinnr(l:bufnr)
