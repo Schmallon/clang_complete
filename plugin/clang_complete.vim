@@ -236,7 +236,7 @@ function! s:initClangCompletePython()
     "autocmd InsertCharPre * python clang_plugin.file_changed()
     autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
     autocmd VimLeave * python clang_plugin.terminate()
-    autocmd BufEnter * call <SID>DoPeriodicQuickFix()
+    autocmd BufEnter *.cpp,*.c,*.h call <SID>DoPeriodicQuickFix()
   augroup end
 endfunction
 
