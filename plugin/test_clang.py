@@ -112,5 +112,13 @@ class TestClangPlugin(unittest.TestCase):
         "defined_in_source_included_by_headerX.cpp", 3, 3,
         "defined_in_source_included_by_header.cpp", 3, 1)
 
+class TestTranslationUnitParser(unittest.TestCase):
+  def test_can_parse(self):
+    parser = libclang.SynchronizedTranslationUnitParser(
+      TestEditor(),
+      libclang.SynchronizedDoer())
+    file =  ('test.cpp', 'void foo();')
+    parser.parse(file)
+
 if __name__ == '__main__':
     unittest.main()
