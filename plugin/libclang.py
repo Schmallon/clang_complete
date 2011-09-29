@@ -724,7 +724,6 @@ class DefinitionFinder(object):
     for file_name in self._alternate_files(cursor.extent.start.file.name):
       self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, call_function_with_alternate_cursor)
 
-
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
     if cursor.kind.is_unexposed:
@@ -749,7 +748,9 @@ class DefinitionFinder(object):
       if definition_or_declaration_cursor.is_definition():
         function(definition_or_declaration_cursor)
       else:
-        self._corresponding_cursors_in_any_alternate_translation_unit_do(definition_or_declaration_cursor, function)
+        self._corresponding_cursors_in_any_alternate_translation_unit_do(
+            definition_or_declaration_cursor,
+            lambda cursor: function(get_definition_or_reference(cursor)))
         function(definition_or_declaration_cursor)
 
   def definition_cursors_do(self, function):
