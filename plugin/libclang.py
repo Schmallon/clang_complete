@@ -572,11 +572,11 @@ class Completer(object):
     self.complete_flags = complete_flags
 
   def get_current_completion_results(self, line, column):
-    self.editor.display_message("Getting completions")
-    translation_unit = self.translation_unit_accessor.get_current_translation_unit()
-    current_file = self.editor.current_file()
-    return translation_unit.codeComplete(self.editor.filename(), line, column, [current_file],
-        self.complete_flags)
+    def _do_it(translation_unit):
+      current_file = self.editor.current_file()
+      return translation_unit.codeComplete(self.editor.filename(), line, column, [current_file],
+          self.complete_flags)
+    return self.translation_unit_accessor.current_translation_unit_do(_do_it)
 
   def format_results(self, result):
     completion = dict()
