@@ -392,7 +392,7 @@ class IdleTranslationUnitParserThread(threading.Thread):
         ignored_priority, current_file = self.remaining_files.get()
         if self.termination_requested:
           return
-        self.parser.parse(current_file)
+        self.parser.translation_unit_do(current_file, lambda x: x)
         self.remaining_files.task_done()
     except Exception:
       self.editor.display_message("Exception thrown in idle thread")
