@@ -114,9 +114,7 @@ class TestClangPlugin(unittest.TestCase):
 
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
-    parser = libclang.SynchronizedTranslationUnitParser(
-      TestEditor(),
-      libclang.SynchronizedDoer())
+    parser = libclang.SynchronizedTranslationUnitParser(TestEditor())
     file =  ('test.cpp', 'void foo();')
     parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 

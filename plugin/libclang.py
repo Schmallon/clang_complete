@@ -239,41 +239,37 @@ class EmacsInterface(Editor):
 class ClangPlugin(object):
   def __init__(self, editor, clang_complete_flags):
     self.editor = editor
-    self.synchronized_doer = SynchronizedDoer()
-    self.translation_unit_accessor = TranslationUnitAccessor(self.editor, self.synchronized_doer)
+    self.translation_unit_accessor = TranslationUnitAccessor(self.editor)
     self.definition_finder = DefinitionFinder(self.editor, self.translation_unit_accessor)
     self.declaration_finder = DeclarationFinder(self.editor, self.translation_unit_accessor)
     self.completer = Completer(self.editor, self.translation_unit_accessor, int(clang_complete_flags))
-    self.idle_diagnostics_generator_thread = IdleDiagnosticsGeneratorThread(self.editor, self.synchronized_doer, self.translation_unit_accessor)
-    #self.idle_diagnostics_generator_thread.start()
+    self._quick_fix_list_generator = QuickFixListGenerator(self.editor, self.translation_unit_accessor)
+    self._diagnostics_highlighter = DiagnosticsHighlighter(self.editor)
 
   def terminate(self):
     self.translation_unit_accessor.terminate()
-    self.idle_diagnostics_generator_thread.terminate()
 
   def file_changed(self):
     self.editor.display_message("File change was notified, clearing all caches.")
     self.translation_unit_accessor.clear_caches()
     self._load_files_in_background()
-    #self.idle_diagnostics_generator_thread.update()
-    #Don't run in parallel for now. Vim can't handle GUI update from another thread.
-    #self.synchronized_doer.do(self.idle_diagnostics_generator_thread._update_diagnostics)
 
   def try_update_diagnostics(self):
     self.editor.display_message("Trying to update the diagnostics")
 
-    def do_it():
-      if self.translation_unit_accessor.is_parsed(self.editor.filename()):
-        self.idle_diagnostics_generator_thread._update_diagnostics()
-        self.editor.display_message("Can update")
-        return 1
-      else:
-        return 0
+    class Success(Exception):
+      pass
+
+    def do_it(translation_unit):
+      self.editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
+      self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
+      raise Success()
 
     try:
-      return self.synchronized_doer.do_if_not_locked(do_it)
-    except AlreadyLocked:
-      return 0
+      self.translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
+    except Success:
+      return 1
+    return 0
 
   def file_opened(self):
     self.editor.display_message("Noticed opening of new file")
@@ -289,7 +285,8 @@ class ClangPlugin(object):
     abort_on_first_call(self.definition_finder.definition_cursors_do, self.editor.jump_to_cursor)
 
   def jump_to_declaration(self):
-    self.synchronized_doer.do(self.declaration_finder.jump_to_declaration)
+    #self.synchronized_doer.do(self.declaration_finder.jump_to_declaration)
+    self.error
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -343,15 +340,26 @@ class TranslationParsingAction(object):
     return tu
 
 class SynchronizedTranslationUnitParser(object):
-  def __init__(self, editor, synchronized_doer):
+  def __init__(self, editor):
     self.editor = editor
     self.index = Index.create()
     self.translation_units = dict()
     self.up_to_date = set()
-    self._synchronized_doer = synchronized_doer
+    self._synchronized_doer = SynchronizedDoer()
 
   def translation_unit_do(self, file, function):
-    return function(self._parse(file))
+    def do_it():
+      return function(self._parse(file))
+    return self._synchronized_doer.do(do_it)
+
+  def translation_unit_if_parsed_do(self, file, function):
+    def do_it():
+      if file[0] in self.up_to_date:
+        return function(self._parse(file))
+    try:
+      return self._synchronized_doer.do_if_not_locked(do_it)
+    except AlreadyLocked:
+      pass
 
   def _parse(self, file):
     def _unsynchronized_parse():
@@ -422,9 +430,9 @@ class SynchronizedDoer(object):
       raise AlreadyLocked()
 
 class TranslationUnitAccessor(object):
-  def __init__(self, editor, synchronized_doer):
+  def __init__(self, editor):
     self.editor = editor
-    self.parser = SynchronizedTranslationUnitParser(self.editor, synchronized_doer)
+    self.parser = SynchronizedTranslationUnitParser(self.editor)
     self.idle_translation_unit_parser_thread = IdleTranslationUnitParserThread(self.editor, self.parser)
     self.idle_translation_unit_parser_thread.start()
 
@@ -440,6 +448,10 @@ class TranslationUnitAccessor(object):
   def current_translation_unit_do(self, function):
     current_file = self.editor.current_file()
     return self._translation_unit_do(current_file, function)
+
+  def current_translation_unit_if_parsed_do(self, function):
+    current_file = self.editor.current_file()
+    return self.parser.translation_unit_if_parsed_do(current_file, function)
 
   def translation_unit_for_file_named_do(self, filename, function):
     try:
@@ -515,46 +527,9 @@ class QuickFixListGenerator(object):
       'text' : diagnostic.spelling,
       'type' : type})
 
-  def _get_quick_fix_list(self, tu):
+  def get_quick_fix_list(self, tu):
     return filter (None, map (self._get_quick_fix, tu.diagnostics))
 
-  #pass in a translation unit
-  def get_current_quick_fix_list(self):
-    return self.translation_unit_accessor.current_translation_unit_do(self._get_quick_fix_list)
-
-class IdleDiagnosticsGeneratorThread(threading.Thread):
-  def __init__(self, editor, synchronized_doer, translation_unit_accessor):
-    threading.Thread.__init__(self)
-    self._editor = editor
-    self._termination_requested = False
-    self._event = threading.Event()
-    self._synchronized_doer = synchronized_doer
-    self._translation_unit_accessor = translation_unit_accessor
-    self._quick_fix_list_generator = QuickFixListGenerator(self._editor, translation_unit_accessor)
-    self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
-
-  def terminate(self):
-    self._termination_requested = True
-    self.update()
-
-  def update(self):
-    self._event.set()
-
-  def run(self):
-    try:
-      while True:
-        self._event.wait()
-        self._event.clear()
-        self._synchronized_doer.do(self._update_diagnostics)
-        if self._termination_requested:
-          return
-    except Exception:
-      self.editor.display_message("Exception occurred in idle diagnostics thread")
-
-  def _update_diagnostics(self):
-    self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quick_fix_list())
-    translation_unit = self._translation_unit_accessor.current_translation_unit_do(
-      self._diagnostics_highlighter.highlight_in_translation_unit)
 
 class Completer(object):
 
