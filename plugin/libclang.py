@@ -431,9 +431,6 @@ class TranslationUnitAccessor(object):
   def terminate(self):
     self.idle_translation_unit_parser_thread.terminate()
 
-  def translation_units(self):
-    return self.parser.translation_units
-
   def is_parsed(self, file_name):
     return self.parser.is_parsed(file_name)
 
@@ -523,11 +520,7 @@ class QuickFixListGenerator(object):
 
   #pass in a translation unit
   def get_current_quick_fix_list(self):
-    if self.editor.filename() in self.translation_unit_accessor.translation_units():
-      return self._get_quick_fix_list(self.translation_unit_accessor.translation_units()[self.editor.filename()])
-    else:
-      self.editor.display_message("File was not found in current translation unit")
-      return []
+    return self.translation_unit_accessor.current_translation_unit_do(self._get_quick_fix_list)
 
 class IdleDiagnosticsGeneratorThread(threading.Thread):
   def __init__(self, editor, synchronized_doer, translation_unit_accessor):
@@ -560,9 +553,8 @@ class IdleDiagnosticsGeneratorThread(threading.Thread):
 
   def _update_diagnostics(self):
     self._editor.display_diagnostics(self._quick_fix_list_generator.get_current_quick_fix_list())
-    translation_unit = self._translation_unit_accessor.get_current_translation_unit()
-    if self._editor.filename() in self._translation_unit_accessor.translation_units():
-      self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
+    translation_unit = self._translation_unit_accessor.current_translation_unit_do(
+      self._diagnostics_highlighter.highlight_in_translation_unit)
 
 class Completer(object):
 
