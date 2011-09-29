@@ -388,6 +388,21 @@ class SynchronizedTranslationUnitParser(object):
   def is_parsed(self, file_name):
     return file_name in self.up_to_date
 
+class IdleTranslationUnitParserThreadDistributor():
+  def __init__(self, editor, translation_unit_parser):
+    self._editor = editor
+    self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser) for i in range(1, 8)]
+    self._next_thread = 0
+    for thread in self._threads:
+      thread.start()
+
+  def terminate(self):
+    for thread in self._threads:
+      thread.terminate()
+
+  def enqueue_file(self, file):
+    self._next_thread = (self._next_thread + 1) % len(self._threads)
+    self._threads[self._next_thread].enqueue_file(file)
 
 class IdleTranslationUnitParserThread(threading.Thread):
   def __init__(self, editor, translation_unit_parser):
@@ -448,11 +463,10 @@ class TranslationUnitAccessor(object):
   def __init__(self, editor):
     self.editor = editor
     self.parser = SynchronizedTranslationUnitParser(self.editor)
-    self.idle_translation_unit_parser_thread = IdleTranslationUnitParserThread(self.editor, self.parser)
-    self.idle_translation_unit_parser_thread.start()
+    self.idle_translation_unit_parser_thread_distributor = IdleTranslationUnitParserThreadDistributor(self.editor, self.parser)
 
   def terminate(self):
-    self.idle_translation_unit_parser_thread.terminate()
+    self.idle_translation_unit_parser_thread_distributor.terminate()
 
   def is_parsed(self, file_name):
     return self.parser.is_parsed(file_name)
@@ -479,7 +493,7 @@ class TranslationUnitAccessor(object):
     self.parser.clear_caches()
 
   def enqueue_translation_unit_creation(self, file):
-    self.idle_translation_unit_parser_thread.enqueue_file(file)
+    self.idle_translation_unit_parser_thread_distributor.enqueue_file(file)
 
   def _translation_unit_do(self, file, function):
     return self.parser.translation_unit_do(file, function)
