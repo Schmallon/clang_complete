@@ -118,7 +118,7 @@ class TestTranslationUnitParser(unittest.TestCase):
       TestEditor(),
       libclang.SynchronizedDoer())
     file =  ('test.cpp', 'void foo();')
-    parser.parse(file)
+    parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 
 if __name__ == '__main__':
     unittest.main()

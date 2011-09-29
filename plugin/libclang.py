@@ -11,6 +11,8 @@ import traceback
 """
 Ideas:
 
+  - Problem - Ensure translation units are not reparsed while being accessed
+
   - Rethink concurrent parsing: Apparently, libclang allows translation units
     to be parsed in parallel. We only have to ensure that a translation unit is
     not accessed while it is being parsed. Why not come up with a
@@ -341,6 +343,9 @@ class SynchronizedTranslationUnitParser(object):
     self.translation_units = dict()
     self.up_to_date = set()
     self._synchronized_doer = synchronized_doer
+
+  def translation_unit_do(self, file, function):
+    return function(self.parse(file))
 
   def parse(self, file):
     def _unsynchronized_parse():
