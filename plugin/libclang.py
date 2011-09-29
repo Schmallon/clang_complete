@@ -345,7 +345,22 @@ class SynchronizedTranslationUnitParser(object):
     self.index = Index.create()
     self.translation_units = dict()
     self.up_to_date = set()
+    self._synchronized_doers = {}
     self._synchronized_doer = SynchronizedDoer()
+
+  def _synchronized_doer_for_file_named(self, file_name):
+    def do_it():
+      try:
+        return self._synchronized_doers[file_name]
+      except KeyError:
+        doer = SynchronizedDoer()
+        self._synchronized_doers[file_name] = doer
+        return doer
+    return self._synchronized_doer.do(do_it)
+
+  def _file_synchronized_do(self, file, action):
+    doer = self._synchronized_doer_for_file_named(file[0])
+    return doer.do(action)
 
   def translation_unit_do(self, file, function):
     def do_it():
