@@ -274,13 +274,7 @@ class ClangPlugin(object):
       self.translation_unit_accessor.enqueue_translation_unit_creation(self.translation_unit_accessor.get_file_for_filename(file_name))
 
   def jump_to_definition(self):
-    def do_it():
-      definition_cursor = self.definition_finder.find_first_definition_cursor()
-      if definition_cursor:
-        self.editor.jump_to_cursor(definition_cursor)
-      else:
-        self.editor.display_message("No definition available")
-    self.synchronized_doer.do(do_it)
+    self.definition_finder.first_definition_cursor_do(self.editor.jump_to_cursor)
 
   def jump_to_declaration(self):
     self.synchronized_doer.do(self.declaration_finder.jump_to_declaration)
@@ -345,9 +339,9 @@ class SynchronizedTranslationUnitParser(object):
     self._synchronized_doer = synchronized_doer
 
   def translation_unit_do(self, file, function):
-    return function(self.parse(file))
+    return function(self._parse(file))
 
-  def parse(self, file):
+  def _parse(self, file):
     def _unsynchronized_parse():
       action = TranslationParsingAction(self.editor, self.index, self.translation_units, self.up_to_date, file)
       return action.parse()
@@ -434,17 +428,14 @@ class TranslationUnitAccessor(object):
   def get_file_for_filename(self, filename):
     return (filename, open(filename, 'r').read())
 
-  def get_current_translation_unit(self):
+  def current_translation_unit_do(self, function):
     current_file = self.editor.current_file()
-    result = self._get_translation_unit(current_file)
-    if result:
-      return result
-    raise NoCurrentTranslationUnit
+    return self._translation_unit_do(current_file, function)
 
-  def get_translation_unit_for_filename(self, filename):
+  def translation_unit_for_file_named_do(self, filename, function):
     try:
       file = self.get_file_for_filename(filename)
-      return self._get_translation_unit(file)
+      return self._translation_unit_do(file, function)
     except IOError:
       return None
 
@@ -454,8 +445,8 @@ class TranslationUnitAccessor(object):
   def enqueue_translation_unit_creation(self, file):
     self.idle_translation_unit_parser_thread.enqueue_file(file)
 
-  def _get_translation_unit(self, file):
-    return self.parser.parse(file)
+  def _translation_unit_do(self, file, function):
+    return self.parser.translation_unit_do(file, function)
 
 class DiagnosticsHighlighter(object):
 
@@ -492,7 +483,7 @@ class QuickFixListGenerator(object):
     if diagnostic.location.file:
       filename = diagnostic.location.file.name
     else:
-      "hack: report errors without files. should nevertheless be in quickfix list"
+      "hack: report errors without files. should nevertheless be in quick_fix list"
       self.editor.display_message(diagnostic.spelling)
       filename = ""
 
@@ -518,6 +509,7 @@ class QuickFixListGenerator(object):
   def _get_quick_fix_list(self, tu):
     return filter (None, map (self._get_quick_fix, tu.diagnostics))
 
+  #pass in a translation unit
   def get_current_quick_fix_list(self):
     if self.editor.filename() in self.translation_unit_accessor.translation_units():
       return self._get_quick_fix_list(self.translation_unit_accessor.translation_units()[self.editor.filename()])
@@ -712,12 +704,14 @@ class DefinitionFinder(object):
         return cursor_at_position
     return None
 
-  def _find_corresponding_cursor_in_any_alternate_translation_unit(self, cursor):
-    for alternate_translation_unit in self._guess_alternate_translation_units(cursor.extent.start.file.name)():
-      result = self._find_corresponding_cursor_in_alternate_translation_unit(cursor, alternate_translation_unit)
-      if result:
-        return result
-    return None
+  def _all_corresponding_cursors_in_any_alternate_translation_unit_do(self, cursor, function):
+    def call_function_with_alternate_cursor(translation_unit):
+      alternate_cursor = self._find_corresponding_cursor_in_alternate_translation_unit(cursor, translation_unit)
+      if alternate_cursor:
+        function(alternate_cursor)
+    for file_name in self._alternate_files(cursor.extent.start.file.name):
+      self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, call_function_with_alternate_cursor)
+
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
@@ -729,53 +723,38 @@ class DefinitionFinder(object):
     current_location = self.editor.get_current_location_in_translation_unit(translation_unit)
     return self._find_definition_in_translation_unit(translation_unit, current_location)
 
-  def _current_translation_units(self):
-    try:
-      return [self.translation_unit_accessor.get_current_translation_unit()]
-    except NoCurrentTranslationUnit:
-      return []
+  def _alternate_files(self, filename):
+    finder = DefinitionFileFinder(self.editor, filename)
+    return finder.definition_files()
 
-  def _guess_alternate_translation_units(self, filename):
-    def f():
-      finder = DefinitionFileFinder(self.editor, filename)
-      return filter(lambda x: x is not None,
-          map(self.translation_unit_accessor.get_translation_unit_for_filename,
-            finder.definition_files()))
-    return f
+  def _guessed_alternate_translation_units_do(self, filename, function):
+    finder = DefinitionFileFinder(self.editor, filename)
+    for file in finder.definition_files():
+      self.translation_unit_accessor.translation_unit_for_file_named_do(file, function)
 
-  def _definition_of_current_cusor_in(self, translation_unit):
+  def _definition_of_current_cursor_do(self, translation_unit, function):
     definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
     if definition_or_declaration_cursor:
       self.editor.display_message("Found either a definition or a declaration")
       if definition_or_declaration_cursor.is_definition():
-        return definition_or_declaration_cursor
+        function(definition_or_declaration_cursor)
       else:
         self.editor.display_message("The first result is not a definition. Searching for definition of first result")
-        alternate_result = self._find_corresponding_cursor_in_any_alternate_translation_unit(definition_or_declaration_cursor)
-        if alternate_result:
-          self.editor.display_message("Jumping to alternate result")
-          return get_definition_or_reference(alternate_result)
-        else:
-          self.editor.display_message("Did not find an alternate result. Jumping to initial result.")
-          return definition_or_declaration_cursor
-    raise NoDefinitionFound
+        #ONLY FIRST
+        self._all_corresponding_cursors_in_any_alternate_translation_unit_do(definition_or_declaration_cursor, function)
+        function(definition_or_declaration_cursor)
 
-  def find_first_definition_cursor(self):
+  def first_definition_cursor_do(self, function):
     """
     Tries to find a definition looking in various translation units. Returns the
     first valid one found
     """
 
-    for get_translation_units in [
-        self._guess_alternate_translation_units(self.editor.filename()),
-        self._current_translation_units,
+    for translation_unit_do in [
+        lambda f: self._guessed_alternate_translation_units_do(self.editor.filename(), f),
+        self.translation_unit_accessor.current_translation_unit_do,
         ]:
-      for translation_unit in get_translation_units():
-        try:
-          return self._definition_of_current_cusor_in(translation_unit)
-        except NoDefinitionFound:
-          pass
-    return None
+      translation_unit_do(lambda translation_unit: self._definition_of_current_cursor_do(translation_unit, function))
 
 class DefinitionFileFinder(object):
   """
