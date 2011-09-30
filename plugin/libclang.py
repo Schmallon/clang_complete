@@ -261,7 +261,6 @@ class ClangPlugin(object):
 
     class Success(Exception):
       pass
-
     def do_it(translation_unit):
       self.editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
@@ -393,7 +392,7 @@ class SynchronizedTranslationUnitParser(object):
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
     self._editor = editor
-    self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser) for i in range(1, 8)]
+    self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser, self.enqueue_file) for i in range(1, 8)]
     self._next_thread = 0
     for thread in self._threads:
       thread.start()
@@ -402,15 +401,16 @@ class IdleTranslationUnitParserThreadDistributor():
     for thread in self._threads:
       thread.terminate()
 
-  def enqueue_file(self, file):
+  def enqueue_file(self, file, high_priority = True):
     self._next_thread = (self._next_thread + 1) % len(self._threads)
-    self._threads[self._next_thread].enqueue_file(file)
+    self._threads[self._next_thread].enqueue_file(file, high_priority)
 
 class IdleTranslationUnitParserThread(threading.Thread):
-  def __init__(self, editor, translation_unit_parser):
+  def __init__(self, editor, translation_unit_parser, enqueue_in_any_thread):
     threading.Thread.__init__(self)
     self.editor = editor
     self.parser = translation_unit_parser
+    self._enqueue_in_any_thread = enqueue_in_any_thread
 
     self.remaining_files = Queue.PriorityQueue()
     self.termination_requested = False
@@ -419,12 +419,18 @@ class IdleTranslationUnitParserThread(threading.Thread):
     self.termination_requested = True
     self.remaining_files.put((-1, None))
 
-  def enqueue_file(self, file, high_priority = True):
+  def enqueue_file(self, file, high_priority):
     if high_priority:
       priority = 0
     else:
       priority = 1
     self.remaining_files.put((priority, file))
+
+  def _enqueue_includes(self, translation_unit):
+    for include in translation_unit.get_includes():
+      file_name = include.source.name
+      if not self.parser.is_parsed(file_name):
+        self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
 
   def run(self):
     try:
@@ -432,10 +438,12 @@ class IdleTranslationUnitParserThread(threading.Thread):
         ignored_priority, current_file = self.remaining_files.get()
         if self.termination_requested:
           return
-        self.parser.translation_unit_do(current_file, lambda x: x)
+        self.editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
+        self.parser.translation_unit_do(current_file, self._enqueue_includes)
+        self.editor.display_message("[" + threading.currentThread().name + " ] - Finished parse: " + current_file[0])
         self.remaining_files.task_done()
-    except Exception:
-      self.editor.display_message("Exception thrown in idle thread")
+    except Exception, e:
+      self.editor.display_message("Exception thrown in idle thread: " + str(e))
 
 
 class AlreadyLocked(Exception):
