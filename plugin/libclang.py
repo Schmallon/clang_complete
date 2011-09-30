@@ -347,7 +347,7 @@ class SynchronizedTranslationUnitParser(object):
     self.translation_units = dict()
     self.up_to_date = set()
     self._synchronized_doers = {}
-    self._synchronized_doer = SynchronizedDoer()
+    self._doer_lock = SynchronizedDoer()
 
   def _synchronized_doer_for_file_named(self, file_name):
     def do_it():
@@ -357,7 +357,7 @@ class SynchronizedTranslationUnitParser(object):
         doer = SynchronizedDoer()
         self._synchronized_doers[file_name] = doer
         return doer
-    return self._synchronized_doer.do(do_it)
+    return self._doer_lock.do(do_it)
 
   def _file_synchronized_do(self, file, action):
     doer = self._synchronized_doer_for_file_named(file[0])
@@ -366,22 +366,21 @@ class SynchronizedTranslationUnitParser(object):
   def translation_unit_do(self, file, function):
     def do_it():
       return function(self._parse(file))
-    return self._synchronized_doer.do(do_it)
+    return self._file_synchronized_do(file, do_it)
 
   def translation_unit_if_parsed_do(self, file, function):
+    doer = self._synchronized_doer_for_file_named(file[0])
     def do_it():
       if file[0] in self.up_to_date:
         return function(self._parse(file))
     try:
-      return self._synchronized_doer.do_if_not_locked(do_it)
+      return doer.do_if_not_locked(do_it)
     except AlreadyLocked:
       pass
 
   def _parse(self, file):
-    def _unsynchronized_parse():
-      action = TranslationParsingAction(self.editor, self.index, self.translation_units, self.up_to_date, file)
-      return action.parse()
-    return self._synchronized_doer.do(_unsynchronized_parse)
+    action = TranslationParsingAction(self.editor, self.index, self.translation_units, self.up_to_date, file)
+    return action.parse()
 
   def clear_caches(self):
     self.up_to_date.clear()
