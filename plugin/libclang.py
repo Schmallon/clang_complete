@@ -673,9 +673,10 @@ class CompleteThread(threading.Thread):
     try:
       CompleteThread.lock.acquire()
       self.result = self.completer.get_current_completion_results(self.line, self.column)
-    except Exception:
-      self.editor.display_message("Exception occurred in completion thread")
-    CompleteThread.lock.release()
+    except Exception, e:
+      self.editor.display_message("Exception thrown in completion thread: " + str(e))
+    finally:
+      CompleteThread.lock.release()
 
 
 class DeclarationFinder(object):
