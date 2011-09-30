@@ -470,6 +470,15 @@ class SynchronizedDoer(object):
     else:
       raise AlreadyLocked()
 
+  def is_locked(self):
+    if self._lock.acquire(blocking = 0):
+      try:
+        return False
+      finally:
+        self._lock.release()
+    else:
+      return True
+
 class TranslationUnitAccessor(object):
   def __init__(self, editor):
     self.editor = editor
