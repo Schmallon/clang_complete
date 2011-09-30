@@ -392,39 +392,37 @@ class SynchronizedTranslationUnitParser(object):
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
     self._editor = editor
-    self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser, self.enqueue_file) for i in range(1, 8)]
-    self._next_thread = 0
+    self.remaining_files = Queue.PriorityQueue()
+    self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser, self.remaining_files, self.enqueue_file) for i in range(1, 8)]
     for thread in self._threads:
       thread.start()
 
   def terminate(self):
     for thread in self._threads:
       thread.terminate()
+    for thread in self._threads:
+      self.remaining_files.put((-1, None))
 
   def enqueue_file(self, file, high_priority = True):
-    self._next_thread = (self._next_thread + 1) % len(self._threads)
-    self._threads[self._next_thread].enqueue_file(file, high_priority)
-
-class IdleTranslationUnitParserThread(threading.Thread):
-  def __init__(self, editor, translation_unit_parser, enqueue_in_any_thread):
-    threading.Thread.__init__(self)
-    self.editor = editor
-    self.parser = translation_unit_parser
-    self._enqueue_in_any_thread = enqueue_in_any_thread
-
-    self.remaining_files = Queue.PriorityQueue()
-    self.termination_requested = False
-
-  def terminate(self):
-    self.termination_requested = True
-    self.remaining_files.put((-1, None))
-
-  def enqueue_file(self, file, high_priority):
     if high_priority:
       priority = 0
     else:
       priority = 1
-    self.remaining_files.put((priority, file))
+    if (priority, file) not in self.remaining_files.queue:
+      self.remaining_files.put((priority, file))
+
+class IdleTranslationUnitParserThread(threading.Thread):
+  def __init__(self, editor, translation_unit_parser, remaining_files, enqueue_in_any_thread):
+    threading.Thread.__init__(self)
+    self.editor = editor
+    self.parser = translation_unit_parser
+    self._enqueue_in_any_thread = enqueue_in_any_thread
+    self.remaining_files = remaining_files
+
+    self.termination_requested = False
+
+  def terminate(self):
+    self.termination_requested = True
 
   def _enqueue_includes(self, translation_unit):
     for include in translation_unit.get_includes():
