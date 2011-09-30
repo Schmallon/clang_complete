@@ -72,6 +72,8 @@ def abort_on_first_call(computation, result_consumer):
   except Found:
     pass
 
+def get_file_for_filename(filename):
+  return (filename, open(filename, 'r').read())
 
 def print_cursor_with_children(self, cursor, n = 0):
   sys.stdout.write(n * " ")
@@ -279,7 +281,7 @@ class ClangPlugin(object):
     self.translation_unit_accessor.enqueue_translation_unit_creation(self.editor.current_file())
     finder = DefinitionFileFinder(self.editor, self.editor.filename())
     for file_name in finder.definition_files():
-      self.translation_unit_accessor.enqueue_translation_unit_creation(self.translation_unit_accessor.get_file_for_filename(file_name))
+      self.translation_unit_accessor.enqueue_translation_unit_creation(get_file_for_filename(file_name))
 
   def jump_to_definition(self):
     abort_on_first_call(self.definition_finder.definition_cursors_do, self.editor.jump_to_cursor)
@@ -471,9 +473,6 @@ class TranslationUnitAccessor(object):
   def is_parsed(self, file_name):
     return self.parser.is_parsed(file_name)
 
-  def get_file_for_filename(self, filename):
-    return (filename, open(filename, 'r').read())
-
   def current_translation_unit_do(self, function):
     current_file = self.editor.current_file()
     return self._translation_unit_do(current_file, function)
@@ -484,7 +483,7 @@ class TranslationUnitAccessor(object):
 
   def translation_unit_for_file_named_do(self, filename, function):
     try:
-      file = self.get_file_for_filename(filename)
+      file = get_file_for_filename(filename)
       return self._translation_unit_do(file, function)
     except IOError:
       return None
