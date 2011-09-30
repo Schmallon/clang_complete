@@ -281,9 +281,6 @@ class ClangPlugin(object):
 
   def _load_files_in_background(self):
     self.translation_unit_accessor.enqueue_translation_unit_creation(self.editor.current_file())
-    finder = DefinitionFileFinder(self.editor, self.editor.filename())
-    for file_name in finder.definition_files():
-      self.translation_unit_accessor.enqueue_translation_unit_creation(get_file_for_filename(file_name))
 
   def jump_to_definition(self):
     abort_on_first_call(self.definition_finder.definition_cursors_do, self.editor.jump_to_cursor)
@@ -392,10 +389,15 @@ class SynchronizedTranslationUnitParser(object):
   def is_parsed(self, file_name):
     return file_name in self.up_to_date
 
+  def is_parsing(self, file_name):
+    doer = self._synchronized_doer_for_file_named(file_name)
+    return doer.is_locked()
+
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
     self._editor = editor
     self.remaining_files = Queue.PriorityQueue()
+    self._parser = translation_unit_parser
     self._threads = [IdleTranslationUnitParserThread(editor, translation_unit_parser, self.remaining_files, self.enqueue_file) for i in range(1, 8)]
     for thread in self._threads:
       thread.start()
@@ -407,6 +409,8 @@ class IdleTranslationUnitParserThreadDistributor():
       self.remaining_files.put((-1, None))
 
   def enqueue_file(self, file, high_priority = True):
+    if self._parser.is_parsed(file[0]) or self._parser.is_parsing(file[0]):
+      return
     if high_priority:
       priority = 0
     else:
@@ -427,11 +431,19 @@ class IdleTranslationUnitParserThread(threading.Thread):
   def terminate(self):
     self.termination_requested = True
 
+  def _enqueue_related_files(self, translation_unit):
+    self._enqueue_definition_files(translation_unit)
+    self._enqueue_includes(translation_unit)
+
   def _enqueue_includes(self, translation_unit):
     for include in translation_unit.get_includes():
       file_name = include.source.name
-      if not self.parser.is_parsed(file_name):
-        self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
+      self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
+
+  def _enqueue_definition_files(self, translation_unit):
+    finder = DefinitionFileFinder(self.editor, translation_unit.spelling)
+    for file_name in finder.definition_files():
+      self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
 
   def run(self):
     try:
@@ -440,8 +452,8 @@ class IdleTranslationUnitParserThread(threading.Thread):
         if self.termination_requested:
           return
         self.editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
-        self.parser.translation_unit_do(current_file, self._enqueue_includes)
         self.editor.display_message("[" + threading.currentThread().name + " ] - Finished parse: " + current_file[0])
+        self.parser.translation_unit_do(current_file, self._enqueue_related_files)
         self.remaining_files.task_done()
     except Exception, e:
       self.editor.display_message("Exception thrown in idle thread: " + str(e))
