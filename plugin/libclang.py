@@ -120,8 +120,11 @@ class VimInterface(Editor):
 
   def _get_variable(self, variable_name, default_value = ""):
     try:
-      return self._vim.eval(variable_name)
-    except vim.error:
+      if int(self._vim.eval("exists('" + variable_name + "')")):
+        return self._vim.eval(variable_name)
+      else:
+        return default_value
+    except:
       return default_value
 
   def _split_options(self, options):
