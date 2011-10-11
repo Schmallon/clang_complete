@@ -363,16 +363,20 @@ class SynchronizedTranslationUnitParser(object):
     doer = self._synchronized_doer_for_file_named(file[0])
     return doer.do(action)
 
+  def call_if_not_null(self, function, arg):
+    if arg:
+      return function(arg)
+
   def translation_unit_do(self, file, function):
     def do_it():
-      return function(self._parse(file))
+      return self.call_if_not_null(function, self._parse(file))
     return self._file_synchronized_do(file, do_it)
 
   def translation_unit_if_parsed_do(self, file, function):
     doer = self._synchronized_doer_for_file_named(file[0])
     def do_it():
       if file[0] in self.up_to_date:
-        return function(self._parse(file))
+        return self.call_if_not_null(function, self._parse(file))
     try:
       return doer.do_if_not_locked(do_it)
     except AlreadyLocked:
