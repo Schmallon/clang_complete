@@ -829,12 +829,12 @@ class DefinitionFileFinder(object):
     except OSError:
       pass
 
-  def _distance(self, a, b):
-    return Levenshtein.distance(a, b)
+  def _ratio(self, a, b):
+    return Levenshtein.ratio(a, b)
 
   def _is_definition_file_name(self, file_name):
     split_file_name = os.path.splitext(file_name)
-    return (self._distance(split_file_name[0], self.split_target[0]) < 3 and
+    return (self._ratio(split_file_name[0], self.split_target[0]) > 0.8 and
         split_file_name[1] in ('.cpp', 'c'))
 
 
