@@ -245,9 +245,9 @@ class ClangPlugin(object):
   def __init__(self, editor, clang_complete_flags):
     self._editor = editor
     self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
-    self.definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
-    self.declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
-    self.completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
+    self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
+    self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
+    self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
     self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
     self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
 
@@ -281,14 +281,14 @@ class ClangPlugin(object):
     self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
   def jump_to_definition(self):
-    abort_on_first_call(self.definition_finder.definition_cursors_do, self._editor.jump_to_cursor)
+    abort_on_first_call(self._definition_finder.definition_cursors_do, self._editor.jump_to_cursor)
 
   def jump_to_declaration(self):
-    abort_on_first_call(self.declaration_finder.declaration_cursors_do, self._editor.jump_to_cursor)
+    abort_on_first_call(self._declaration_finder.declaration_cursors_do, self._editor.jump_to_cursor)
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
-    return self.completer.get_current_completions(base)
+    return self._completer.get_current_completions(base)
 
 class NoCurrentTranslationUnit(Exception):
   pass
@@ -296,25 +296,25 @@ class NoCurrentTranslationUnit(Exception):
 class TranslationParsingAction(object):
   def __init__(self, editor, index, translation_units, up_to_date, file):
     self._editor = editor
-    self.index = index
-    self.translation_units = translation_units
-    self.up_to_date = up_to_date
+    self._index = index
+    self._translation_units = translation_units
+    self._up_to_date = up_to_date
     self._file = file
 
   def parse(self):
-    if self._file_name() in self.translation_units:
+    if self._file_name() in self._translation_units:
       result = self._reuse_existing_translation_unit()
     else:
       result = self._read_new_translation_unit()
-    self.up_to_date.add(self._file_name())
+    self._up_to_date.add(self._file_name())
     return result
 
   def _file_name(self):
     return self._file[0]
 
   def _reuse_existing_translation_unit(self):
-    tu = self.translation_units[self._file_name()]
-    if self._file_name() not in self.up_to_date:
+    tu = self._translation_units[self._file_name()]
+    if self._file_name() not in self._up_to_date:
       tu.reparse([self._file])
     return tu
 
@@ -322,14 +322,14 @@ class TranslationParsingAction(object):
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
 
     args = self._editor.user_options()
-    tu = self.index.parse(self._file_name(), args, [self._file], flags)
+    tu = self._index.parse(self._file_name(), args, [self._file], flags)
 
     if tu == None:
       self._editor.display_message("Cannot parse this source file. The following arguments " \
           + "are used for clang: " + " ".join(args))
       return None
 
-    self.translation_units[self._file_name()] = tu
+    self._translation_units[self._file_name()] = tu
 
     # Reparse to initialize the PCH cache even for auto completion
     # This should be done by index.parse(), however it is not.
@@ -340,9 +340,9 @@ class TranslationParsingAction(object):
 class SynchronizedTranslationUnitParser(object):
   def __init__(self, editor):
     self._editor = editor
-    self.index = Index.create()
-    self.translation_units = dict()
-    self.up_to_date = set()
+    self._index = Index.create()
+    self._translation_units = dict()
+    self._up_to_date = set()
     self._synchronized_doers = {}
     self._doer_lock = SynchronizedDoer()
 
@@ -372,7 +372,7 @@ class SynchronizedTranslationUnitParser(object):
   def translation_unit_if_parsed_do(self, file, function):
     doer = self._synchronized_doer_for_file_named(file[0])
     def do_it():
-      if file[0] in self.up_to_date:
+      if file[0] in self._up_to_date:
         return self.call_if_not_null(function, self._parse(file))
     try:
       return doer.do_if_not_locked(do_it)
@@ -380,14 +380,14 @@ class SynchronizedTranslationUnitParser(object):
       pass
 
   def _parse(self, file):
-    action = TranslationParsingAction(self._editor, self.index, self.translation_units, self.up_to_date, file)
+    action = TranslationParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
     return action.parse()
 
   def clear_caches(self):
-    self.up_to_date.clear()
+    self._up_to_date.clear()
 
   def is_parsed(self, file_name):
-    return file_name in self.up_to_date
+    return file_name in self._up_to_date
 
   def is_parsing(self, file_name):
     doer = self._synchronized_doer_for_file_named(file_name)
@@ -396,9 +396,9 @@ class SynchronizedTranslationUnitParser(object):
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
     self._editor = editor
-    self.remaining_files = Queue.PriorityQueue()
+    self._remaining_files = Queue.PriorityQueue()
     self._parser = translation_unit_parser
-    self._threads = [IdleTranslationUnitParserThread(self._editor, translation_unit_parser, self.remaining_files, self.enqueue_file) for i in range(1, 8)]
+    self._threads = [IdleTranslationUnitParserThread(self._editor, translation_unit_parser, self._remaining_files, self.enqueue_file) for i in range(1, 8)]
     for thread in self._threads:
       thread.start()
 
@@ -406,7 +406,7 @@ class IdleTranslationUnitParserThreadDistributor():
     for thread in self._threads:
       thread.terminate()
     for thread in self._threads:
-      self.remaining_files.put((-1, None))
+      self._remaining_files.put((-1, None))
 
   def enqueue_file(self, file, high_priority = True):
     if self._parser.is_parsed(file[0]) or self._parser.is_parsing(file[0]):
@@ -415,21 +415,20 @@ class IdleTranslationUnitParserThreadDistributor():
       priority = 0
     else:
       priority = 1
-    if (priority, file) not in self.remaining_files.queue:
-      self.remaining_files.put((priority, file))
+    if (priority, file) not in self._remaining_files.queue:
+      self._remaining_files.put((priority, file))
 
 class IdleTranslationUnitParserThread(threading.Thread):
-  def __init__(self, editor, translation_unit_parser, remaining_files, enqueue_in_any_thread):
+  def __init__(self, editor, translation_unit_parser, _remaining_files, enqueue_in_any_thread):
     threading.Thread.__init__(self)
     self._editor = editor
-    self.parser = translation_unit_parser
+    self._parser = translation_unit_parser
     self._enqueue_in_any_thread = enqueue_in_any_thread
-    self.remaining_files = remaining_files
-
-    self.termination_requested = False
+    self._remaining_files = _remaining_files
+    self._termination_requested = False
 
   def terminate(self):
-    self.termination_requested = True
+    self._termination_requested = True
 
   def _enqueue_related_files(self, translation_unit):
     #This doesn't really add any includes in the preamble.
@@ -449,12 +448,12 @@ class IdleTranslationUnitParserThread(threading.Thread):
   def run(self):
     try:
       while True:
-        ignored_priority, current_file = self.remaining_files.get()
-        if self.termination_requested:
+        ignored_priority, current_file = self._remaining_files.get()
+        if self._termination_requested:
           return
         self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
-        self.parser.translation_unit_do(current_file, self._enqueue_related_files)
-        self.remaining_files.task_done()
+        self._parser.translation_unit_do(current_file, self._enqueue_related_files)
+        self._remaining_files.task_done()
     except Exception, e:
       self._editor.display_message("Exception thrown in idle thread: " + str(e))
 
@@ -494,14 +493,14 @@ class SynchronizedDoer(object):
 class TranslationUnitAccessor(object):
   def __init__(self, editor):
     self._editor = editor
-    self.parser = SynchronizedTranslationUnitParser(self._editor)
-    self.idle_translation_unit_parser_thread_distributor = IdleTranslationUnitParserThreadDistributor(self._editor, self.parser)
+    self._parser = SynchronizedTranslationUnitParser(self._editor)
+    self._idle_translation_unit_parser_thread_distributor = IdleTranslationUnitParserThreadDistributor(self._editor, self._parser)
 
   def terminate(self):
-    self.idle_translation_unit_parser_thread_distributor.terminate()
+    self._idle_translation_unit_parser_thread_distributor.terminate()
 
   def is_parsed(self, file_name):
-    return self.parser.is_parsed(file_name)
+    return self._parser.is_parsed(file_name)
 
   def current_translation_unit_do(self, function):
     current_file = self._editor.current_file()
@@ -509,7 +508,7 @@ class TranslationUnitAccessor(object):
 
   def current_translation_unit_if_parsed_do(self, function):
     current_file = self._editor.current_file()
-    return self.parser.translation_unit_if_parsed_do(current_file, function)
+    return self._parser.translation_unit_if_parsed_do(current_file, function)
 
   def translation_unit_for_file_named_do(self, filename, function):
     try:
@@ -519,13 +518,13 @@ class TranslationUnitAccessor(object):
       return None
 
   def clear_caches(self):
-    self.parser.clear_caches()
+    self._parser.clear_caches()
 
   def enqueue_translation_unit_creation(self, file):
-    self.idle_translation_unit_parser_thread_distributor.enqueue_file(file)
+    self._idle_translation_unit_parser_thread_distributor.enqueue_file(file)
 
   def _translation_unit_do(self, file, function):
-    return self.parser.translation_unit_do(file, function)
+    return self._parser.translation_unit_do(file, function)
 
 class DiagnosticsHighlighter(object):
 
@@ -593,13 +592,13 @@ class Completer(object):
   def __init__(self, editor, translation_unit_accessor, complete_flags):
     self._editor = editor
     self._translation_unit_accessor = translation_unit_accessor
-    self.complete_flags = complete_flags
+    self._complete_flags = complete_flags
 
   def get_current_completion_results(self, line, column):
     def _do_it(translation_unit):
       current_file = self._editor.current_file()
       return translation_unit.codeComplete(self._editor.filename(), line, column, [current_file],
-          self.complete_flags)
+          self._complete_flags)
     return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
   def format_results(self, result):
@@ -675,15 +674,16 @@ class CompleteThread(threading.Thread):
   def __init__(self, editor, completer, line, column):
     threading.Thread.__init__(self)
     self._editor = editor
-    self.completer = completer
-    self.line = line
-    self.column = column
+    self._completer = completer
+    self._line = line
+    self._column = column
+
     self.result = None
 
   def run(self):
     try:
       CompleteThread.lock.acquire()
-      self.result = self.completer.get_current_completion_results(self.line, self.column)
+      self.result = self._completer.get_current_completion_results(self._line, self._column)
     except Exception, e:
       self._editor.display_message("Exception thrown in completion thread: " + str(e))
     finally:
@@ -793,14 +793,14 @@ class DefinitionFileFinder(object):
   """
   def __init__(self, editor, target_file_name):
     self._editor = editor
-    self.target_file_name = target_file_name
-    self.split_target = os.path.splitext(os.path.basename(self.target_file_name))
-    self.visited_directories = set()
-    self.search_limit = 50
-    self.num_directories_searched = 0
+    self._target_file_name = target_file_name
+    self._split_target = os.path.splitext(os.path.basename(self._target_file_name))
+    self._visited_directories = set()
+    self._search_limit = 50
+    self._num_directories_searched = 0
 
   def definition_files(self):
-    directory_name = os.path.dirname(self.target_file_name)
+    directory_name = os.path.dirname(self._target_file_name)
     for result in self._search_directory_and_parent_directories(directory_name):
       yield result
 
@@ -813,15 +813,15 @@ class DefinitionFileFinder(object):
         yield result
 
   def _search_directory_and_subdirectories(self, directory_name):
-    self.num_directories_searched = 1 + self.num_directories_searched
-    if self.num_directories_searched > self.search_limit:
+    self._num_directories_searched = 1 + self._num_directories_searched
+    if self._num_directories_searched > self._search_limit:
       return
-    self.visited_directories.add(os.path.abspath(directory_name))
+    self._visited_directories.add(os.path.abspath(directory_name))
     try:
       for file_name in os.listdir(directory_name):
         absolute_name = os.path.abspath(os.path.join(directory_name, file_name))
         if os.path.isdir(absolute_name) and file_name not in self._editor.excluded_directories():
-          if absolute_name not in self.visited_directories:
+          if absolute_name not in self._visited_directories:
             for result in self._search_directory_and_subdirectories(absolute_name):
               yield result
         else:
@@ -835,7 +835,7 @@ class DefinitionFileFinder(object):
 
   def _is_definition_file_name(self, file_name):
     split_file_name = os.path.splitext(file_name)
-    return (self._ratio(split_file_name[0], self.split_target[0]) > 0.8 and
+    return (self._ratio(split_file_name[0], self._split_target[0]) > 0.8 and
         split_file_name[1] in ('.cpp', 'c'))
 
 
