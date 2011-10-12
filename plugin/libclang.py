@@ -592,7 +592,7 @@ class Completer(object):
 
   def __init__(self, editor, translation_unit_accessor, complete_flags):
     self._editor = editor
-    self.translation_unit_accessor = translation_unit_accessor
+    self._translation_unit_accessor = translation_unit_accessor
     self.complete_flags = complete_flags
 
   def get_current_completion_results(self, line, column):
@@ -600,7 +600,7 @@ class Completer(object):
       current_file = self._editor.current_file()
       return translation_unit.codeComplete(self._editor.filename(), line, column, [current_file],
           self.complete_flags)
-    return self.translation_unit_accessor.current_translation_unit_do(_do_it)
+    return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
   def format_results(self, result):
     completion = dict()
@@ -730,7 +730,7 @@ class DefinitionFinder(object):
 
   def __init__(self, editor, translation_unit_accessor):
     self._editor = editor
-    self.translation_unit_accessor = translation_unit_accessor
+    self._translation_unit_accessor = translation_unit_accessor
 
   def _find_corresponding_cursor_in_alternate_translation_unit(self, cursor, other_translation_unit):
     file = cursor.extent.start.file
@@ -748,7 +748,7 @@ class DefinitionFinder(object):
       if alternate_cursor:
         function(alternate_cursor)
     for file_name in self._alternate_files(cursor.extent.start.file.name):
-      self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, call_function_with_alternate_cursor)
+      self._translation_unit_accessor.translation_unit_for_file_named_do(file_name, call_function_with_alternate_cursor)
 
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
@@ -766,7 +766,7 @@ class DefinitionFinder(object):
 
   def _guessed_alternate_translation_units_do(self, filename, function):
     for file in self._alternate_files(filename):
-      self.translation_unit_accessor.translation_unit_for_file_named_do(file, function)
+      self._translation_unit_accessor.translation_unit_for_file_named_do(file, function)
 
   def _definitions_of_current_cursor_do(self, translation_unit, function):
     definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
@@ -782,7 +782,7 @@ class DefinitionFinder(object):
   def definition_cursors_do(self, function):
     for translation_unit_do in [
         lambda f: self._guessed_alternate_translation_units_do(self._editor.filename(), f),
-        self.translation_unit_accessor.current_translation_unit_do,
+        self._translation_unit_accessor.current_translation_unit_do,
         ]:
       translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
 
