@@ -213,33 +213,33 @@ class EmacsInterface(Editor):
 
   def __init__(self):
     from Pymacs import lisp as emacs
-    self.emacs = emacs
+    self._emacs = emacs
 
   def current_file(self):
-    return (self.filename(), self.emacs.buffer_string())
+    return (self.filename(), self._emacs.buffer_string())
 
   def filename(self):
-    return self.emacs.buffer_file_name()
+    return self._emacs.buffer_file_name()
 
   def user_options(self):
     return ""
 
   def open_file(self, filename, line, column):
-    self.emacs.find_file(filename)
-    self.emacs.goto_line(line)
-    self.emacs.move_to_column(column - 1)
+    self._emacs.find_file(filename)
+    self._emacs.goto_line(line)
+    self._emacs.move_to_column(column - 1)
 
   def debug_enabled(self):
     return False
 
   def current_line(self):
-    return self.emacs.line_number_at_pos()
+    return self._emacs.line_number_at_pos()
 
   def current_column(self):
-    return 1 + self.emacs.current_column()
+    return 1 + self._emacs.current_column()
 
   def display_message(self, message):
-    self.emacs.minibuffer_message(message)
+    self._emacs.minibuffer_message(message)
 
 class ClangPlugin(object):
   def __init__(self, editor, clang_complete_flags):
