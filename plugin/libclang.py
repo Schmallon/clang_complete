@@ -433,8 +433,9 @@ class IdleTranslationUnitParserThread(threading.Thread):
     self.termination_requested = True
 
   def _enqueue_related_files(self, translation_unit):
+    #This doesn't really add any includes in the preamble.
+    #self._enqueue_includes(translation_unit)
     self._enqueue_definition_files(translation_unit)
-    self._enqueue_includes(translation_unit)
 
   def _enqueue_includes(self, translation_unit):
     for include in translation_unit.get_includes():
