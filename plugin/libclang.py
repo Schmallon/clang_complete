@@ -284,8 +284,7 @@ class ClangPlugin(object):
     abort_on_first_call(self.definition_finder.definition_cursors_do, self.editor.jump_to_cursor)
 
   def jump_to_declaration(self):
-    #self.synchronized_doer.do(self.declaration_finder.jump_to_declaration)
-    self.error
+    abort_on_first_call(self.declaration_finder.declaration_cursors_do, self.editor.jump_to_cursor)
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -708,12 +707,13 @@ class DeclarationFinder(object):
         return child_cursor
     return None
 
-  def jump_to_declaration(self):
-    declaration_cursor = self._find_declaration_in_translation_unit(self._translation_unit_accessor.get_current_translation_unit())
-    if declaration_cursor:
-      self._editor.jump_to_cursor(declaration_cursor)
-    else:
-      self._editor.display_message("No declaration available")
+  def declaration_cursors_do(self, function):
+    def call_function_with_declaration_in(translation_unit):
+      declaration_cursor = self._find_declaration_in_translation_unit(translation_unit)
+      if declaration_cursor:
+        function(declaration_cursor)
+
+    self._translation_unit_accessor.current_translation_unit_do(call_function_with_declaration_in)
 
 class NoDefinitionFound(Exception):
   pass
