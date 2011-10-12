@@ -260,8 +260,6 @@ class ClangPlugin(object):
     self._load_files_in_background()
 
   def try_update_diagnostics(self):
-    self.editor.display_message("Trying to update the diagnostics")
-
     class Success(Exception):
       pass
     def do_it(translation_unit):
@@ -318,12 +316,12 @@ class TranslationParsingAction(object):
   def _reuse_existing_translation_unit(self):
     tu = self.translation_units[self._file_name()]
     if self._file_name() not in self.up_to_date:
-      self.editor.display_message("Translation unit is possibly not up to date. Reparse is due")
       tu.reparse([self._file])
     return tu
 
   def _read_new_translation_unit(self):
     flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
+
     args = self.editor.user_options()
     tu = self.index.parse(self._file_name(), args, [self._file], flags)
 
@@ -455,7 +453,6 @@ class IdleTranslationUnitParserThread(threading.Thread):
         if self.termination_requested:
           return
         self.editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
-        self.editor.display_message("[" + threading.currentThread().name + " ] - Finished parse: " + current_file[0])
         self.parser.translation_unit_do(current_file, self._enqueue_related_files)
         self.remaining_files.task_done()
     except Exception, e:
