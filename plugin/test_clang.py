@@ -112,6 +112,13 @@ class TestClangPlugin(unittest.TestCase):
         "defined_in_source_included_by_headerX.cpp", 3, 3,
         "defined_in_source_included_by_header.cpp", 3, 1)
 
+  def test_find_references_to_outside_of_selection(self):
+    source_file_name = "test_find_references_to_outside_of_selection.cpp"
+    self.open_source_file(source_file_name, 1, 1)
+    self.editor.select_range((5,1),(7,1))
+    references = self.clang_plugin.find_references_to_outside_of_selection()
+    self.assertEquals(references, ((3, 1), (3,36)))
+
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
     parser = libclang.SynchronizedTranslationUnitParser(TestEditor())
