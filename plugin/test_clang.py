@@ -11,6 +11,7 @@ class TestEditor(libclang.Editor):
     self._current_line = -1
     self._filename = 'invalid filename'
     self._contents = 'invalid contents'
+    self._selection = ((1,1), (1,1))
 
   def display_diagnostics(self, quickfix_list):
     pass
@@ -56,6 +57,9 @@ class TestEditor(libclang.Editor):
     self._contents = open(filename, 'r').read()
     self._current_line = line
     self._current_column = column
+
+  def select_range(self, start, end):
+    self._selection = (start, end)
 
 
 class TestClangPlugin(unittest.TestCase):
