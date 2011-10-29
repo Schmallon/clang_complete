@@ -753,7 +753,7 @@ class DefinitionFinder(object):
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
     if cursor.kind.is_unexposed:
-      self._editor.display_message("Item at current position is not exposed. Are you in a Macro?")
+      self._editor.display_message("Item at current position is not exposed. Cursor kind: " + str(cursor.kind))
     return get_definition_or_reference(cursor)
 
   def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
