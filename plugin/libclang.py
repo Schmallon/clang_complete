@@ -186,7 +186,7 @@ class VimInterface(Editor):
   def _display_in_editor(self, message):
     print(message)
 
-  def higlight_range(self, start, end):
+  def highlight_range(self, start, end):
     #We could distinguish different severities
     hg_group = 'SpellBad'
     pattern = '/\%' + str(start.line) + 'l' + '\%' \
@@ -585,7 +585,7 @@ class DiagnosticsHighlighter(object):
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    self._editor.higlight_range(diagnostic.location, diagnostic.location)
+    self._editor.highlight_range(diagnostic.location, diagnostic.location)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -594,7 +594,7 @@ class DiagnosticsHighlighter(object):
           #
     for i in range(len(diagnostic.ranges)):
       range_i = diagnostic.ranges[i]
-      self._editor.higlight_range(range_i.start, range_i.end)
+      self._editor.highlight_range(range_i.start, range_i.end)
 
   def highlight_in_translation_unit(self, translation_unit):
     map(self._highlight_diagnostic, translation_unit.diagnostics)
