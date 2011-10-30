@@ -300,18 +300,27 @@ class ClangPlugin(object):
 
 
 class FindReferencesToOutsideOfSelectionAction(object):
+
   def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
-
-    file = translation_unit.getFile(file_name)
-    selection_start_location = translation_unit.getLocation(file, selection[0][0], selection[0][1])
-    selection_start_cursor = translation_unit.getCursor(selection_start_location)
-
-    containing_parent = self.find_containing_cursor()
+    containing_parent = self.find_containing_cursor(translation_unit, file_name, selection)
     self.traverse_all_children_in_selection(containing_parent)
 
-  def find_containing_cursor(self):
-    #selection_start.get_lexical_parent()
-    pass
+  def get_cursor_for_file_name_and_tuple(self, translation_unit, file_name, tuple):
+    file = translation_unit.getFile(file_name)
+    location = translation_unit.getLocation(file, tuple[0], tuple[1])
+    return translation_unit.getCursor(location)
+
+  def location_leq(self, location1, location2):
+    return location1.line < location2.line or (
+        location1.line == location2.line and location1.column <= location2.column)
+
+  def find_containing_cursor(self, translation_unit, file_name, selection):
+    selection_start_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[0])
+    selection_end_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[1])
+    current_cursor = selection_start_cursor
+    while self.location_leq(current_cursor.extent.end, selection_end_cursor.extent.start):
+      current_cursor = current_cursor.get_lexical_parent()
+    return current_cursor
 
   def traverse_all_children_in_selection(self, containing_parent):
     pass

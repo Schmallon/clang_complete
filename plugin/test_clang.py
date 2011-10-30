@@ -133,7 +133,7 @@ class TestTranslationUnitParser(unittest.TestCase):
     parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 
 
-class TestFindReferencesToOutsideOfSelectionAction(object):
+class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
   def setUp(self):
     self.editor = TestEditor()
     self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
@@ -149,6 +149,27 @@ class TestFindReferencesToOutsideOfSelectionAction(object):
 
   def test_can_construct_action(self):
     self.create_action()
+
+  def action_do(self, selection, function):
+    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
+    def do_it(translation_unit):
+      return function(self.create_action())
+    return self.translation_unit_do(file_name, do_it)
+
+  def assert_source_range_equals(self, source_range, expected_tuple):
+    given_tuple = (
+        (source_range.start.line, source_range.start.column),
+        (source_range.end.line, source_range.end.column))
+    self.assertEquals(given_tuple, expected_tuple)
+
+  def test_finds_containing_cursor(self):
+    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
+    def do_it(translation_unit):
+      action = self.create_action()
+      containing_cursor = action.find_containing_cursor(translation_unit, file_name, ((6, 3), (6, 45)))
+      self.assert_source_range_equals(containing_cursor.extent, ((6, 3), (6, 45)))
+    return self.translation_unit_do(file_name, do_it)
+
 
 if __name__ == '__main__':
     unittest.main()
