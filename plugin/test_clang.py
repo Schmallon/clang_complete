@@ -122,9 +122,9 @@ class TestClangPlugin(unittest.TestCase):
   def test_find_references_to_outside_of_selection(self):
     source_file_name = "test_find_references_to_outside_of_selection.cpp"
     self.open_source_file(source_file_name, 1, 1)
-    self.editor.select_range((5,1),(7,1))
+    self.editor.select_range((7,5),(7,54))
     references = self.clang_plugin.find_references_to_outside_of_selection()
-    self.assertEquals(references, ((3, 1), (3,36)))
+    self.assertEquals(list(references), [((3, 3), (3,36))])
 
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
@@ -134,6 +134,7 @@ class TestTranslationUnitParser(unittest.TestCase):
 
 
 class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
+
   def setUp(self):
     self.editor = TestEditor()
     self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
@@ -163,17 +164,12 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
         (source_range.end.line, source_range.end.column))
     self.assertEquals(given_tuple, expected_tuple)
 
-  def test_finds_containing_cursor_single_variable_definition(self):
+  def test_find_references_to_outside_of_selection(self):
     def do_it(action, translation_unit, file_name):
-      containing_cursor = action.find_containing_cursor(translation_unit, file_name, ((7, 5), (7, 54)))
-      self.assert_source_range_equals(containing_cursor.extent, ((7, 5), (7, 55)))
+      references = action.find_references_to_outside_of_selection(translation_unit, file_name, ((7, 5), (7, 54)))
+      self.assertEquals(list(references), [((3, 3), (3, 36))])
     self.action_do(do_it)
 
-  def test_finds_containing_cursor_two_variable_definitions(self):
-    def do_it(action, translation_unit, file_name):
-      containing_cursor = action.find_containing_cursor(translation_unit, file_name, ((7, 5), (8, 66)))
-      self.assert_source_range_equals(containing_cursor.extent, ((6, 3), (10, 4)))
-    self.action_do(do_it)
 
 if __name__ == '__main__':
     unittest.main()

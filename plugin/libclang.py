@@ -7,6 +7,7 @@ import sys
 import Levenshtein
 import Queue
 import traceback
+import itertools
 
 """
 Ideas:
@@ -60,6 +61,10 @@ Ideas:
    - Allow finding definitions of commented code
    - Macros
 """
+
+def flatten(listOfLists):
+    "Flatten one level of nesting"
+    return itertools.chain.from_iterable(listOfLists)
 
 def abort_on_first_call(computation, result_consumer):
   class Found(Exception):
@@ -302,40 +307,42 @@ class ClangPlugin(object):
 class FindReferencesToOutsideOfSelectionAction(object):
 
   def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
-    containing_parent = self.find_containing_cursor(translation_unit, file_name, selection)
-    self.traverse_all_children_in_selection(containing_parent)
+    selection_start_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[0])
+    selection_end_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[1])
+
+    def disjoint_with_selection(cursor):
+      return (self.location_lt(cursor.extent.end, selection_start_cursor.extent.start)
+          or self.location_lt(selection_end_cursor.extent.end, cursor.extent.start))
+
+    def intersects_with_selection(cursor):
+      return not disjoint_with_selection(cursor)
+
+    def do_it(cursor, result):
+      referenced_cursor = cursor.get_cursor_referenced()
+      if referenced_cursor:
+        if not intersects_with_selection(referenced_cursor):
+          result.add(self.range_to_tuple(referenced_cursor.extent))
+
+      for child in cursor.get_children():
+        if intersects_with_selection(child):
+          do_it(child, result)
+
+    result = set()
+    do_it(translation_unit.cursor, result)
+    return result
+
+  def range_to_tuple(self, range):
+    return ((range.start.line, range.start.column), (range.end.line, range.end.column))
 
   def get_cursor_for_file_name_and_tuple(self, translation_unit, file_name, tuple):
     file = translation_unit.getFile(file_name)
     location = translation_unit.getLocation(file, tuple[0], tuple[1])
     return translation_unit.getCursor(location)
 
-  def location_leq(self, location1, location2):
+  def location_lt(self, location1, location2):
     return location1.line < location2.line or (
-        location1.line == location2.line and location1.column <= location2.column)
+        location1.line == location2.line and location1.column < location2.column)
 
-  def find_containing_cursor(self, translation_unit, file_name, selection):
-    selection_start_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[0])
-    selection_end_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[1])
-
-    def find_containing_child_cursor(cursor):
-      for child in cursor.get_children():
-        if (self.location_leq(child.extent.start, selection_start_cursor.extent.start) and self.location_leq(selection_end_cursor.extent.end, child.extent.end)):
-          return child
-      return None
-
-    def find_deepest_containing_child_cursor(cursor):
-      containing_child = find_containing_child_cursor(cursor)
-      if containing_child:
-        return find_deepest_containing_child_cursor(containing_child)
-      else:
-        return cursor
-
-    return find_deepest_containing_child_cursor(translation_unit.cursor)
-
-
-  def traverse_all_children_in_selection(self, containing_parent):
-    pass
 
 class NoCurrentTranslationUnit(Exception):
   pass
