@@ -141,8 +141,15 @@ class TestFindReferencesToOutsideOfSelectionAction(object):
   def tearDown(self):
     self.translation_unit_accessor.terminate()
 
+  def translation_unit_do(self, file_name, function):
+    return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
+
+  def create_action(self, translation_unit, file_name, selection):
+    return libclang.FindReferencesToOutsideOfSelectionAction(translation_unit, file_name, selection)
+
   def test_can_construct_action(self):
-    action = libclang.FindReferencesToOutsideOfSelectionAction(self.translation_unit_accessor, "", ((1, 1), (1, 1)))
+    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
+    self.translation_unit_do(file_name, lambda translation_unit: self.create_action(translation_unit, file_name, ((1,1), (1,1))))
 
 if __name__ == '__main__':
     unittest.main()
