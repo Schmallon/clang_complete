@@ -7,7 +7,6 @@ import sys
 import Levenshtein
 import Queue
 import traceback
-import itertools
 
 """
 Ideas:
@@ -61,10 +60,6 @@ Ideas:
    - Allow finding definitions of commented code
    - Macros
 """
-
-def flatten(listOfLists):
-    "Flatten one level of nesting"
-    return itertools.chain.from_iterable(listOfLists)
 
 def abort_on_first_call(computation, result_consumer):
   class Found(Exception):
