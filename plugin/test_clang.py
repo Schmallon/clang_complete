@@ -144,17 +144,11 @@ class TestFindReferencesToOutsideOfSelectionAction(object):
   def translation_unit_do(self, file_name, function):
     return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
 
-  def create_action(self, translation_unit, file_name, selection):
-    return libclang.FindReferencesToOutsideOfSelectionAction(translation_unit, file_name, selection)
-
-  def action_do(self, selection, function):
-    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
-    def do_it(translation_unit):
-      return function(self.create_action(translation_unit, file_name, ((1,1), (1,1))))
-    return self.translation_unit_do(file_name, do_it)
+  def create_action(self):
+    return libclang.FindReferencesToOutsideOfSelectionAction()
 
   def test_can_construct_action(self):
-    self.action_do(((1, 1), (1, 1)), lambda action: action)
+    self.create_action()
 
 if __name__ == '__main__':
     unittest.main()

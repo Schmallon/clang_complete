@@ -292,24 +292,19 @@ class ClangPlugin(object):
 
   def find_references_to_outside_of_selection(self):
     def do_it(translation_unit):
-      return FindReferencesToOutsideOfSelectionAction(
+      return FindReferencesToOutsideOfSelectionAction().find_references_to_outside_of_selection(
           translation_unit,
           self._editor.filename(),
-          self._editor.selection()).find_references_to_outside_of_selection()
+          self._editor.selection())
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
 
 class FindReferencesToOutsideOfSelectionAction(object):
-  def __init__(self, translation_unit, file_name, selection):
-    self._translation_unit = translation_unit
-    self._file_name = file_name
-    self._selection = selection
+  def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
 
-  def find_references_to_outside_of_selection(self):
-    file = self._translation_unit.getFile(self._file_name)
-
-    selection_start_location = self._translation_unit.getLocation(file, self._selection[0][0], self._selection[0][1])
-    selection_start_cursor = self._translation_unit.getCursor(selection_start_location)
+    file = translation_unit.getFile(file_name)
+    selection_start_location = translation_unit.getLocation(file, selection[0][0], selection[0][1])
+    selection_start_cursor = translation_unit.getCursor(selection_start_location)
 
     containing_parent = self.find_containing_cursor()
     self.traverse_all_children_in_selection(containing_parent)
