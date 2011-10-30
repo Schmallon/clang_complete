@@ -73,8 +73,11 @@ class TestClangPlugin(unittest.TestCase):
   def tearDown(self):
     self.clang_plugin.terminate()
 
+  def full_file_name(self, file_name):
+    return "test_sources/" + file_name
+
   def open_source_file(self, source_file_name, start_line, start_column):
-    self.editor.open_file("test_sources/" + source_file_name, start_line, start_column)
+    self.editor.open_file(self.full_file_name(source_file_name), start_line, start_column)
 
   def jump_to_definition(self, source_file_name, start_line, start_column):
     self.open_source_file(source_file_name, start_line, start_column)
