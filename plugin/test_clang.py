@@ -132,5 +132,17 @@ class TestTranslationUnitParser(unittest.TestCase):
     file =  ('test.cpp', 'void foo();')
     parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 
+
+class TestFindReferencesToOutsideOfSelectionAction(object):
+  def setUp(self):
+    self.editor = TestEditor()
+    self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
+
+  def tearDown(self):
+    self.translation_unit_accessor.terminate()
+
+  def test_can_construct_action(self):
+    action = libclang.FindReferencesToOutsideOfSelectionAction(self.translation_unit_accessor, "", ((1, 1), (1, 1)))
+
 if __name__ == '__main__':
     unittest.main()
