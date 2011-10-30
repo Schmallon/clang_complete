@@ -150,10 +150,11 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
   def test_can_construct_action(self):
     self.create_action()
 
-  def action_do(self, selection, function):
+  def action_do(self, function):
     file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
     def do_it(translation_unit):
-      return function(self.create_action())
+      action = self.create_action()
+      function(action, translation_unit, file_name)
     return self.translation_unit_do(file_name, do_it)
 
   def assert_source_range_equals(self, source_range, expected_tuple):
@@ -163,22 +164,16 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
     self.assertEquals(given_tuple, expected_tuple)
 
   def test_finds_containing_cursor_single_variable_definition(self):
-    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
-    def do_it(translation_unit):
-      action = self.create_action()
+    def do_it(action, translation_unit, file_name):
       containing_cursor = action.find_containing_cursor(translation_unit, file_name, ((7, 5), (7, 54)))
       self.assert_source_range_equals(containing_cursor.extent, ((7, 5), (7, 55)))
-    return self.translation_unit_do(file_name, do_it)
+    self.action_do(do_it)
 
   def test_finds_containing_cursor_two_variable_definitions(self):
-    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
-    def do_it(translation_unit):
-      action = self.create_action()
+    def do_it(action, translation_unit, file_name):
       containing_cursor = action.find_containing_cursor(translation_unit, file_name, ((7, 5), (8, 66)))
-      print containing_cursor.kind
-      print containing_cursor.get_lexical_parent().kind
       self.assert_source_range_equals(containing_cursor.extent, ((6, 3), (10, 4)))
-    return self.translation_unit_do(file_name, do_it)
+    self.action_do(do_it)
 
 if __name__ == '__main__':
     unittest.main()
