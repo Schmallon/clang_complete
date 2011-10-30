@@ -317,10 +317,22 @@ class FindReferencesToOutsideOfSelectionAction(object):
   def find_containing_cursor(self, translation_unit, file_name, selection):
     selection_start_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[0])
     selection_end_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[1])
-    current_cursor = selection_start_cursor
-    while self.location_leq(current_cursor.extent.end, selection_end_cursor.extent.start):
-      current_cursor = current_cursor.get_lexical_parent()
-    return current_cursor
+
+    def find_containing_child_cursor(cursor):
+      for child in cursor.get_children():
+        if (self.location_leq(child.extent.start, selection_start_cursor.extent.start) and self.location_leq(selection_end_cursor.extent.end, child.extent.end)):
+          return child
+      return None
+
+    def find_deepest_containing_child_cursor(cursor):
+      containing_child = find_containing_child_cursor(cursor)
+      if containing_child:
+        return find_deepest_containing_child_cursor(containing_child)
+      else:
+        return cursor
+
+    return find_deepest_containing_child_cursor(translation_unit.cursor)
+
 
   def traverse_all_children_in_selection(self, containing_parent):
     pass
