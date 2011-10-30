@@ -1,4 +1,4 @@
-from clang.cindex import *
+import clang.cindex
 import time
 import re
 import threading
@@ -368,7 +368,7 @@ class TranslationParsingAction(object):
     return tu
 
   def _read_new_translation_unit(self):
-    flags = TranslationUnit.PrecompiledPreamble | TranslationUnit.CXXPrecompiledPreamble | TranslationUnit.CacheCompletionResults
+    flags = clang.cindex.TranslationUnit.PrecompiledPreamble | clang.cindex.TranslationUnit.CXXPrecompiledPreamble | clang.cindex.TranslationUnit.CacheCompletionResults
 
     args = self._editor.user_options()
     tu = self._index.parse(self._file_name(), args, [self._file], flags)
@@ -389,7 +389,7 @@ class TranslationParsingAction(object):
 class SynchronizedTranslationUnitParser(object):
   def __init__(self, editor):
     self._editor = editor
-    self._index = Index.create()
+    self._index = clang.cindex.Index.create()
     self._translation_units = dict()
     self._up_to_date = set()
     self._synchronized_doers = {}
