@@ -61,6 +61,9 @@ class TestEditor(libclang.Editor):
   def select_range(self, start, end):
     self._selection = (start, end)
 
+  def selection(self):
+    return self._selection
+
 
 class TestClangPlugin(unittest.TestCase):
   def setUp(self):
