@@ -101,6 +101,9 @@ class Editor(object):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
 
+  def highlight_range(self, start, end):
+    self.highlight(start.line, start.column, end.line, end.column)
+
   def dump_stack(self):
     for entry in traceback.format_stack():
       self.display_message(entry)
@@ -186,12 +189,13 @@ class VimInterface(Editor):
   def _display_in_editor(self, message):
     print(message)
 
-  def highlight_range(self, start, end):
+
+  def highlight(self, start_line, start_column, end_line, end_column):
     #We could distinguish different severities
     hg_group = 'SpellBad'
-    pattern = '/\%' + str(start.line) + 'l' + '\%' \
-        + str(start.column) + 'c' + '.*' \
-        + '\%' + str(end.column + 1) + 'c/'
+    pattern = '/\%' + str(start_line) + 'l' + '\%' \
+        + str(start_column) + 'c' + '.*' \
+        + '\%' + str(end_column + 1) + 'c/'
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
     self._vim.command(command)
 
