@@ -322,11 +322,8 @@ class ClangPlugin(object):
   def highlight_references_to_outside_of_selection(self):
     references = self.find_references_to_outside_of_selection()
     for reference in references:
-      self._editor.highlight(reference[0][0], reference[0][1], reference[1][0], reference[1][1])
-    if references:
-      reference = list(references)[0]
-      self._editor.select(reference[0][0], reference[0][1], reference[1][0], reference[1][1])
-
+      if reference.start.file_name == self._editor.filename():
+        self._editor.highlight(reference.start.line, reference.start.column, reference.end.line, reference.end.column)
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
