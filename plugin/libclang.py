@@ -342,7 +342,7 @@ class ExportedPosition(object):
 
   @classmethod
   def from_clang_position(cls, clang_position):
-    return cls(clang_position.file.name, clang_position.line, clang_position.column)
+    return cls(clang_position.file.name if clang_position.file else None, clang_position.line, clang_position.column)
 
 class ExportedRange(object):
   def __init__(self, start, end):
