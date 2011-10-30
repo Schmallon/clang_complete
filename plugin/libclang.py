@@ -172,6 +172,13 @@ class VimInterface(Editor):
   def current_column(self):
     return int(self._vim.eval("col('.')"))
 
+  def selection(self):
+    selection_start = (int(self._vim.eval('line("\'<")')), int(self._vim.eval('col("\'<")')))
+    selection_end = (int(self._vim.eval('line("\'>")')), int(self._vim.eval('col("\'>")')))
+    result = (selection_start, selection_end)
+    self.display_message(str(result))
+    return result
+
   def sort_algorithm(self):
     return self._vim.eval("g:clang_sort_algo")
 
@@ -206,8 +213,7 @@ class VimInterface(Editor):
     pattern = '/\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c/'
-    command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
-    self.display_message("Highlighting" + str(command))
+    command = "exe 'match' . ' " + hg_group + ' ' + pattern + "'"
     self._vim.command(command)
 
   def _python_dict_to_vim_dict(self, dictionary):
@@ -322,6 +328,43 @@ class ClangPlugin(object):
       self._editor.select(reference[0][0], reference[0][1], reference[1][0], reference[1][1])
 
 
+class ExportedPosition(object):
+  def __init__(self, file_name, line, column):
+    self.file_name = file_name
+    self.line = line
+    self.column = column
+
+  def __eq__(self, other):
+    return (self.file_name == other.file_name and self.line == other.line and self.column == other.column)
+
+  def __repr__(self):
+      return "(%r, %r, %r)" % (self.file_name, self.line, self.column)
+
+  def __hash__(self):
+    return self.line * 80 + self.column
+
+  @classmethod
+  def from_clang_position(cls, clang_position):
+    return cls(clang_position.file.name, clang_position.line, clang_position.column)
+
+class ExportedRange(object):
+  def __init__(self, start, end):
+    self.start = start
+    self.end = end
+
+  def __eq__(self, other):
+    return (self.start == other.start and self.end == other.end)
+
+  def __repr__(self):
+      return "(%r, %r)" % (self.start, self.end)
+
+  def __hash__(self):
+    return self.start.__hash__() + self.end.__hash__()
+
+  @classmethod
+  def from_clang_range(cls, clang_range):
+    return cls(ExportedPosition.from_clang_position(clang_range.start), ExportedPosition.from_clang_position(clang_range.end))
+
 class FindReferencesToOutsideOfSelectionAction(object):
 
   def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
@@ -339,7 +382,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
       referenced_cursor = cursor.get_cursor_referenced()
       if referenced_cursor:
         if not intersects_with_selection(referenced_cursor):
-          result.add(self.range_to_tuple(referenced_cursor.extent))
+          result.add(ExportedRange.from_clang_range(referenced_cursor.extent))
 
       for child in cursor.get_children():
         if intersects_with_selection(child):
@@ -348,9 +391,6 @@ class FindReferencesToOutsideOfSelectionAction(object):
     result = set()
     do_it(translation_unit.cursor, result)
     return result
-
-  def range_to_tuple(self, range):
-    return ((range.start.line, range.start.column), (range.end.line, range.end.column))
 
   def get_cursor_for_file_name_and_tuple(self, translation_unit, file_name, tuple):
     file = translation_unit.getFile(file_name)

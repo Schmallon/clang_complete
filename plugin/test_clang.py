@@ -123,11 +123,11 @@ class TestClangPlugin(unittest.TestCase):
         "defined_in_source_included_by_header.cpp", 3, 1)
 
   def test_find_references_to_outside_of_selection(self):
-    source_file_name = "test_find_references_to_outside_of_selection.cpp"
-    self.open_source_file(source_file_name, 1, 1)
+    file_name = "test_find_references_to_outside_of_selection.cpp"
+    self.open_source_file(file_name, 1, 1)
     self.editor.select_range((7,5),(7,54))
     references = self.clang_plugin.find_references_to_outside_of_selection()
-    self.assertEquals(list(references), [((3, 3), (3,36))])
+    self.assertEquals(list(references), [range_from_tuples(self.full_file_name(file_name), (3, 3), (3, 36))])
 
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
@@ -135,6 +135,10 @@ class TestTranslationUnitParser(unittest.TestCase):
     file =  ('test.cpp', 'void foo();')
     parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 
+def range_from_tuples(file_name, start, end):
+  start_pos = libclang.ExportedPosition(file_name, start[0], start[1])
+  end_pos = libclang.ExportedPosition(file_name, end[0], end[1])
+  return libclang.ExportedRange(start_pos, end_pos)
 
 class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
 
@@ -161,16 +165,10 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
       function(action, translation_unit, file_name)
     return self.translation_unit_do(file_name, do_it)
 
-  def assert_source_range_equals(self, source_range, expected_tuple):
-    given_tuple = (
-        (source_range.start.line, source_range.start.column),
-        (source_range.end.line, source_range.end.column))
-    self.assertEquals(given_tuple, expected_tuple)
-
   def test_find_references_to_outside_of_selection(self):
     def do_it(action, translation_unit, file_name):
-      references = action.find_references_to_outside_of_selection(translation_unit, file_name, ((7, 5), (7, 54)))
-      self.assertEquals(list(references), [((3, 3), (3, 36))])
+      references = action.find_references_to_outside_of_selection(translation_unit, file_name,  ((7, 5), (7, 54)))
+      self.assertEquals(list(references), [range_from_tuples(file_name, (3, 3), (3, 36))])
     self.action_do(do_it)
 
 
