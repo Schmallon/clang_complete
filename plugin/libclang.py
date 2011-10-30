@@ -189,6 +189,16 @@ class VimInterface(Editor):
   def _display_in_editor(self, message):
     print(message)
 
+  def _go_to(self, line, column):
+    self._vim.command("normal " + str(line) + "G")
+    self._vim.command("normal " + "0")
+    if column > 1:
+      self._vim.command("normal " + (column - 1) * "l")
+
+  def select(self, start_line, start_column, end_line, end_column):
+    self._go_to(start_line, start_column)
+    self._vim.command("normal " + "v")
+    self._go_to(end_line, end_column)
 
   def highlight(self, start_line, start_column, end_line, end_column):
     #We could distinguish different severities
@@ -197,6 +207,7 @@ class VimInterface(Editor):
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c/'
     command = "exe 'syntax match' . ' " + hg_group + ' ' + pattern + "'"
+    self.display_message("Highlighting" + str(command))
     self._vim.command(command)
 
   def _python_dict_to_vim_dict(self, dictionary):
@@ -301,6 +312,14 @@ class ClangPlugin(object):
           self._editor.filename(),
           self._editor.selection())
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
+
+  def highlight_references_to_outside_of_selection(self):
+    references = self.find_references_to_outside_of_selection()
+    for reference in references:
+      self._editor.highlight(reference[0][0], reference[0][1], reference[1][0], reference[1][1])
+    if references:
+      reference = list(references)[0]
+      self._editor.select(reference[0][0], reference[0][1], reference[1][0], reference[1][1])
 
 
 class FindReferencesToOutsideOfSelectionAction(object):
