@@ -1,5 +1,4 @@
 import clang.cindex
-import time
 import re
 import threading
 import os
