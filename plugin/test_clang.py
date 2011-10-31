@@ -127,7 +127,8 @@ class TestClangPlugin(unittest.TestCase):
     self.open_source_file(file_name, 1, 1)
     self.editor.select_range((7,5),(7,54))
     references = self.clang_plugin.find_references_to_outside_of_selection()
-    self.assertEquals(list(references), [range_from_tuples(self.full_file_name(file_name), (3, 3), (3, 36))])
+    referenced_ranges = map(lambda reference: reference.referenced_range, references)
+    self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(self.full_file_name(file_name), (3, 3), (3, 36))])
 
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
@@ -168,7 +169,8 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
   def test_find_references_to_outside_of_selection(self):
     def do_it(action, translation_unit, file_name):
       references = action.find_references_to_outside_of_selection(translation_unit, file_name,  ((7, 5), (7, 54)))
-      self.assertEquals(list(references), [range_from_tuples(file_name, (3, 3), (3, 36))])
+      referenced_ranges = map(lambda reference: reference.referenced_range, references)
+      self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(file_name, (3, 3), (3, 36))])
     self.action_do(do_it)
 
 

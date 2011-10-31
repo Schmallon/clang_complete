@@ -324,13 +324,14 @@ class ClangPlugin(object):
 
     self._editor.clear_highlights()
     for reference in references:
-      if reference.start.file_name == self._editor.filename():
-        self._editor.highlight(reference.start.line, reference.start.column, reference.end.line, reference.end.column, hg_group = "SpellRare")
+      range = reference.referenced_range
+      if range.start.file_name == self._editor.filename():
+        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, hg_group = "SpellRare")
 
-    qf = [dict({ 'filename' : reference.start.file_name,
-      'lnum' : reference.start.line,
-      'col' : reference.start.column,
-      'text' : 'Reference'}) for reference in references if reference.start.file_name == self._editor.filename()]
+    qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
+      'lnum' : reference.referenced_range.start.line,
+      'col' : reference.referenced_range.start.column,
+      'text' : 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.filename()]
 
     self._editor.display_diagnostics(qf)
 
@@ -372,6 +373,7 @@ class ExportedRange(object):
   def from_clang_range(cls, clang_range):
     return cls(ExportedPosition.from_clang_position(clang_range.start), ExportedPosition.from_clang_position(clang_range.end))
 
+
 class FindReferencesToOutsideOfSelectionAction(object):
 
   def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
@@ -386,10 +388,18 @@ class FindReferencesToOutsideOfSelectionAction(object):
       return not disjoint_with_selection(cursor)
 
     def do_it(cursor, result):
+
+      class Reference(object):
+        def __init__(self, referenced_range, referencing_range):
+          self.referenced_range = referenced_range
+          self.referencing_range = referencing_range
+
       referenced_cursor = cursor.get_cursor_referenced()
       if referenced_cursor:
         if not intersects_with_selection(referenced_cursor):
-          result.add(ExportedRange.from_clang_range(referenced_cursor.extent))
+          result.add(Reference(
+            ExportedRange.from_clang_range(referenced_cursor.extent),
+            ExportedRange.from_clang_range(cursor.extent)))
 
       for child in cursor.get_children():
         if intersects_with_selection(child):
