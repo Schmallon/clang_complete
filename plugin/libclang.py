@@ -328,6 +328,11 @@ class ClangPlugin(object):
       if range.start.file_name == self._editor.filename():
         self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, hg_group = "SpellRare")
 
+    for reference in references:
+      range = reference.referencing_range
+      if range.start.file_name == self._editor.filename():
+        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, hg_group = "SpellCap")
+
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
       'col' : reference.referenced_range.start.column,
