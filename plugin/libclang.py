@@ -206,14 +206,14 @@ class VimInterface(Editor):
     self._vim.command("normal " + "v")
     self._go_to(end_line, end_column)
 
-  def highlight(self, start_line, start_column, end_line, end_column):
-    #We could distinguish different severities
-    hg_group = 'SpellBad'
-    pattern = '/\%' + str(start_line) + 'l' + '\%' \
+  def clear_highlights(self):
+    self._vim.command("call clearmatches()")
+
+  def highlight(self, start_line, start_column, end_line, end_column, hg_group = 'SpellBad'):
+    pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
-        + '\%' + str(end_column + 1) + 'c/'
-    command = "exe 'match' . ' " + hg_group + ' ' + pattern + "'"
-    self._vim.command(command)
+        + '\%' + str(end_column + 1) + 'c'
+    self._vim.command("call matchadd('" + hg_group + "', '" + pattern + "')")
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -284,6 +284,7 @@ class ClangPlugin(object):
       pass
     def do_it(translation_unit):
       self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
+      self._editor.clear_highlights()
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
       raise Success()
 
@@ -320,6 +321,11 @@ class ClangPlugin(object):
 
   def highlight_references_to_outside_of_selection(self):
     references = self.find_references_to_outside_of_selection()
+
+    self._editor.clear_highlights()
+    for reference in references:
+      if reference.start.file_name == self._editor.filename():
+        self._editor.highlight(reference.start.line, reference.start.column, reference.end.line, reference.end.column, hg_group = "SpellRare")
 
     qf = [dict({ 'filename' : reference.start.file_name,
       'lnum' : reference.start.line,
