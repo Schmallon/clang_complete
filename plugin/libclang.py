@@ -100,8 +100,11 @@ class Editor(object):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
 
-  def highlight_range(self, start, end):
-    self.highlight(start.line, start.column, end.line, end.column)
+  def highlight_range(self, range, highlight_style):
+    self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
+
+  def highlight_location(self, location, highlight_style):
+    self.highlight(location.line, location.column, location.line, location.column, highlight_style)
 
   def dump_stack(self):
     for entry in traceback.format_stack():
@@ -211,7 +214,7 @@ class VimInterface(Editor):
   def clear_highlights(self):
     self._vim.command("call clearmatches()")
 
-  def highlight(self, start_line, start_column, end_line, end_column, highlight_style = 0):
+  def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
@@ -328,12 +331,12 @@ class ClangPlugin(object):
     for reference in references:
       range = reference.referenced_range
       if range.start.file_name == self._editor.filename():
-        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style = 1)
+        self._editor.highlight_range(range, highlight_style = 1)
 
     for reference in references:
       range = reference.referencing_range
       if range.start.file_name == self._editor.filename():
-        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style = 2)
+        self._editor.highlight_range(range, highlight_style = 2)
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
@@ -672,7 +675,7 @@ class DiagnosticsHighlighter(object):
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    self._editor.highlight_range(diagnostic.location, diagnostic.location)
+    self._editor.highlight_location(diagnostic.location, 0)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -681,7 +684,7 @@ class DiagnosticsHighlighter(object):
           #
     for i in range(len(diagnostic.ranges)):
       range_i = diagnostic.ranges[i]
-      self._editor.highlight_range(range_i.start, range_i.end)
+      self._editor.highlight_range(range_i, 0)
 
   def highlight_in_translation_unit(self, translation_unit):
     map(self._highlight_diagnostic, translation_unit.diagnostics)
