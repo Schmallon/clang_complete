@@ -113,6 +113,8 @@ class VimInterface(Editor):
   def __init__(self):
     import vim
     self._vim = vim
+    self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap']
+
 
   # Get a tuple (filename, filecontent) for the file opened in the current
   # vim buffer. The filecontent contains the unsafed buffer content.
@@ -209,11 +211,11 @@ class VimInterface(Editor):
   def clear_highlights(self):
     self._vim.command("call clearmatches()")
 
-  def highlight(self, start_line, start_column, end_line, end_column, hg_group = 'SpellBad'):
+  def highlight(self, start_line, start_column, end_line, end_column, highlight_style = 0):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
-    self._vim.command("call matchadd('" + hg_group + "', '" + pattern + "')")
+    self._vim.command("call matchadd('" + self._highlight_groups[highlight_style] + "', '" + pattern + "')")
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -326,12 +328,12 @@ class ClangPlugin(object):
     for reference in references:
       range = reference.referenced_range
       if range.start.file_name == self._editor.filename():
-        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, hg_group = "SpellRare")
+        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style = 1)
 
     for reference in references:
       range = reference.referencing_range
       if range.start.file_name == self._editor.filename():
-        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, hg_group = "SpellCap")
+        self._editor.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style = 2)
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
