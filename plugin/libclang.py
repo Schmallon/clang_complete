@@ -327,16 +327,14 @@ class ClangPlugin(object):
   def highlight_references_to_outside_of_selection(self):
     references = self.find_references_to_outside_of_selection()
 
+    def highlight_range_if_in_current_file(range, highlight_style):
+      if range.start.file_name == self._editor.filename():
+        self._editor.highlight_range(range, highlight_style)
+
     self._editor.clear_highlights()
     for reference in references:
-      range = reference.referenced_range
-      if range.start.file_name == self._editor.filename():
-        self._editor.highlight_range(range, highlight_style = 1)
-
-    for reference in references:
-      range = reference.referencing_range
-      if range.start.file_name == self._editor.filename():
-        self._editor.highlight_range(range, highlight_style = 2)
+      highlight_range_if_in_current_file(reference.referenced_range, 1)
+      highlight_range_if_in_current_file(reference.referencing_range, 2)
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
