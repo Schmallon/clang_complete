@@ -159,20 +159,19 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
   def test_can_construct_action(self):
     self.create_action()
 
-  def action_do(self, function):
-    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
+  def action_do(self, file_name, function):
     def do_it(translation_unit):
       action = self.create_action()
-      function(action, translation_unit, file_name)
+      function(action, translation_unit)
     return self.translation_unit_do(file_name, do_it)
 
   def test_find_references_to_outside_of_selection(self):
-    def do_it(action, translation_unit, file_name):
+    file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
+    def do_it(action, translation_unit):
       references = action.find_references_to_outside_of_selection(translation_unit, file_name,  ((7, 5), (7, 54)))
       referenced_ranges = map(lambda reference: reference.referenced_range, references)
       self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(file_name, (3, 3), (3, 36))])
-    self.action_do(do_it)
-
+    self.action_do(file_name, do_it)
 
 if __name__ == '__main__':
     unittest.main()
