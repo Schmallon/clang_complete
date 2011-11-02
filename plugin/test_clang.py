@@ -181,5 +181,13 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
       self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(file_name, (3, 3), (3, 28))])
     self.action_do(file_name, do_it)
 
+  def test_find_references_with_selecting_extra_whitespace_works(self):
+    file_name = "test_sources/test_find_references_to_variable_defined_on_same_level.cpp"
+    def do_it(action, translation_unit):
+      references = action.find_references_to_outside_of_selection(translation_unit, file_name,  ((5, 1), (5, 27)))
+      referenced_ranges = map(lambda reference: reference.referenced_range, references)
+      self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(file_name, (3, 3), (3, 28))])
+    self.action_do(file_name, do_it)
+
 if __name__ == '__main__':
     unittest.main()

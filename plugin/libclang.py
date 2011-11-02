@@ -385,12 +385,15 @@ class ExportedRange(object):
 class FindReferencesToOutsideOfSelectionAction(object):
 
   def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
-    selection_start_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[0])
-    selection_end_cursor = self.get_cursor_for_file_name_and_tuple(translation_unit, file_name, selection[1])
+    selection_range = ExportedRange(ExportedPosition(file_name, selection[0][0], selection[0][1]), ExportedPosition(file_name, selection[1][0], selection[1][1]))
+
+    def location_lt(location1, location2):
+      return location1.line < location2.line or (
+          location1.line == location2.line and location1.column < location2.column)
 
     def disjoint_with_selection(cursor):
-      return (self.location_lt(cursor.extent.end, selection_start_cursor.extent.start)
-          or self.location_lt(selection_end_cursor.extent.end, cursor.extent.start))
+      return (location_lt(cursor.extent.end, selection_range.start)
+          or location_lt(selection_range.end, cursor.extent.start))
 
     def intersects_with_selection(cursor):
       return not disjoint_with_selection(cursor)
@@ -416,16 +419,6 @@ class FindReferencesToOutsideOfSelectionAction(object):
     result = set()
     do_it(translation_unit.cursor, result)
     return result
-
-  def get_cursor_for_file_name_and_tuple(self, translation_unit, file_name, tuple):
-    file = translation_unit.getFile(file_name)
-    location = translation_unit.getLocation(file, tuple[0], tuple[1])
-    return translation_unit.getCursor(location)
-
-  def location_lt(self, location1, location2):
-    return location1.line < location2.line or (
-        location1.line == location2.line and location1.column < location2.column)
-
 
 class NoCurrentTranslationUnit(Exception):
   pass
