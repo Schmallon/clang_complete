@@ -420,6 +420,38 @@ class FindReferencesToOutsideOfSelectionAction(object):
     do_it(translation_unit.cursor, result)
     return result
 
+
+class FindParametersPassedByReferenceAction(object):
+
+  def find_parameters_passed_by_reference(self, translation_unit, file_name):
+    def get_reference_param_indexes(function_decl_cursor):
+      result = []
+      index = 0
+      for cursor in function_decl_cursor.get_children():
+        if cursor.kind == clang.cindex.CursorKind.PARM_DECL:
+          type_kind = cursor.type.kind
+          if type_kind in [clang.cindex.TypeKind.LVALUEREFERENCE, clang.cindex.TypeKind.RVALUEREFERENCE]:
+            result.append(index)
+        index = index + 1
+      return result
+
+
+    def do_it(cursor, result, level):
+      if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
+        reference_param_indexes = get_reference_param_indexes(cursor.get_cursor_referenced())
+        index = 0
+        for child in cursor.get_children():
+          if index - 1 in reference_param_indexes:
+            result.add(ExportedRange.from_clang_range(child.extent))
+          index = index + 1
+
+      for child in cursor.get_children():
+        do_it(child, result, level + 1)
+
+    result = set()
+    do_it(translation_unit.cursor, result, 0)
+    return result
+
 class NoCurrentTranslationUnit(Exception):
   pass
 
