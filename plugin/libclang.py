@@ -116,7 +116,7 @@ class VimInterface(Editor):
   def __init__(self):
     import vim
     self._vim = vim
-    self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap']
+    self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
 
 
   # Get a tuple (filename, filecontent) for the file opened in the current
@@ -347,7 +347,7 @@ class ClangPlugin(object):
     ranges = self._translation_unit_accessor.current_translation_unit_do(
       FindParametersPassedByNonConstReferenceAction().find_parameters_passed_by_nonconst_reference)
     for range in ranges:
-      self._highlight_range_if_in_current_file(range, 1)
+      self._highlight_range_if_in_current_file(range, 3)
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
