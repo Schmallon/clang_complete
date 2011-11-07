@@ -468,18 +468,14 @@ class FindParametersPassedByNonConstReferenceAction(object):
       return result
 
     def do_it(cursor, result, level):
+      for child in cursor.get_children():
+        do_it(child, result, level + 1)
       if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
         cursor_referenced = cursor.get_cursor_referenced()
         if cursor_referenced:
-          reference_param_indexes = get_nonconst_reference_param_indexes(cursor_referenced)
-          index = 0
-          for child in cursor.get_children():
-            if index - 1 in reference_param_indexes:
-              result.add(ExportedRange.from_clang_range(child.extent))
-            index = index + 1
-
-      for child in cursor.get_children():
-        do_it(child, result, level + 1)
+          children = list(cursor.get_children())
+          for i in get_nonconst_reference_param_indexes(cursor_referenced):
+            result.add(ExportedRange.from_clang_range(children[i + 1].extent))
 
     result = set()
     do_it(translation_unit.cursor, result, 0)
