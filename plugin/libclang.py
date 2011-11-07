@@ -117,7 +117,7 @@ class VimInterface(Editor):
     import vim
     self._vim = vim
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
-    self._id_to_highlight_style = {}
+    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1}
     self._id_to_match_id = {}
 
 
@@ -252,10 +252,10 @@ class VimInterface(Editor):
 
   def _highlight_group_for_id(self, id):
     try:
-      return self._id_to_highlight_style[id]
+      return self._highlight_groups[self._id_to_highlight_style_index[id]]
     except KeyError:
-      self._id_to_highlight_style[id] = self._highlight_groups[len(self._id_to_highlight_style)]
-      return self._id_to_highlight_style[id]
+      self._id_to_highlight_style_index[id] = self._highlight_groups[len(self._id_to_highlight_style_index)]
+      return self._highlight_groups[self._id_to_highlight_style_index[id]]
 
 
 class EmacsInterface(Editor):
