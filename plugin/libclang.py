@@ -467,18 +467,23 @@ class FindParametersPassedByNonConstReferenceAction(object):
         index = index + 1
       return result
 
-    def do_it(cursor, result):
+    def handle_call_expression(result, cursor):
+      cursor_referenced = cursor.get_cursor_referenced()
+      if cursor_referenced:
+        children = list(cursor.get_children())
+        for i in get_nonconst_reference_param_indexes(cursor_referenced):
+          result.add(ExportedRange.from_clang_range(children[i + 1].extent))
+
+    def call_expressions_do(do_it, cursor):
       for child in cursor.get_children():
-        do_it(child, result)
+        call_expressions_do(do_it, child)
       if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
-        cursor_referenced = cursor.get_cursor_referenced()
-        if cursor_referenced:
-          children = list(cursor.get_children())
-          for i in get_nonconst_reference_param_indexes(cursor_referenced):
-            result.add(ExportedRange.from_clang_range(children[i + 1].extent))
+        do_it(cursor)
 
     result = set()
-    do_it(translation_unit.cursor, result)
+    call_expressions_do(
+        lambda cursor: handle_call_expression(result, cursor),
+        translation_unit.cursor)
     return result
 
 class NoCurrentTranslationUnit(Exception):
