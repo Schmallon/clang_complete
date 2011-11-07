@@ -324,17 +324,17 @@ class ClangPlugin(object):
           self._editor.selection())
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
+  def _highlight_range_if_in_current_file(self, range, highlight_style):
+    if range.start.file_name == self._editor.filename():
+      self._editor.highlight_range(range, highlight_style)
+
   def highlight_references_to_outside_of_selection(self):
     references = self.find_references_to_outside_of_selection()
 
-    def highlight_range_if_in_current_file(range, highlight_style):
-      if range.start.file_name == self._editor.filename():
-        self._editor.highlight_range(range, highlight_style)
-
     self._editor.clear_highlights()
     for reference in references:
-      highlight_range_if_in_current_file(reference.referenced_range, 1)
-      highlight_range_if_in_current_file(reference.referencing_range, 2)
+      self._highlight_range_if_in_current_file(reference.referenced_range, 1)
+      self._highlight_range_if_in_current_file(reference.referencing_range, 2)
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
@@ -343,6 +343,11 @@ class ClangPlugin(object):
 
     self._editor.display_diagnostics(qf)
 
+  def highlight_parameters_passed_by_nonconst_reference(self):
+    ranges = self._translation_unit_accessor.current_translation_unit_do(
+      FindParametersPassedByNonConstReferenceAction().find_parameters_passed_by_nonconst_reference)
+    for range in ranges:
+      self._highlight_range_if_in_current_file(range, 1)
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
