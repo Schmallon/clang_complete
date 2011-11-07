@@ -190,7 +190,7 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
     self.action_do(file_name, do_it)
 
 
-class TestFindParametersPassedByReference(unittest.TestCase):
+class TestFindParametersPassedByNonConstReference(unittest.TestCase):
 
   def setUp(self):
     self.editor = TestEditor()
@@ -204,15 +204,15 @@ class TestFindParametersPassedByReference(unittest.TestCase):
 
   def action_do(self, file_name, function):
     def do_it(translation_unit):
-      action = libclang.FindParametersPassedByReferenceAction()
+      action = libclang.FindParametersPassedByNonConstReferenceAction()
       function(action, translation_unit)
     return self._translation_unit_do(file_name, do_it)
 
   def test_find_references_to_outside_of_selection(self):
     file_name = "test_sources/test_find_parameters_passed_by_reference.cpp"
     def do_it(action, translation_unit):
-      ranges = action.find_parameters_passed_by_reference(translation_unit, file_name)
-      self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (11, 17), (11, 29))])
+      ranges = action.find_parameters_passed_by_nonconst_reference(translation_unit)
+      self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (12, 17), (12, 29))])
     self.action_do(file_name, do_it)
 
 if __name__ == '__main__':
