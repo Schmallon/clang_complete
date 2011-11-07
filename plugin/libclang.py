@@ -461,7 +461,8 @@ class FindParametersPassedByNonConstReferenceAction(object):
   def find_parameters_passed_by_nonconst_reference(self, translation_unit):
     def get_nonconst_reference_param_indexes(function_decl_cursor):
       result = []
-      for index, cursor in enumerate(function_decl_cursor.get_children()):
+      param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
+      for index, cursor in enumerate(param_decls):
         if cursor.kind == clang.cindex.CursorKind.PARM_DECL:
           if cursor.type.kind in [clang.cindex.TypeKind.LVALUEREFERENCE, clang.cindex.TypeKind.RVALUEREFERENCE]:
             if not cursor.type.get_pointee().is_const_qualified():
