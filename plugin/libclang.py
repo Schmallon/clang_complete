@@ -100,6 +100,7 @@ class Editor(object):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
 
+
   def highlight_range(self, range, highlight_style):
     self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
 
@@ -117,6 +118,7 @@ class VimInterface(Editor):
     import vim
     self._vim = vim
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
+    self._id_to_highlight_style = {}
 
 
   # Get a tuple (filename, filecontent) for the file opened in the current
@@ -218,7 +220,7 @@ class VimInterface(Editor):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
-    self._vim.command("call matchadd('" + self._highlight_groups[highlight_style] + "', '" + pattern + "')")
+    self._vim.command("call matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "')")
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -233,6 +235,14 @@ class VimInterface(Editor):
 
   def display_diagnostics(self, quick_fix_list):
     self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + self._quick_fix_list_to_str(quick_fix_list) + ")")
+
+  def _highlight_group_for_id(self, id):
+    try:
+      return self._id_to_highlight_style[id]
+    except KeyError:
+      self._id_to_highlight_style[id] = self._highlight_groups[len(self._id_to_highlight_style)]
+      return self._id_to_highlight_style[id]
+
 
 class EmacsInterface(Editor):
 
@@ -333,8 +343,8 @@ class ClangPlugin(object):
 
     self._editor.clear_highlights()
     for reference in references:
-      self._highlight_range_if_in_current_file(reference.referenced_range, 1)
-      self._highlight_range_if_in_current_file(reference.referencing_range, 2)
+      self._highlight_range_if_in_current_file(reference.referenced_range, "Referenced Range")
+      self._highlight_range_if_in_current_file(reference.referencing_range, "Referencing Range")
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
@@ -347,7 +357,7 @@ class ClangPlugin(object):
     ranges = self._translation_unit_accessor.current_translation_unit_do(
       FindParametersPassedByNonConstReferenceAction().find_parameters_passed_by_nonconst_reference)
     for range in ranges:
-      self._highlight_range_if_in_current_file(range, 3)
+      self._highlight_range_if_in_current_file(range, "Non-const reference")
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
@@ -701,7 +711,7 @@ class DiagnosticsHighlighter(object):
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    self._editor.highlight_location(diagnostic.location, 0)
+    self._editor.highlight_location(diagnostic.location, "Diagnostic")
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -710,7 +720,7 @@ class DiagnosticsHighlighter(object):
           #
     for i in range(len(diagnostic.ranges)):
       range_i = diagnostic.ranges[i]
-      self._editor.highlight_range(range_i, 0)
+      self._editor.highlight_range(range_i, "Diagnostic")
 
   def highlight_in_translation_unit(self, translation_unit):
     map(self._highlight_diagnostic, translation_unit.diagnostics)
