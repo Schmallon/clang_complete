@@ -100,7 +100,6 @@ class Editor(object):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
 
-
   def highlight_range(self, range, highlight_style):
     self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
 
@@ -119,6 +118,7 @@ class VimInterface(Editor):
     self._vim = vim
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
     self._id_to_highlight_style = {}
+    self._id_to_match_id = {}
 
 
   # Get a tuple (filename, filecontent) for the file opened in the current
@@ -213,14 +213,28 @@ class VimInterface(Editor):
     self._vim.command("normal " + "v")
     self._go_to(end_line, end_column)
 
-  def clear_highlights(self):
+  def clear_all_highlights(self):
     self._vim.command("call clearmatches()")
+
+  def clear_highlights(self, highlight_style):
+    try:
+      ids = self._id_to_match_id[highlight_style]
+      for id in self._id_to_match_id.setdefault(highlight_style, set()):
+        self._vim.eval("matchdelete(" + str(id) + ")")
+      self._id_to_match_id[highlight_style] = set()
+    except KeyError:
+      pass
 
   def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
-    self._vim.command("call matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "')")
+    match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "')")
+    self._add_match_id(highlight_style, match_id)
+
+  def _add_match_id(self, highlight_style, match_id):
+    ids = self._id_to_match_id.setdefault(highlight_style, set())
+    ids.add(match_id)
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -299,7 +313,6 @@ class ClangPlugin(object):
       pass
     def do_it(translation_unit):
       self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
-      self._editor.clear_highlights()
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
       raise Success()
 
@@ -341,10 +354,13 @@ class ClangPlugin(object):
   def highlight_references_to_outside_of_selection(self):
     references = self.find_references_to_outside_of_selection()
 
-    self._editor.clear_highlights()
+    style_referenced_range = "Referenced Range"
+    style_referencing_range = "Referenced Range"
+    self._editor.clear_highlights(style_referenced_range)
+    self._editor.clear_highlights(style_referencing_range)
     for reference in references:
-      self._highlight_range_if_in_current_file(reference.referenced_range, "Referenced Range")
-      self._highlight_range_if_in_current_file(reference.referencing_range, "Referencing Range")
+      self._highlight_range_if_in_current_file(reference.referenced_range, style_referenced_range)
+      self._highlight_range_if_in_current_file(reference.referencing_range, style_referencing_range)
 
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
@@ -354,10 +370,12 @@ class ClangPlugin(object):
     self._editor.display_diagnostics(qf)
 
   def highlight_parameters_passed_by_nonconst_reference(self):
+    highlight_style = "Non-const reference"
+    self._editor.clear_highlights(highlight_style)
     ranges = self._translation_unit_accessor.current_translation_unit_do(
       FindParametersPassedByNonConstReferenceAction().find_parameters_passed_by_nonconst_reference)
     for range in ranges:
-      self._highlight_range_if_in_current_file(range, "Non-const reference")
+      self._highlight_range_if_in_current_file(range, highlight_style)
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
@@ -705,13 +723,14 @@ class DiagnosticsHighlighter(object):
 
   def __init__(self, editor):
     self._editor = editor
+    self._highlight_style = "Diagnostic"
 
   def _highlight_diagnostic(self, diagnostic):
 
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    self._editor.highlight_location(diagnostic.location, "Diagnostic")
+    self._editor.highlight_location(diagnostic.location, self._highlight_style)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -720,9 +739,10 @@ class DiagnosticsHighlighter(object):
           #
     for i in range(len(diagnostic.ranges)):
       range_i = diagnostic.ranges[i]
-      self._editor.highlight_range(range_i, "Diagnostic")
+      self._editor.highlight_range(range_i, self._highlight_style)
 
   def highlight_in_translation_unit(self, translation_unit):
+    self._editor.clear_highlights(self._highlight_style)
     map(self._highlight_diagnostic, translation_unit.diagnostics)
 
 class QuickFixListGenerator(object):
