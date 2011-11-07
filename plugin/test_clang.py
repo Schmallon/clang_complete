@@ -204,7 +204,7 @@ class TestFindParametersPassedByNonConstReference(unittest.TestCase):
 
   def action_do(self, file_name, function):
     def do_it(translation_unit):
-      action = libclang.FindParametersPassedByNonConstReferenceAction()
+      action = libclang.FindParametersPassedByNonConstReferenceAction(self.editor)
       function(action, translation_unit)
     return self._translation_unit_do(file_name, do_it)
 

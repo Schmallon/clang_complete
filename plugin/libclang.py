@@ -373,7 +373,7 @@ class ClangPlugin(object):
     highlight_style = "Non-const reference"
     self._editor.clear_highlights(highlight_style)
     ranges = self._translation_unit_accessor.current_translation_unit_do(
-      FindParametersPassedByNonConstReferenceAction().find_parameters_passed_by_nonconst_reference)
+      FindParametersPassedByNonConstReferenceAction(self._editor).find_parameters_passed_by_nonconst_reference)
     for range in ranges:
       self._highlight_range_if_in_current_file(range, highlight_style)
 
@@ -454,6 +454,10 @@ class FindReferencesToOutsideOfSelectionAction(object):
     return result
 
 class FindParametersPassedByNonConstReferenceAction(object):
+
+  def __init__(self, editor):
+    self._editor = editor
+
   def find_parameters_passed_by_nonconst_reference(self, translation_unit):
     def get_nonconst_reference_param_indexes(function_decl_cursor):
       result = []
