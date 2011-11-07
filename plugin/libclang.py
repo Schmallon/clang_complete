@@ -467,9 +467,9 @@ class FindParametersPassedByNonConstReferenceAction(object):
         index = index + 1
       return result
 
-    def do_it(cursor, result, level):
+    def do_it(cursor, result):
       for child in cursor.get_children():
-        do_it(child, result, level + 1)
+        do_it(child, result)
       if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
         cursor_referenced = cursor.get_cursor_referenced()
         if cursor_referenced:
@@ -478,7 +478,7 @@ class FindParametersPassedByNonConstReferenceAction(object):
             result.add(ExportedRange.from_clang_range(children[i + 1].extent))
 
     result = set()
-    do_it(translation_unit.cursor, result, 0)
+    do_it(translation_unit.cursor, result)
     return result
 
 class NoCurrentTranslationUnit(Exception):
