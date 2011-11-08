@@ -222,5 +222,11 @@ class TestFindParametersPassedByNonConstReference(unittest.TestCase):
       self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (14, 11), (14, 30))])
     self.action_do(file_name, do_it)
 
+  def test_find_parameter_passed_by_nonconst_reference_to_stream_operators(self):
+    file_name = "test_sources/test_find_parameters_passed_by_reference_to_stream_operators.cpp"
+    def do_it(action, translation_unit):
+      ranges = action.find_parameters_passed_by_nonconst_reference(translation_unit)
+      self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (15, 3), (15, 6))])
+    self.action_do(file_name, do_it)
 if __name__ == '__main__':
     unittest.main()

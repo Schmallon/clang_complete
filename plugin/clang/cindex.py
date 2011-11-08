@@ -939,6 +939,20 @@ class Cursor(Structure):
         Cursor_visit(self, Cursor_visit_callback(visitor), children)
         return iter(children)
 
+    def get_args(self):
+        """Return an iterator for accessing the children of this cursor."""
+
+        # FIXME: Expose iteration from CIndex, PR6125.
+        def visitor(child, parent, children):
+            # FIXME: Document this assertion in API.
+            # FIXME: There should just be an isNull method.
+            assert child != Cursor_null()
+            children.append(child)
+            return 1 # continue
+        children = []
+        CallExpr_visit_args(self, Cursor_visit_callback(visitor), children)
+        return iter(children)
+
     def get_semantic_parent(self):
       return Cursor_semantic_parent(self)
 
@@ -1717,6 +1731,10 @@ Cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
 Cursor_visit = lib.clang_visitChildren
 Cursor_visit.argtypes = [Cursor, Cursor_visit_callback, py_object]
 Cursor_visit.restype = c_uint
+
+CallExpr_visit_args = lib.clang_CallExpr_visitArgs
+CallExpr_visit_args.argtypes = [Cursor, Cursor_visit_callback, py_object]
+CallExpr_visit_args.restype = c_uint
 
 # Type Functions
 Type_get_canonical = lib.clang_getCanonicalType

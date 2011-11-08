@@ -472,17 +472,12 @@ class FindParametersPassedByNonConstReferenceAction(object):
     def handle_call_expression(result, cursor):
       cursor_referenced = cursor.get_cursor_referenced()
       if cursor_referenced:
-        children = list(cursor.get_children())
+        args = list(cursor.get_args())
         for i in get_nonconst_reference_param_indexes(cursor_referenced):
           try:
-            result.add(ExportedRange.from_clang_range(children[i + 1].extent))
+            result.add(ExportedRange.from_clang_range(args[i].extent))
           except IndexError:
             self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
-            for c in children:
-              self._editor.display_message(str(c.kind))
-            self._editor.display_message("-----")
-            for c in cursor_referenced.get_children():
-              self._editor.display_message(str(c.kind))
 
     def call_expressions_do(do_it, cursor):
       for child in cursor.get_children():
