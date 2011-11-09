@@ -481,7 +481,9 @@ class FindParametersPassedByNonConstReferenceAction(object):
 
     def call_expressions_do(do_it, cursor):
       for child in cursor.get_children():
-        call_expressions_do(do_it, child)
+        if child.location.file and child.location.file.name == translation_unit.spelling:
+          call_expressions_do(do_it, child)
+
       if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
         do_it(cursor)
 
