@@ -228,5 +228,29 @@ class TestFindParametersPassedByNonConstReference(unittest.TestCase):
       ranges = action.find_parameters_passed_by_nonconst_reference(translation_unit)
       self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (15, 3), (15, 6))])
     self.action_do(file_name, do_it)
+
+class TestFindCallsOfVirtualMethods(unittest.TestCase):
+  def setUp(self):
+    self.editor = TestEditor()
+    self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
+
+  def tearDown(self):
+    self.translation_unit_accessor.terminate()
+
+  def _translation_unit_do(self, file_name, function):
+    return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
+
+  def action_do(self, file_name, function):
+    def do_it(translation_unit):
+      action = libclang.FindVirtualMethodCallsAction(self.editor)
+      function(action, translation_unit)
+    return self._translation_unit_do(file_name, do_it)
+
+  def test_find_virtual_method_calls(self):
+    file_name = "test_sources/test_find_virtual_method_calls.cpp"
+    def do_it(action, translation_unit):
+      ranges = action.find_virtual_method_calls(translation_unit)
+      self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (13, 3), (13, 23))])
+    self.action_do(file_name, do_it)
 if __name__ == '__main__':
     unittest.main()
