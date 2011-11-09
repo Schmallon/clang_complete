@@ -453,6 +453,16 @@ class FindReferencesToOutsideOfSelectionAction(object):
     do_it(translation_unit.cursor, result)
     return result
 
+def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
+  def recurse(cursor):
+    for child in cursor.get_children():
+      if child.location.file and child.location.file.name == translation_unit.spelling:
+        recurse(child)
+
+    if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
+      do_it(cursor)
+  recurse(translation_unit.cursor)
+
 class FindParametersPassedByNonConstReferenceAction(object):
 
   def __init__(self, editor):
@@ -479,18 +489,10 @@ class FindParametersPassedByNonConstReferenceAction(object):
           except IndexError:
             self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
 
-    def call_expressions_do(do_it, cursor):
-      for child in cursor.get_children():
-        if child.location.file and child.location.file.name == translation_unit.spelling:
-          call_expressions_do(do_it, child)
-
-      if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
-        do_it(cursor)
-
     result = set()
-    call_expressions_do(
+    call_expressions_in_file_of_translation_unit_do(
         lambda cursor: handle_call_expression(result, cursor),
-        translation_unit.cursor)
+        translation_unit)
     return result
 
 class NoCurrentTranslationUnit(Exception):
