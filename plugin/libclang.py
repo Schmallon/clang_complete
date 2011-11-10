@@ -117,7 +117,7 @@ class VimInterface(Editor):
     import vim
     self._vim = vim
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
-    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1}
+    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2}
     self._id_to_match_id = {}
 
 
@@ -220,8 +220,12 @@ class VimInterface(Editor):
 
   def clear_all_highlights(self):
     self._vim.command("call clearmatches()")
+    self._id_to_match_id = {}
 
   def clear_highlights(self, highlight_style):
+    #Temporary workaround, until we don't try to delete matches from other windows
+    self.clear_all_highlights()
+    return
     try:
       ids = self._id_to_match_id[highlight_style]
       for id in self._id_to_match_id.setdefault(highlight_style, set()):
