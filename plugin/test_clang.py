@@ -189,17 +189,12 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
 
 
 class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):
-  def action_do(self, file_name, function):
+  def assert_returns_ranges(self, file_name, expected_ranges):
     def do_it(translation_unit):
       action = libclang.FindParametersPassedByNonConstReferenceAction(self.editor)
-      function(action, translation_unit)
-    return self.translation_unit_do(file_name, do_it)
-
-  def assert_returns_ranges(self, file_name, expected_ranges):
-    def do_it(action, translation_unit):
       ranges = action.find_parameters_passed_by_nonconst_reference(translation_unit)
       self.assertEquals(list(set(ranges)), expected_ranges)
-    self.action_do(file_name, do_it)
+    self.translation_unit_do(file_name, do_it)
 
   def test_find_parameter_passed_by_nonconst_reference(self):
     file_name = "test_sources/test_find_parameters_passed_by_reference.cpp"
