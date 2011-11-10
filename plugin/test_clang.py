@@ -222,5 +222,18 @@ class TestFindCallsOfVirtualMethods(TestCaseWithTranslationUnitAccessor):
   def test_find_virtual_method_calls(self):
     file_name = "test_sources/test_find_virtual_method_calls.cpp"
     self.assert_returns_ranges(file_name, [range_from_tuples(file_name, (13, 3), (13, 23))])
+
+class TestFindOmittedDefaultArguments(TestCaseWithTranslationUnitAccessor):
+  def assert_returns_ranges(self, file_name, expected_ranges):
+    def do_it(translation_unit):
+      action = libclang.FindOmittedDefaultArgumentsAction()
+      ranges = action.find_omitted_default_arguments(translation_unit)
+      self.assertEquals(list(set(ranges)), expected_ranges)
+    return self.translation_unit_do(file_name, do_it)
+
+  def test_find_omitted_default_arguments(self):
+    file_name = "test_sources/test_find_omitted_default_arguments.cpp"
+    self.assert_returns_ranges(file_name, [range_from_tuples(file_name, (5, 3), (5, 37))])
+
 if __name__ == '__main__':
     unittest.main()

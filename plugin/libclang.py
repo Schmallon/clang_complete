@@ -477,6 +477,33 @@ class FindVirtualMethodCallsAction(object):
     call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
     return result
 
+
+class FindOmittedDefaultArgumentsAction(object):
+
+  def num_arguments(self, function_decl_cursor):
+    param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
+    return len(param_decls)
+
+  def omits_default_argument(self, cursor):
+    """
+    This implementation relies on default arguments being represented as
+    cursors without extent. This is not ideal and is intended to serve only as
+    an intermediate solution.
+    """
+    for argument in cursor.get_args():
+      if argument.extent.start.offset == 0 and argument.extent.end.offset == 0:
+        return True
+    return False
+
+  def find_omitted_default_arguments(self, translation_unit):
+    def do_it(call_expr):
+      if self.omits_default_argument(call_expr):
+        result.add(ExportedRange.from_clang_range(call_expr.extent))
+
+    result = set()
+    call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
+    return result
+
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
   def recurse(cursor):
     for child in cursor.get_children():
