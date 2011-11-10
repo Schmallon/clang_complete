@@ -62,7 +62,7 @@ class TestEditor(libclang.Editor):
     self._selection = (start, end)
 
   def selection(self):
-    return self._selection
+    return range_from_tuples(self.filename(), self._selection[0], self._selection[1])
 
 
 class TestClangPlugin(unittest.TestCase):

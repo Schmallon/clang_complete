@@ -179,10 +179,15 @@ class VimInterface(Editor):
     return int(self._vim.eval("col('.')"))
 
   def selection(self):
-    selection_start = (int(self._vim.eval('line("\'<")')), int(self._vim.eval('col("\'<")')))
-    selection_end = (int(self._vim.eval('line("\'>")')), int(self._vim.eval('col("\'>")')))
-    result = (selection_start, selection_end)
-    self.display_message(str(result))
+    selection_start = ExportedPosition(
+        self.filename(),
+        int(self._vim.eval('line("\'<")')),
+        int(self._vim.eval('col("\'<")')))
+    selection_end = ExportedPosition(
+        self.filename(),
+        int(self._vim.eval('line("\'>")')),
+          int(self._vim.eval('col("\'>")')))
+    result = ExportedRange(selection_start, selection_end)
     return result
 
   def sort_algorithm(self):
@@ -341,12 +346,9 @@ class ClangPlugin(object):
 
   def find_references_to_outside_of_selection(self):
     def do_it(translation_unit):
-      selection = self._editor.selection()
-      file_name = self._editor.filename()
-      selection_range = ExportedRange(ExportedPosition(file_name, selection[0][0], selection[0][1]), ExportedPosition(file_name, selection[1][0], selection[1][1]))
       return FindReferencesToOutsideOfSelectionAction().find_references_to_outside_of_selection(
           translation_unit,
-          selection_range)
+          self._editor.selection())
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
   def _highlight_range_if_in_current_file(self, range, highlight_style):
