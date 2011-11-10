@@ -377,6 +377,15 @@ class ClangPlugin(object):
     for range in ranges:
       self._highlight_range_if_in_current_file(range, highlight_style)
 
+  def highlight_virtual_method_calls(self):
+    highlight_style = "Virtual method call"
+    self._editor.clear_highlights(highlight_style)
+    ranges = self._translation_unit_accessor.current_translation_unit_do(
+      FindVirtualMethodCallsAction().find_virtual_method_calls)
+    for range in ranges:
+      self._highlight_range_if_in_current_file(range, highlight_style)
+
+
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
     self.file_name = file_name
@@ -451,6 +460,18 @@ class FindReferencesToOutsideOfSelectionAction(object):
 
     result = set()
     do_it(translation_unit.cursor, result)
+    return result
+
+class FindVirtualMethodCallsAction(object):
+  def find_virtual_method_calls(self, translation_unit):
+
+    def do_it(call_expr):
+      cursor_referenced = call_expr.get_cursor_referenced()
+      if cursor_referenced and cursor_referenced.is_virtual():
+        result.add(ExportedRange.from_clang_range(call_expr.extent))
+
+    result = set()
+    call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
     return result
 
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):

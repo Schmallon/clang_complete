@@ -242,7 +242,7 @@ class TestFindCallsOfVirtualMethods(unittest.TestCase):
 
   def action_do(self, file_name, function):
     def do_it(translation_unit):
-      action = libclang.FindVirtualMethodCallsAction(self.editor)
+      action = libclang.FindVirtualMethodCallsAction()
       function(action, translation_unit)
     return self._translation_unit_do(file_name, do_it)
 
