@@ -341,10 +341,12 @@ class ClangPlugin(object):
 
   def find_references_to_outside_of_selection(self):
     def do_it(translation_unit):
+      selection = self._editor.selection()
+      file_name = self._editor.filename()
+      selection_range = ExportedRange(ExportedPosition(file_name, selection[0][0], selection[0][1]), ExportedPosition(file_name, selection[1][0], selection[1][1]))
       return FindReferencesToOutsideOfSelectionAction().find_references_to_outside_of_selection(
           translation_unit,
-          self._editor.filename(),
-          self._editor.selection())
+          selection_range)
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
   def _highlight_range_if_in_current_file(self, range, highlight_style):
@@ -426,8 +428,7 @@ class ExportedRange(object):
 
 class FindReferencesToOutsideOfSelectionAction(object):
 
-  def find_references_to_outside_of_selection(self, translation_unit, file_name, selection):
-    selection_range = ExportedRange(ExportedPosition(file_name, selection[0][0], selection[0][1]), ExportedPosition(file_name, selection[1][0], selection[1][1]))
+  def find_references_to_outside_of_selection(self, translation_unit, selection_range):
 
     def location_lt(location1, location2):
       return location1.line < location2.line or (
