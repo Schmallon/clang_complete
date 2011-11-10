@@ -1,6 +1,6 @@
 import sys
 sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
-#sys.argv = ["/Users/mkl/projects/llvm/debug_build/Debug+Asserts/lib"]
+#sys.argv = ["/Users/mkl/projects/llvm/debug/Debug+Asserts/lib"]
 import libclang
 import unittest
 
@@ -141,8 +141,8 @@ def range_from_tuples(file_name, start, end):
   end_pos = libclang.ExportedPosition(file_name, end[0], end[1])
   return libclang.ExportedRange(start_pos, end_pos)
 
-class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
 
+class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
   def setUp(self):
     self.editor = TestEditor()
     self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
@@ -153,11 +153,9 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
   def translation_unit_do(self, file_name, function):
     return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
 
+class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAccessor):
   def create_action(self):
     return libclang.FindReferencesToOutsideOfSelectionAction()
-
-  def test_can_construct_action(self):
-    self.create_action()
 
   def action_do(self, file_name, function):
     def do_it(translation_unit):
@@ -190,23 +188,12 @@ class TestFindReferencesToOutsideOfSelectionAction(unittest.TestCase):
     self.action_do(file_name, do_it)
 
 
-class TestFindParametersPassedByNonConstReference(unittest.TestCase):
-
-  def setUp(self):
-    self.editor = TestEditor()
-    self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
-
-  def tearDown(self):
-    self.translation_unit_accessor.terminate()
-
-  def _translation_unit_do(self, file_name, function):
-    return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
-
+class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):
   def action_do(self, file_name, function):
     def do_it(translation_unit):
       action = libclang.FindParametersPassedByNonConstReferenceAction(self.editor)
       function(action, translation_unit)
-    return self._translation_unit_do(file_name, do_it)
+    return self.translation_unit_do(file_name, do_it)
 
   def test_find_parameter_passed_by_nonconst_reference(self):
     file_name = "test_sources/test_find_parameters_passed_by_reference.cpp"
@@ -229,22 +216,12 @@ class TestFindParametersPassedByNonConstReference(unittest.TestCase):
       self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (15, 3), (15, 6))])
     self.action_do(file_name, do_it)
 
-class TestFindCallsOfVirtualMethods(unittest.TestCase):
-  def setUp(self):
-    self.editor = TestEditor()
-    self.translation_unit_accessor = libclang.TranslationUnitAccessor(self.editor)
-
-  def tearDown(self):
-    self.translation_unit_accessor.terminate()
-
-  def _translation_unit_do(self, file_name, function):
-    return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
-
+class TestFindCallsOfVirtualMethods(TestCaseWithTranslationUnitAccessor):
   def action_do(self, file_name, function):
     def do_it(translation_unit):
       action = libclang.FindVirtualMethodCallsAction()
       function(action, translation_unit)
-    return self._translation_unit_do(file_name, do_it)
+    return self.translation_unit_do(file_name, do_it)
 
   def test_find_virtual_method_calls(self):
     file_name = "test_sources/test_find_virtual_method_calls.cpp"
