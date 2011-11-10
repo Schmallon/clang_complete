@@ -953,6 +953,9 @@ class Cursor(Structure):
         CallExpr_visit_args(self, Cursor_visit_callback(visitor), children)
         return iter(children)
 
+    def is_virtual(self):
+      return CXXMethod_isVirtual(self)
+
     def get_semantic_parent(self):
       return Cursor_semantic_parent(self)
 
@@ -1735,6 +1738,10 @@ Cursor_visit.restype = c_uint
 CallExpr_visit_args = lib.clang_CallExpr_visitArgs
 CallExpr_visit_args.argtypes = [Cursor, Cursor_visit_callback, py_object]
 CallExpr_visit_args.restype = c_uint
+
+CXXMethod_isVirtual = lib.clang_CXXMethod_isVirtual
+CXXMethod_isVirtual.argtypes = [Cursor]
+CXXMethod_isVirtual.restype = bool
 
 # Type Functions
 Type_get_canonical = lib.clang_getCanonicalType
