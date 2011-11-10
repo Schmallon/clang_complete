@@ -195,7 +195,7 @@ class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAcc
   def assert_returns_ranges(self, file_name, expected_ranges):
     def do_it(translation_unit):
       action = libclang.FindParametersPassedByNonConstReferenceAction(self.editor)
-      ranges = action.find_parameters_passed_by_nonconst_reference(translation_unit)
+      ranges = action.find_ranges(translation_unit)
       self.assertEquals(list(set(ranges)), expected_ranges)
     self.translation_unit_do(file_name, do_it)
 
@@ -215,7 +215,7 @@ class TestFindCallsOfVirtualMethods(TestCaseWithTranslationUnitAccessor):
   def assert_returns_ranges(self, file_name, expected_ranges):
     def do_it(translation_unit):
       action = libclang.FindVirtualMethodCallsAction()
-      ranges = action.find_virtual_method_calls(translation_unit)
+      ranges = action.find_ranges(translation_unit)
       self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (13, 3), (13, 23))])
     return self.translation_unit_do(file_name, do_it)
 
@@ -227,7 +227,7 @@ class TestFindOmittedDefaultArguments(TestCaseWithTranslationUnitAccessor):
   def assert_returns_ranges(self, file_name, expected_ranges):
     def do_it(translation_unit):
       action = libclang.FindOmittedDefaultArgumentsAction()
-      ranges = action.find_omitted_default_arguments(translation_unit)
+      ranges = action.find_ranges(translation_unit)
       self.assertEquals(list(set(ranges)), expected_ranges)
     return self.translation_unit_do(file_name, do_it)
 

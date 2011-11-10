@@ -381,7 +381,7 @@ class ClangPlugin(object):
     highlight_style = "Non-const reference"
     self._editor.clear_highlights(highlight_style)
     ranges = self._translation_unit_accessor.current_translation_unit_do(
-      FindParametersPassedByNonConstReferenceAction(self._editor).find_parameters_passed_by_nonconst_reference)
+      FindParametersPassedByNonConstReferenceAction(self._editor).find_ranges)
     for range in ranges:
       self._highlight_range_if_in_current_file(range, highlight_style)
 
@@ -389,7 +389,7 @@ class ClangPlugin(object):
     highlight_style = "Virtual method call"
     self._editor.clear_highlights(highlight_style)
     ranges = self._translation_unit_accessor.current_translation_unit_do(
-      FindVirtualMethodCallsAction().find_virtual_method_calls)
+      FindVirtualMethodCallsAction().find_ranges)
     for range in ranges:
       self._highlight_range_if_in_current_file(range, highlight_style)
 
@@ -470,8 +470,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
     return result
 
 class FindVirtualMethodCallsAction(object):
-  def find_virtual_method_calls(self, translation_unit):
-
+  def find_ranges(self, translation_unit):
     def do_it(call_expr):
       cursor_referenced = call_expr.get_cursor_referenced()
       if cursor_referenced and cursor_referenced.is_virtual():
@@ -499,7 +498,7 @@ class FindOmittedDefaultArgumentsAction(object):
         return True
     return False
 
-  def find_omitted_default_arguments(self, translation_unit):
+  def find_ranges(self, translation_unit):
     def do_it(call_expr):
       if self.omits_default_argument(call_expr):
         result.add(ExportedRange.from_clang_range(call_expr.extent))
@@ -523,7 +522,7 @@ class FindParametersPassedByNonConstReferenceAction(object):
   def __init__(self, editor):
     self._editor = editor
 
-  def find_parameters_passed_by_nonconst_reference(self, translation_unit):
+  def find_ranges(self, translation_unit):
     def get_nonconst_reference_param_indexes(function_decl_cursor):
       result = []
       param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
