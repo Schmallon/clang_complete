@@ -117,8 +117,7 @@ class VimInterface(Editor):
     import vim
     self._vim = vim
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
-    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2}
-    self._id_to_match_id = {}
+    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Omitted default argument" : 3}
 
 
   # Get a tuple (filename, filecontent) for the file opened in the current
@@ -220,30 +219,19 @@ class VimInterface(Editor):
 
   def clear_all_highlights(self):
     self._vim.command("call clearmatches()")
-    self._id_to_match_id = {}
 
   def clear_highlights(self, highlight_style):
-    #Temporary workaround, until we don't try to delete matches from other windows
-    self.clear_all_highlights()
+    "Assumes that (group -> highlight_style) is injective"
+    all_matches = self._vim.eval("getmatches()")
+    group = self._highlight_group_for_id(highlight_style)
+    other_matches = filter(lambda match: match['group'] != group, all_matches)
     return
-    try:
-      ids = self._id_to_match_id[highlight_style]
-      for id in self._id_to_match_id.setdefault(highlight_style, set()):
-        self._vim.eval("matchdelete(" + str(id) + ")")
-      self._id_to_match_id[highlight_style] = set()
-    except KeyError:
-      pass
 
   def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
     match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "')")
-    self._add_match_id(highlight_style, match_id)
-
-  def _add_match_id(self, highlight_style, match_id):
-    ids = self._id_to_match_id.setdefault(highlight_style, set())
-    ids.add(match_id)
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
