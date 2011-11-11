@@ -370,13 +370,16 @@ class ClangPlugin(object):
         ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
         ("Virtual method call", FindVirtualMethodCallsAction()),
         ("Omitted default argument", FindOmittedDefaultArgumentsAction())]
-    for highlight_style, action in styles_and_actions:
-      self._editor.clear_highlights(highlight_style)
-    for highlight_style, action in styles_and_actions:
-      ranges = self._translation_unit_accessor.current_translation_unit_do(
-        action.find_ranges)
-      for range in ranges:
-        self._highlight_range_if_in_current_file(range, highlight_style)
+
+    def do_it(translation_unit):
+      for highlight_style, action in styles_and_actions:
+        self._editor.clear_highlights(highlight_style)
+        ranges = action.find_ranges(translation_unit)
+        for range in ranges:
+          self._highlight_range_if_in_current_file(range, highlight_style)
+
+    self._translation_unit_accessor.current_translation_unit_do(do_it)
+
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
