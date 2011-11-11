@@ -113,9 +113,26 @@ class Editor(object):
 
 class VimInterface(Editor):
 
+  class LoggingVim(object):
+    def __init__(self, logger):
+      import vim
+      self._vim = vim
+      self._logger = logger
+
+    def eval(self, x):
+      self._logger.display_message(str(x))
+      return self._vim.eval(x)
+
+    def command(self, x):
+      self._logger.display_message(str(x))
+      return self._vim.command(x)
+
+    def current(self):
+      return self._vim.current
+
+
   def __init__(self):
-    import vim
-    self._vim = vim
+    self._vim = self.LoggingVim(self)
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
     self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Omitted default argument" : 3}
 
@@ -163,7 +180,7 @@ class VimInterface(Editor):
     return self._split_options(self._get_variable("g:clang_excluded_directories"))
 
   def filename(self):
-    return self._vim.current.buffer.name
+    return self._vim.current().buffer.name
 
   def open_file(self, filename, line, column):
     self._vim.command("e +" + str(line) + " " + filename)
@@ -1190,7 +1207,3 @@ kinds = dict({                                                                 \
 503 : '503'  # CXCursor_InclusionDirective                                     \
 })
 # vim: set ts=2 sts=2 sw=2 expandtab :
-
-
-
-
