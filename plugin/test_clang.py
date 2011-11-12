@@ -5,7 +5,7 @@ import libclang
 import unittest
 
 
-class TestEditor(libclang.Editor):
+class TestEditor(object):
   def __init__(self):
     self._current_column = -1
     self._current_line = -1
@@ -36,6 +36,9 @@ class TestEditor(libclang.Editor):
 
   def filename(self):
     return self._filename
+
+  def current_location(self):
+    return libclang.ExportedPosition(self.filename(), self.current_line(), self.current_column())
 
   def contents(self):
     return self._contents

@@ -79,19 +79,7 @@ def print_cursor_with_children(self, cursor, n = 0):
   for child in cursor.get_children():
     print_cursor_with_children(child, n + 1)
 
-class Editor(object):
-  """
-  These aren't really properties of an editor.
-  """
-  def get_current_location_in_translation_unit(self, translation_unit):
-    file = translation_unit.getFile(self.filename())
-    if not file:
-      self.display_message("""Could not find the file at current position in the current
-      translation unit""")
-      return None
-    return translation_unit.getLocation(file, self.current_line(), self.current_column())
-
-class VimInterface(Editor):
+class VimInterface(object):
 
   class LoggingVim(object):
     def __init__(self, logger):
@@ -170,6 +158,9 @@ class VimInterface(Editor):
 
   def debug_enabled(self):
     return int(self._vim.eval("g:clang_debug")) == 1
+
+  def current_location(self):
+    return ExportedPosition(self.filename(), self.current_line(), self.current_column())
 
   def current_line(self):
     return int(self._vim.eval("line('.')"))
@@ -258,7 +249,7 @@ class VimInterface(Editor):
       return self._highlight_groups[self._id_to_highlight_style_index[id]]
 
 
-class EmacsInterface(Editor):
+class EmacsInterface(object):
 
   def __init__(self):
     from Pymacs import lisp as emacs
@@ -395,6 +386,12 @@ class ExportedPosition(object):
 
   def __hash__(self):
     return self.line * 80 + self.column
+
+  def clang_position(self, translation_unit):
+    file = translation_unit.getFile(self.file_name)
+    if not file:
+      return None
+    return translation_unit.getLocation(file, self.line, self.column)
 
   @classmethod
   def from_clang_position(cls, clang_position):
@@ -942,7 +939,7 @@ class DeclarationFinder(object):
     self._translation_unit_accessor = translation_unit_accessor
 
   def _get_current_cursor_in_translation_unit(self, translation_unit):
-    location = self._editor.get_current_location_in_translation_unit(translation_unit)
+    location = self._editor.current_location().clang_position(translation_unit)
     return translation_unit.getCursor(location)
 
   def _find_declaration_in_translation_unit(self, translation_unit):
@@ -1009,7 +1006,7 @@ class DefinitionFinder(object):
     return get_definition_or_reference(cursor)
 
   def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
-    current_location = self._editor.get_current_location_in_translation_unit(translation_unit)
+    current_location = self._editor.current_location().clang_position(translation_unit)
     return self._find_definition_in_translation_unit(translation_unit, current_location)
 
   def _alternate_files(self, filename):
