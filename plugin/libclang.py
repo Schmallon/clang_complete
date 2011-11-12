@@ -957,12 +957,12 @@ class DeclarationFinder(object):
   def _find_declaration_in_translation_unit(self, translation_unit):
     current_location_cursor = self._editor.get_current_cursor_in_translation_unit(translation_unit)
     parent_cursor = current_location_cursor.get_semantic_parent()
-    if parent_cursor == Cursor.nullCursor():
-      return None
+    if parent_cursor == clang.cindex.Cursor.nullCursor():
+      return current_location_cursor.get_cursor_referenced()
     for child_cursor in parent_cursor.get_children():
       if child_cursor.get_canonical() == current_location_cursor.get_canonical():
         return child_cursor
-    return None
+    return current_location_cursor.get_cursor_referenced()
 
   def declaration_cursors_do(self, function):
     def call_function_with_declaration_in(translation_unit):
