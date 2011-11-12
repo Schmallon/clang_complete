@@ -322,12 +322,25 @@ class ClangPlugin(object):
     self._translation_unit_accessor.clear_caches()
     self._load_files_in_background()
 
+  def _highlight_interesting_ranges(self, translation_unit):
+    styles_and_actions = [
+        ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
+        ("Virtual method call", FindVirtualMethodCallsAction()),
+        ("Omitted default argument", FindOmittedDefaultArgumentsAction())]
+
+    for highlight_style, action in styles_and_actions:
+      self._editor.clear_highlights(highlight_style)
+      ranges = action.find_ranges(translation_unit)
+      for range in ranges:
+        self._highlight_range_if_in_current_file(range, highlight_style)
+
   def try_update_diagnostics(self):
     class Success(Exception):
       pass
     def do_it(translation_unit):
       self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
+      self._highlight_interesting_ranges(translation_unit)
       raise Success()
 
     try:
@@ -381,22 +394,6 @@ class ClangPlugin(object):
       'text' : 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.filename()]
 
     self._editor.display_diagnostics(qf)
-
-  def highlight_interesting_ranges(self):
-    styles_and_actions = [
-        ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
-        ("Virtual method call", FindVirtualMethodCallsAction()),
-        ("Omitted default argument", FindOmittedDefaultArgumentsAction())]
-
-    def do_it(translation_unit):
-      for highlight_style, action in styles_and_actions:
-        self._editor.clear_highlights(highlight_style)
-        ranges = action.find_ranges(translation_unit)
-        for range in ranges:
-          self._highlight_range_if_in_current_file(range, highlight_style)
-
-    self._translation_unit_accessor.current_translation_unit_do(do_it)
-
 
 class ExportedPosition(object):
   def __init__(self, file_name, line, column):
