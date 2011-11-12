@@ -60,7 +60,7 @@ Ideas:
    - Macros
 """
 
-def abort_on_first_call(computation, result_consumer):
+def abort_after_first_call(computation, result_consumer):
   class Found(Exception):
     pass
   def f(x):
@@ -353,10 +353,10 @@ class ClangPlugin(object):
     self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
   def jump_to_definition(self):
-    abort_on_first_call(self._definition_finder.definition_cursors_do, self._editor.jump_to_cursor)
+    abort_after_first_call(self._definition_finder.definition_cursors_do, self._editor.jump_to_cursor)
 
   def jump_to_declaration(self):
-    abort_on_first_call(self._declaration_finder.declaration_cursors_do, self._editor.jump_to_cursor)
+    abort_after_first_call(self._declaration_finder.declaration_cursors_do, self._editor.jump_to_cursor)
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
