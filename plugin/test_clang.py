@@ -9,7 +9,7 @@ class TestEditor(object):
   def __init__(self):
     self._current_column = -1
     self._current_line = -1
-    self._filename = 'invalid filename'
+    self._file_name = 'invalid filename'
     self._contents = 'invalid contents'
     self._selection = ((1,1), (1,1))
 
@@ -34,17 +34,17 @@ class TestEditor(object):
   def current_column(self):
     return self._current_column
 
-  def filename(self):
-    return self._filename
+  def file_name(self):
+    return self._file_name
 
   def current_location(self):
-    return libclang.ExportedLocation(self.filename(), self.current_line(), self.current_column())
+    return libclang.ExportedLocation(self.file_name(), self.current_line(), self.current_column())
 
   def contents(self):
     return self._contents
 
   def current_file(self):
-    return (self.filename(), self.contents())
+    return (self.file_name(), self.contents())
 
   def user_options(self):
     return ""
@@ -55,9 +55,9 @@ class TestEditor(object):
   def display_message(self, message):
     print(message)
 
-  def open_file(self, filename, line, column):
-    self._filename = filename
-    self._contents = open(filename, 'r').read()
+  def open_file(self, file_name, line, column):
+    self._file_name = file_name
+    self._contents = open(file_name, 'r').read()
     self._current_line = line
     self._current_column = column
 
@@ -68,7 +68,7 @@ class TestEditor(object):
     self._selection = (start, end)
 
   def selection(self):
-    return range_from_tuples(self.filename(), self._selection[0], self._selection[1])
+    return range_from_tuples(self.file_name(), self._selection[0], self._selection[1])
 
 
 class TestClangPlugin(unittest.TestCase):
@@ -93,19 +93,19 @@ class TestClangPlugin(unittest.TestCase):
     self.open_source_file(source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_declaration()
 
-  def assert_location(self, expected_filename, expected_line, expected_column):
-    if not self.editor.filename().endswith(expected_filename):
-      self.fail(self.editor.filename() + " does not end with " + expected_filename)
+  def assert_location(self, expected_file_name, expected_line, expected_column):
+    if not self.editor.file_name().endswith(expected_file_name):
+      self.fail(self.editor.file_name() + " does not end with " + expected_file_name)
     self.assertEquals(self.editor.current_column(), expected_column)
     self.assertEquals(self.editor.current_line(), expected_line)
 
-  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
+  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_file_name, expected_line, expected_column):
     self.jump_to_definition(source_file_name, start_line, start_column)
-    self.assert_location(expected_filename, expected_line, expected_column)
+    self.assert_location(expected_file_name, expected_line, expected_column)
 
-  def assert_jumps_to_declaration(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
+  def assert_jumps_to_declaration(self, source_file_name, start_line, start_column, expected_file_name, expected_line, expected_column):
     self.jump_to_declaration(source_file_name, start_line, start_column)
-    self.assert_location(expected_filename, expected_line, expected_column)
+    self.assert_location(expected_file_name, expected_line, expected_column)
 
   def test_jump_to_definition_in_same_file(self):
     self.assert_jumps_to_definition("test_defined_in_same_file.cpp", 7, 3, "test_defined_in_same_file.cpp", 1, 1)

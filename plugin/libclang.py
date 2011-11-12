@@ -70,8 +70,8 @@ def abort_after_first_call(computation, result_consumer):
   except Found:
     pass
 
-def get_file_for_filename(filename):
-  return (filename, open(filename, 'r').read())
+def get_file_for_file_name(file_name):
+  return (file_name, open(file_name, 'r').read())
 
 def print_cursor_with_children(self, cursor, n = 0):
   sys.stdout.write(n * " ")
@@ -105,11 +105,11 @@ class VimInterface(object):
     self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Omitted default argument" : 3}
 
 
-  # Get a tuple (filename, filecontent) for the file opened in the current
+  # Get a tuple (file_name, filecontent) for the file opened in the current
   # vim buffer. The filecontent contains the unsafed buffer content.
   def current_file(self):
     file = "\n".join(self._vim.eval("getline(1, '$')"))
-    return (self.filename(), file)
+    return (self.file_name(), file)
 
   def _get_variable(self, variable_name, default_value = ""):
     try:
@@ -147,20 +147,20 @@ class VimInterface(object):
   def excluded_directories(self):
     return self._split_options(self._get_variable("g:clang_excluded_directories"))
 
-  def filename(self):
+  def file_name(self):
     return self._vim.current().buffer.name
 
   def open_location(self, location):
     self.open_file(location.file.name, location.line, location.column)
 
-  def open_file(self, filename, line, column):
-    self._vim.command("e +" + str(line) + " " + filename)
+  def open_file(self, file_name, line, column):
+    self._vim.command("e +" + str(line) + " " + file_name)
 
   def debug_enabled(self):
     return int(self._vim.eval("g:clang_debug")) == 1
 
   def current_location(self):
-    return ExportedLocation(self.filename(), self.current_line(), self.current_column())
+    return ExportedLocation(self.file_name(), self.current_line(), self.current_column())
 
   def current_line(self):
     return int(self._vim.eval("line('.')"))
@@ -170,11 +170,11 @@ class VimInterface(object):
 
   def selection(self):
     selection_start = ExportedLocation(
-        self.filename(),
+        self.file_name(),
         int(self._vim.eval('line("\'<")')),
         int(self._vim.eval('col("\'<")')))
     selection_end = ExportedLocation(
-        self.filename(),
+        self.file_name(),
         int(self._vim.eval('line("\'>")')),
           int(self._vim.eval('col("\'>")')))
     result = ExportedRange(selection_start, selection_end)
@@ -256,16 +256,16 @@ class EmacsInterface(object):
     self._emacs = emacs
 
   def current_file(self):
-    return (self.filename(), self._emacs.buffer_string())
+    return (self.file_name(), self._emacs.buffer_string())
 
-  def filename(self):
+  def file_name(self):
     return self._emacs.buffer_file_name()
 
   def user_options(self):
     return ""
 
-  def open_file(self, filename, line, column):
-    self._emacs.find_file(filename)
+  def open_file(self, file_name, line, column):
+    self._emacs.find_file(file_name)
     self._emacs.goto_line(line)
     self._emacs.move_to_column(column - 1)
 
@@ -351,7 +351,7 @@ class ClangPlugin(object):
     return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
   def _highlight_range_if_in_current_file(self, range, highlight_style):
-    if range.start.file_name == self._editor.filename():
+    if range.start.file_name == self._editor.file_name():
       self._editor.highlight_range(range, highlight_style)
 
   def highlight_references_to_outside_of_selection(self):
@@ -368,7 +368,7 @@ class ClangPlugin(object):
     qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
       'lnum' : reference.referenced_range.start.line,
       'col' : reference.referenced_range.start.column,
-      'text' : 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.filename()]
+      'text' : 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.file_name()]
 
     self._editor.display_diagnostics(qf)
 
@@ -677,12 +677,12 @@ class IdleTranslationUnitParserThread(threading.Thread):
   def _enqueue_includes(self, translation_unit):
     for include in translation_unit.get_includes():
       file_name = include.source.name
-      self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
+      self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
 
   def _enqueue_definition_files(self, translation_unit):
     finder = DefinitionFileFinder(self._editor, translation_unit.spelling)
     for file_name in finder.definition_files():
-      self._enqueue_in_any_thread(get_file_for_filename(file_name), high_priority = False)
+      self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
 
   def run(self):
     try:
@@ -749,9 +749,9 @@ class TranslationUnitAccessor(object):
     current_file = self._editor.current_file()
     return self._parser.translation_unit_if_parsed_do(current_file, function)
 
-  def translation_unit_for_file_named_do(self, filename, function):
+  def translation_unit_for_file_named_do(self, file_name, function):
     try:
-      file = get_file_for_filename(filename)
+      file = get_file_for_file_name(file_name)
       return self._translation_unit_do(file, function)
     except IOError:
       return None
@@ -800,11 +800,11 @@ class QuickFixListGenerator(object):
   def _get_quick_fix(self, diagnostic):
     # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
     if diagnostic.location.file:
-      filename = diagnostic.location.file.name
+      file_name = diagnostic.location.file.name
     else:
       "hack: report errors without files. should nevertheless be in quick_fix list"
       self._editor.display_message(diagnostic.spelling)
-      filename = ""
+      file_name = ""
 
     if diagnostic.severity == diagnostic.Ignored:
       type = 'I'
@@ -819,7 +819,7 @@ class QuickFixListGenerator(object):
     else:
       type = 'O'
 
-    return dict({ 'filename' : filename,
+    return dict({ 'filename' : file_name,
       'lnum' : diagnostic.location.line,
       'col' : diagnostic.location.column,
       'text' : diagnostic.spelling,
@@ -839,7 +839,7 @@ class Completer(object):
   def get_current_completion_results(self, line, column):
     def _do_it(translation_unit):
       current_file = self._editor.current_file()
-      return translation_unit.codeComplete(self._editor.filename(), line, column, [current_file],
+      return translation_unit.codeComplete(self._editor.file_name(), line, column, [current_file],
           self._complete_flags)
     return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
@@ -1009,12 +1009,12 @@ class DefinitionFinder(object):
     current_location = self._editor.current_location().clang_location(translation_unit)
     return self._find_definition_in_translation_unit(translation_unit, current_location)
 
-  def _alternate_files(self, filename):
-    finder = DefinitionFileFinder(self._editor, filename)
+  def _alternate_files(self, file_name):
+    finder = DefinitionFileFinder(self._editor, file_name)
     return finder.definition_files()
 
-  def _guessed_alternate_translation_units_do(self, filename, function):
-    for file in self._alternate_files(filename):
+  def _guessed_alternate_translation_units_do(self, file_name, function):
+    for file in self._alternate_files(file_name):
       self._translation_unit_accessor.translation_unit_for_file_named_do(file, function)
 
   def _definitions_of_current_cursor_do(self, translation_unit, function):
@@ -1030,7 +1030,7 @@ class DefinitionFinder(object):
 
   def _definition_cursors_do(self, function):
     for translation_unit_do in [
-        lambda f: self._guessed_alternate_translation_units_do(self._editor.filename(), f),
+        lambda f: self._guessed_alternate_translation_units_do(self._editor.file_name(), f),
         self._translation_unit_accessor.current_translation_unit_do,
         ]:
       translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
