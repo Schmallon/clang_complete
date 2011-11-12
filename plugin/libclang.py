@@ -9,15 +9,6 @@ import Queue
 """
 Ideas:
 
-  - Problem - Ensure translation units are not reparsed while being accessed
-
-  - Rethink concurrent parsing: Apparently, libclang allows translation units
-    to be parsed in parallel. We only have to ensure that a translation unit is
-    not accessed while it is being parsed. Why not come up with a
-    SynchronizedTranslationUnit that blocks concurrent calls?
-     - Problem: We might use old against new cursors. We have to block
-       interactions for longer times
-
   - Implement completion and diagnostics for emacs
   For that to work I should first check which parts that are currently
   implemented in vimscript are actually vim specific and vice versa.
@@ -36,16 +27,9 @@ Ideas:
   display.
 
   - Code cleanup
-   - Mark all private methods/fields as such
    - There seems to be some confusion between returning NULL or nullCursor
      - get_semantic_parent returns nullCursor
      - get_definition returns NULL
-   - Declaration/Definition finding share lots of code.
-    - both implementations consist out of two classes
-     - find the cursor
-     - jump to the cursor
-  - When jumping to definitions, print a debug message that explains how the definition
-    was found (through which file)
   - Allow jumping through pimpls
   - When opening a new file, right away get possible translation units
    - keep a set of translation unit (name -> translation unit)
