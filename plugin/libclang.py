@@ -5,7 +5,6 @@ import os
 import sys
 import Levenshtein
 import Queue
-import traceback
 
 """
 Ideas:
@@ -95,17 +94,6 @@ class Editor(object):
   def jump_to_cursor(self, cursor):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
-
-  def highlight_range(self, range, highlight_style):
-    self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
-
-  def highlight_location(self, location, highlight_style):
-    self.highlight(location.line, location.column, location.line, location.column, highlight_style)
-
-  def dump_stack(self):
-    for entry in traceback.format_stack():
-      self.display_message(entry)
-
 
 class VimInterface(Editor):
 
@@ -239,6 +227,9 @@ class VimInterface(Editor):
     group = self._highlight_group_for_id(highlight_style)
     other_matches = filter(lambda match: match['group'] != group, all_matches)
     return
+
+  def highlight_range(self, range, highlight_style):
+    self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
 
   def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
@@ -789,7 +780,8 @@ class DiagnosticsHighlighter(object):
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    self._editor.highlight_location(diagnostic.location, self._highlight_style)
+    single_position_range = ExportedRange(diagnostic.location, diagnostic.location)
+    self._editor.highlight_range(single_position_range, self._highlight_style)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
