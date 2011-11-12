@@ -92,10 +92,6 @@ class Editor(object):
       return None
     return translation_unit.getLocation(file, self.current_line(), self.current_column())
 
-  def get_current_cursor_in_translation_unit(self, translation_unit):
-    location = self.get_current_location_in_translation_unit(translation_unit)
-    return translation_unit.getCursor(location)
-
   def jump_to_cursor(self, cursor):
     location = cursor.extent.start
     self.open_file(location.file.name, location.line, location.column)
@@ -954,8 +950,12 @@ class DeclarationFinder(object):
     self._editor = editor
     self._translation_unit_accessor = translation_unit_accessor
 
+  def _get_current_cursor_in_translation_unit(self, translation_unit):
+    location = self._editor.get_current_location_in_translation_unit(translation_unit)
+    return translation_unit.getCursor(location)
+
   def _find_declaration_in_translation_unit(self, translation_unit):
-    current_location_cursor = self._editor.get_current_cursor_in_translation_unit(translation_unit)
+    current_location_cursor = self._get_current_cursor_in_translation_unit(translation_unit)
     parent_cursor = current_location_cursor.get_semantic_parent()
     if parent_cursor == clang.cindex.Cursor.nullCursor():
       return current_location_cursor.get_cursor_referenced()
