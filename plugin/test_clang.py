@@ -87,19 +87,19 @@ class TestClangPlugin(unittest.TestCase):
     self.open_source_file(source_file_name, start_line, start_column)
     self.clang_plugin.jump_to_declaration()
 
-  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
-    self.jump_to_definition(source_file_name, start_line, start_column)
+  def assert_location(self, expected_filename, expected_line, expected_column):
     if not self.editor.filename().endswith(expected_filename):
       self.fail(self.editor.filename() + " does not end with " + expected_filename)
     self.assertEquals(self.editor.current_column(), expected_column)
     self.assertEquals(self.editor.current_line(), expected_line)
 
+  def assert_jumps_to_definition(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
+    self.jump_to_definition(source_file_name, start_line, start_column)
+    self.assert_location(expected_filename, expected_line, expected_column)
+
   def assert_jumps_to_declaration(self, source_file_name, start_line, start_column, expected_filename, expected_line, expected_column):
     self.jump_to_declaration(source_file_name, start_line, start_column)
-    if not self.editor.filename().endswith(expected_filename):
-      self.fail(self.editor.filename() + " does not end with " + expected_filename)
-    self.assertEquals(self.editor.current_column(), expected_column)
-    self.assertEquals(self.editor.current_line(), expected_line)
+    self.assert_location(expected_filename, expected_line, expected_column)
 
   def test_jump_to_definition_in_same_file(self):
     self.assert_jumps_to_definition("test_defined_in_same_file.cpp", 7, 3, "test_defined_in_same_file.cpp", 1, 1)
