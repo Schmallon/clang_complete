@@ -58,6 +58,9 @@ class TestEditor(libclang.Editor):
     self._current_line = line
     self._current_column = column
 
+  def open_location(self, location):
+    self.open_file(location.file.name, location.line, location.column)
+
   def select_range(self, start, end):
     self._selection = (start, end)
 

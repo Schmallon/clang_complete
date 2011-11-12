@@ -91,10 +91,6 @@ class Editor(object):
       return None
     return translation_unit.getLocation(file, self.current_line(), self.current_column())
 
-  def jump_to_cursor(self, cursor):
-    location = cursor.extent.start
-    self.open_file(location.file.name, location.line, location.column)
-
 class VimInterface(Editor):
 
   class LoggingVim(object):
@@ -165,6 +161,9 @@ class VimInterface(Editor):
 
   def filename(self):
     return self._vim.current().buffer.name
+
+  def open_location(self, location):
+    self.open_file(location.file.name, location.line, location.column)
 
   def open_file(self, filename, line, column):
     self._vim.command("e +" + str(line) + " " + filename)
@@ -344,10 +343,10 @@ class ClangPlugin(object):
     self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
   def jump_to_definition(self):
-    abort_after_first_call(self._definition_finder.definition_cursors_do, self._editor.jump_to_cursor)
+    abort_after_first_call(self._definition_finder.definition_locations_do, self._editor.open_location)
 
   def jump_to_declaration(self):
-    abort_after_first_call(self._declaration_finder.declaration_cursors_do, self._editor.jump_to_cursor)
+    abort_after_first_call(self._declaration_finder.declaration_locations_do, self._editor.open_location)
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -956,13 +955,16 @@ class DeclarationFinder(object):
         return child_cursor
     return current_location_cursor.get_cursor_referenced()
 
-  def declaration_cursors_do(self, function):
+  def _declaration_cursors_do(self, function):
     def call_function_with_declaration_in(translation_unit):
       declaration_cursor = self._find_declaration_in_translation_unit(translation_unit)
       if declaration_cursor:
         function(declaration_cursor)
 
     self._translation_unit_accessor.current_translation_unit_do(call_function_with_declaration_in)
+
+  def declaration_locations_do(self, function):
+    self._declaration_cursors_do(lambda cursor: function(cursor.extent.start))
 
 class NoDefinitionFound(Exception):
   pass
@@ -1029,12 +1031,15 @@ class DefinitionFinder(object):
             lambda cursor: function(get_definition_or_reference(cursor)))
         function(definition_or_declaration_cursor)
 
-  def definition_cursors_do(self, function):
+  def _definition_cursors_do(self, function):
     for translation_unit_do in [
         lambda f: self._guessed_alternate_translation_units_do(self._editor.filename(), f),
         self._translation_unit_accessor.current_translation_unit_do,
         ]:
       translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
+
+  def definition_locations_do(self, function):
+    self._definition_cursors_do(lambda cursor: function(cursor.extent.start))
 
 class DefinitionFileFinder(object):
   """
