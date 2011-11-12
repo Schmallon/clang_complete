@@ -160,7 +160,7 @@ class VimInterface(object):
     return int(self._vim.eval("g:clang_debug")) == 1
 
   def current_location(self):
-    return ExportedPosition(self.filename(), self.current_line(), self.current_column())
+    return ExportedLocation(self.filename(), self.current_line(), self.current_column())
 
   def current_line(self):
     return int(self._vim.eval("line('.')"))
@@ -169,11 +169,11 @@ class VimInterface(object):
     return int(self._vim.eval("col('.')"))
 
   def selection(self):
-    selection_start = ExportedPosition(
+    selection_start = ExportedLocation(
         self.filename(),
         int(self._vim.eval('line("\'<")')),
         int(self._vim.eval('col("\'<")')))
-    selection_end = ExportedPosition(
+    selection_end = ExportedLocation(
         self.filename(),
         int(self._vim.eval('line("\'>")')),
           int(self._vim.eval('col("\'>")')))
@@ -372,7 +372,7 @@ class ClangPlugin(object):
 
     self._editor.display_diagnostics(qf)
 
-class ExportedPosition(object):
+class ExportedLocation(object):
   def __init__(self, file_name, line, column):
     self.file_name = file_name
     self.line = line
@@ -387,15 +387,15 @@ class ExportedPosition(object):
   def __hash__(self):
     return self.line * 80 + self.column
 
-  def clang_position(self, translation_unit):
+  def clang_location(self, translation_unit):
     file = translation_unit.getFile(self.file_name)
     if not file:
       return None
     return translation_unit.getLocation(file, self.line, self.column)
 
   @classmethod
-  def from_clang_position(cls, clang_position):
-    return cls(clang_position.file.name if clang_position.file else None, clang_position.line, clang_position.column)
+  def from_clang_location(cls, clang_location):
+    return cls(clang_location.file.name if clang_location.file else None, clang_location.line, clang_location.column)
 
 class ExportedRange(object):
   def __init__(self, start, end):
@@ -413,7 +413,7 @@ class ExportedRange(object):
 
   @classmethod
   def from_clang_range(cls, clang_range):
-    return cls(ExportedPosition.from_clang_position(clang_range.start), ExportedPosition.from_clang_position(clang_range.end))
+    return cls(ExportedLocation.from_clang_location(clang_range.start), ExportedLocation.from_clang_location(clang_range.end))
 
 
 class FindReferencesToOutsideOfSelectionAction(object):
@@ -776,8 +776,8 @@ class DiagnosticsHighlighter(object):
     if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
       return
 
-    single_position_range = ExportedRange(diagnostic.location, diagnostic.location)
-    self._editor.highlight_range(single_position_range, self._highlight_style)
+    single_location_range = ExportedRange(diagnostic.location, diagnostic.location)
+    self._editor.highlight_range(single_location_range, self._highlight_style)
 
     # Use this wired kind of iterator as the python clang libraries
           # have a bug in the range iterator that stops us to use:
@@ -939,7 +939,7 @@ class DeclarationFinder(object):
     self._translation_unit_accessor = translation_unit_accessor
 
   def _get_current_cursor_in_translation_unit(self, translation_unit):
-    location = self._editor.current_location().clang_position(translation_unit)
+    location = self._editor.current_location().clang_location(translation_unit)
     return translation_unit.getCursor(location)
 
   def _find_declaration_in_translation_unit(self, translation_unit):
@@ -985,10 +985,10 @@ class DefinitionFinder(object):
     file = cursor.extent.start.file
     other_file = other_translation_unit.getFile(file.name)
     for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-      position = other_translation_unit.getLocationForOffset(other_file, offset)
-      cursor_at_position = other_translation_unit.getCursor(position)
-      if cursor_at_position.get_usr() == cursor.get_usr():
-        return cursor_at_position
+      location = other_translation_unit.getLocationForOffset(other_file, offset)
+      cursor_at_location = other_translation_unit.getCursor(location)
+      if cursor_at_location.get_usr() == cursor.get_usr():
+        return cursor_at_location
     return None
 
   def _corresponding_cursors_in_any_alternate_translation_unit_do(self, cursor, function):
@@ -1002,11 +1002,11 @@ class DefinitionFinder(object):
   def _find_definition_in_translation_unit(self, translation_unit, location):
     cursor = translation_unit.getCursor(location)
     if cursor.kind.is_unexposed:
-      self._editor.display_message("Item at current position is not exposed. Cursor kind: " + str(cursor.kind))
+      self._editor.display_message("Item at current location is not exposed. Cursor kind: " + str(cursor.kind))
     return get_definition_or_reference(cursor)
 
   def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
-    current_location = self._editor.current_location().clang_position(translation_unit)
+    current_location = self._editor.current_location().clang_location(translation_unit)
     return self._find_definition_in_translation_unit(translation_unit, current_location)
 
   def _alternate_files(self, filename):

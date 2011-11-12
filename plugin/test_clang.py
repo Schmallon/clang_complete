@@ -38,7 +38,7 @@ class TestEditor(object):
     return self._filename
 
   def current_location(self):
-    return libclang.ExportedPosition(self.filename(), self.current_line(), self.current_column())
+    return libclang.ExportedLocation(self.filename(), self.current_line(), self.current_column())
 
   def contents(self):
     return self._contents
@@ -157,8 +157,8 @@ class TestTranslationUnitParser(unittest.TestCase):
     parser.translation_unit_do(file, lambda translation_unit: translation_unit)
 
 def range_from_tuples(file_name, start, end):
-  start_pos = libclang.ExportedPosition(file_name, start[0], start[1])
-  end_pos = libclang.ExportedPosition(file_name, end[0], end[1])
+  start_pos = libclang.ExportedLocation(file_name, start[0], start[1])
+  end_pos = libclang.ExportedLocation(file_name, end[0], end[1])
   return libclang.ExportedRange(start_pos, end_pos)
 
 
