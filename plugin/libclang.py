@@ -672,7 +672,7 @@ class IdleTranslationUnitParserThread(threading.Thread):
       self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
 
   def _enqueue_definition_files(self, translation_unit):
-    finder = DefinitionFileFinder(self._editor, translation_unit.spelling)
+    finder = DefinitionFileFinder(self._editor.excluded_directories(), translation_unit.spelling)
     for file_name in finder.definition_files():
       self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
 
@@ -1002,7 +1002,7 @@ class DefinitionFinder(object):
     return self._find_definition_in_translation_unit(translation_unit, current_location)
 
   def _alternate_files(self, file_name):
-    finder = DefinitionFileFinder(self._editor, file_name)
+    finder = DefinitionFileFinder(self._editor.excluded_directories(), file_name)
     return finder.definition_files()
 
   def _guessed_alternate_translation_units_do(self, file_name, function):
@@ -1035,8 +1035,8 @@ class DefinitionFileFinder(object):
   Given the name of a file (e.g. foo.h), finds similarly named files (e.g. foo.cpp,
   fooI.cpp) somewhere nearby in the file system.
   """
-  def __init__(self, editor, target_file_name):
-    self._editor = editor
+  def __init__(self, excluded_directories, target_file_name):
+    self._excluded_directories = excluded_directories
     self._target_file_name = target_file_name
     self._split_target = os.path.splitext(os.path.basename(self._target_file_name))
     self._visited_directories = set()
@@ -1064,7 +1064,7 @@ class DefinitionFileFinder(object):
     try:
       for file_name in os.listdir(directory_name):
         absolute_name = os.path.abspath(os.path.join(directory_name, file_name))
-        if os.path.isdir(absolute_name) and file_name not in self._editor.excluded_directories():
+        if os.path.isdir(absolute_name) and file_name not in self._excluded_directories:
           if absolute_name not in self._visited_directories:
             for result in self._search_directory_and_subdirectories(absolute_name):
               yield result
