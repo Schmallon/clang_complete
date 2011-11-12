@@ -5,6 +5,7 @@ import os
 import sys
 import Levenshtein
 import Queue
+import cProfile
 
 """
 Ideas:
@@ -494,30 +495,30 @@ class FindParametersPassedByNonConstReferenceAction(object):
   def __init__(self, editor):
     self._editor = editor
 
+  def _get_nonconst_reference_param_indexes(self, function_decl_cursor):
+    result = []
+    param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
+    for index, cursor in enumerate(param_decls):
+      if cursor.kind == clang.cindex.CursorKind.PARM_DECL:
+        if cursor.type.kind in [clang.cindex.TypeKind.LVALUEREFERENCE, clang.cindex.TypeKind.RVALUEREFERENCE]:
+          if not cursor.type.get_pointee().is_const_qualified():
+            result.append(index)
+    return result
+
+  def _handle_call_expression(self, result, cursor):
+    cursor_referenced = cursor.get_cursor_referenced()
+    if cursor_referenced:
+      args = list(cursor.get_args())
+      for i in self._get_nonconst_reference_param_indexes(cursor_referenced):
+        try:
+          result.add(ExportedRange.from_clang_range(args[i].extent))
+        except IndexError:
+          self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
+
   def find_ranges(self, translation_unit):
-    def get_nonconst_reference_param_indexes(function_decl_cursor):
-      result = []
-      param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
-      for index, cursor in enumerate(param_decls):
-        if cursor.kind == clang.cindex.CursorKind.PARM_DECL:
-          if cursor.type.kind in [clang.cindex.TypeKind.LVALUEREFERENCE, clang.cindex.TypeKind.RVALUEREFERENCE]:
-            if not cursor.type.get_pointee().is_const_qualified():
-              result.append(index)
-      return result
-
-    def handle_call_expression(result, cursor):
-      cursor_referenced = cursor.get_cursor_referenced()
-      if cursor_referenced:
-        args = list(cursor.get_args())
-        for i in get_nonconst_reference_param_indexes(cursor_referenced):
-          try:
-            result.add(ExportedRange.from_clang_range(args[i].extent))
-          except IndexError:
-            self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
-
     result = set()
     call_expressions_in_file_of_translation_unit_do(
-        lambda cursor: handle_call_expression(result, cursor),
+        lambda cursor: self._handle_call_expression(result, cursor),
         translation_unit)
     return result
 
