@@ -209,7 +209,7 @@ class VimInterface(object):
     all_matches = self._vim.eval("getmatches()")
     group = self._highlight_group_for_id(highlight_style)
     other_matches = filter(lambda match: match['group'] != group, all_matches)
-    return
+    self._vim.eval("setmatches(" + str(other_matches) + ")")
 
   def highlight_range(self, range, highlight_style):
     self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
