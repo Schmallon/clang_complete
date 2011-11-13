@@ -483,12 +483,13 @@ class FindOmittedDefaultArgumentsAction(object):
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
   def recurse(cursor):
     for child in cursor.get_children():
-      if child.location.file and child.location.file.name == translation_unit.spelling:
-        recurse(child)
-
+      recurse(child)
     if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
       do_it(cursor)
-  recurse(translation_unit.cursor)
+
+  for top_level_cursor in translation_unit.cursor.get_children():
+    if top_level_cursor.location.file and top_level_cursor.location.file.name == translation_unit.spelling:
+      recurse(top_level_cursor)
 
 class FindParametersPassedByNonConstReferenceAction(object):
 
