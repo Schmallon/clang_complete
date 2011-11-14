@@ -293,6 +293,13 @@ class ClangPlugin(object):
     self._load_files_in_background()
 
   def _highlight_interesting_ranges(self, translation_unit):
+
+    class MemoizedTranslationUnit(object):
+      def __init__(self, translation_unit):
+        self.cursor = translation_unit.cursor
+        self.spelling = translation_unit.spelling
+    memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
+
     styles_and_actions = [
         ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
         ("Virtual method call", FindVirtualMethodCallsAction()),
@@ -300,7 +307,7 @@ class ClangPlugin(object):
 
     for highlight_style, action in styles_and_actions:
       self._editor.clear_highlights(highlight_style)
-      ranges = action.find_ranges(translation_unit)
+      ranges = action.find_ranges(memoized_translation_unit)
       for range in ranges:
         self._highlight_range_if_in_current_file(range, highlight_style)
 
