@@ -209,7 +209,7 @@ class VimInterface(object):
     all_matches = self._vim.eval("getmatches()")
     group = self._highlight_group_for_id(highlight_style)
     other_matches = filter(lambda match: match['group'] != group, all_matches)
-    self._vim.eval("setmatches(" + str(other_matches) + ")")
+    self._vim.eval("setmatches(" + self._quick_fix_list_to_str(other_matches) + ")")
 
   def highlight_range(self, range, highlight_style):
     self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
@@ -222,7 +222,7 @@ class VimInterface(object):
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
-      return str(entry).replace('"', '\\"')
+      return str(entry).replace('"', '\\"').replace("\\", "\\\\")
 
     def translate_entry(entry):
       return '"' + escape(entry) + '" : "' + escape(dictionary[entry]) + '"'
