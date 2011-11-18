@@ -654,6 +654,7 @@ class IdleTranslationUnitParserThreadDistributor():
   def terminate(self):
     for thread in self._threads:
       thread.terminate()
+    # Only start waking up threads after all threads know they must terminate on notification
     for thread in self._threads:
       self._remaining_files.put((-1, None))
 
