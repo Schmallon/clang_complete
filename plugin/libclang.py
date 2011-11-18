@@ -81,12 +81,16 @@ class VimInterface(object):
     def eval(self, x):
       self._check_thread()
       self._logger.display_message(str(x))
-      return self._vim.eval(x)
+      result = self._vim.eval(x)
+      self._logger.display_message("Succeeded")
+      return result
 
     def command(self, x):
       self._check_thread()
       self._logger.display_message(str(x))
-      return self._vim.command(x)
+      result = self._vim.command(x)
+      self._logger.display_message("Succeeded")
+      return result
 
     def current(self):
       self._check_thread()
