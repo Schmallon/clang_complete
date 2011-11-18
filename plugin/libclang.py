@@ -10,6 +10,10 @@ import cProfile
 """
 Ideas:
 
+  - Highlight unused pre-declarations
+
+  - Highlight unused includes (probably not possible)
+
   - Implement completion and diagnostics for emacs
   For that to work I should first check which parts that are currently
   implemented in vimscript are actually vim specific and vice versa.
