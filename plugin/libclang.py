@@ -292,6 +292,7 @@ class ClangPlugin(object):
     self._translation_unit_accessor.terminate()
 
   def file_changed(self):
+    self._editor.clear_all_highlights()
     self._editor.display_message("File change was notified, clearing all caches.")
     self._translation_unit_accessor.clear_caches()
     self._load_files_in_background()
