@@ -635,12 +635,15 @@ class SynchronizedTranslationUnitParser(object):
   def clear_caches(self):
     self._up_to_date.clear()
 
-  def is_parsed(self, file_name):
+  def _is_parsed(self, file_name):
     return file_name in self._up_to_date
 
-  def is_parsing(self, file_name):
+  def _is_parsing(self, file_name):
     doer = self._synchronized_doer_for_file_named(file_name)
     return doer.is_locked()
+
+  def is_parsed_or_parsing(self, file_name):
+    return self._is_parsed(file_name) or self._is_parsing(file_name)
 
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
@@ -659,7 +662,7 @@ class IdleTranslationUnitParserThreadDistributor():
       self._remaining_files.put((-1, None))
 
   def enqueue_file(self, file, high_priority = True):
-    if self._parser.is_parsed(file[0]) or self._parser.is_parsing(file[0]):
+    if self._parser.is_parsed_or_parsing(file[0]):
       return
     if high_priority:
       priority = 0
@@ -748,9 +751,6 @@ class TranslationUnitAccessor(object):
 
   def terminate(self):
     self._idle_translation_unit_parser_thread_distributor.terminate()
-
-  def is_parsed(self, file_name):
-    return self._parser.is_parsed(file_name)
 
   def current_translation_unit_do(self, function):
     current_file = self._editor.current_file()
