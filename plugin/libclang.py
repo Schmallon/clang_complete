@@ -595,6 +595,24 @@ class SynchronizedTranslationUnitParser(object):
     self._synchronized_doers = {}
     self._doer_lock = SynchronizedDoer()
 
+  def translation_unit_do(self, file, function):
+    def do_it():
+      return self._call_if_not_null(function, self._parse(file))
+    return self._file_synchronized_do(file, do_it)
+
+  def translation_unit_if_parsed_do(self, file, function):
+    doer = self._synchronized_doer_for_file_named(file[0])
+    def do_it():
+      if file[0] in self._up_to_date:
+        return self._call_if_not_null(function, self._parse(file))
+    try:
+      return doer.do_if_not_locked(do_it)
+    except AlreadyLocked:
+      pass
+
+  def is_parsed_or_parsing(self, file_name):
+    return self._is_parsed(file_name) or self._is_parsing(file_name)
+
   def _synchronized_doer_for_file_named(self, file_name):
     def do_it():
       try:
@@ -613,21 +631,6 @@ class SynchronizedTranslationUnitParser(object):
     if arg:
       return function(arg)
 
-  def translation_unit_do(self, file, function):
-    def do_it():
-      return self._call_if_not_null(function, self._parse(file))
-    return self._file_synchronized_do(file, do_it)
-
-  def translation_unit_if_parsed_do(self, file, function):
-    doer = self._synchronized_doer_for_file_named(file[0])
-    def do_it():
-      if file[0] in self._up_to_date:
-        return self._call_if_not_null(function, self._parse(file))
-    try:
-      return doer.do_if_not_locked(do_it)
-    except AlreadyLocked:
-      pass
-
   def _parse(self, file):
     action = TranslationParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
     return action.parse()
@@ -641,9 +644,6 @@ class SynchronizedTranslationUnitParser(object):
   def _is_parsing(self, file_name):
     doer = self._synchronized_doer_for_file_named(file_name)
     return doer.is_locked()
-
-  def is_parsed_or_parsing(self, file_name):
-    return self._is_parsed(file_name) or self._is_parsing(file_name)
 
 class IdleTranslationUnitParserThreadDistributor():
   def __init__(self, editor, translation_unit_parser):
@@ -680,6 +680,18 @@ class IdleTranslationUnitParserThread(threading.Thread):
     self._remaining_files = _remaining_files
     self._termination_requested = False
 
+  def run(self):
+    try:
+      while True:
+        ignored_priority, current_file = self._remaining_files.get()
+        if self._termination_requested:
+          return
+        self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
+        self._parser.translation_unit_do(current_file, self._enqueue_related_files)
+        self._remaining_files.task_done()
+    except Exception, e:
+      self._editor.display_message("Exception thrown in idle thread: " + str(e))
+
   def terminate(self):
     self._termination_requested = True
 
@@ -697,19 +709,6 @@ class IdleTranslationUnitParserThread(threading.Thread):
     finder = DefinitionFileFinder(self._editor.excluded_directories(), translation_unit.spelling)
     for file_name in finder.definition_files():
       self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
-
-  def run(self):
-    try:
-      while True:
-        ignored_priority, current_file = self._remaining_files.get()
-        if self._termination_requested:
-          return
-        self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
-        self._parser.translation_unit_do(current_file, self._enqueue_related_files)
-        self._remaining_files.task_done()
-    except Exception, e:
-      self._editor.display_message("Exception thrown in idle thread: " + str(e))
-
 
 class AlreadyLocked(Exception):
   pass
