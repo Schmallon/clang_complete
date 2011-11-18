@@ -935,23 +935,21 @@ class Cursor(Structure):
             assert child != Cursor_null()
             children.append(child)
             return 1 # continue
-        children = []
-        Cursor_visit(self, Cursor_visit_callback(visitor), children)
-        return iter(children)
+
+        if not hasattr(self, '_children'):
+          children = []
+          Cursor_visit(self, Cursor_visit_callback(visitor), children)
+          self._children = children
+
+        return iter(self._children)
 
     def get_args(self):
-        """Return an iterator for accessing the children of this cursor."""
-
-        # FIXME: Expose iteration from CIndex, PR6125.
-        def visitor(child, parent, children):
-            # FIXME: Document this assertion in API.
-            # FIXME: There should just be an isNull method.
-            assert child != Cursor_null()
-            children.append(child)
-            return 1 # continue
-        children = []
-        CallExpr_visit_args(self, Cursor_visit_callback(visitor), children)
-        return iter(children)
+        """Return an iterator for accessing the arguments of this cursor."""
+        result = []
+        num_args = CallExpr_getNumArgs(self)
+        for i in range(0, num_args):
+          result.append(CallExpr_getArg(self, i))
+        return iter(result)
 
     def is_virtual(self):
       return CXXMethod_isVirtual(self)
@@ -1735,9 +1733,13 @@ Cursor_visit = lib.clang_visitChildren
 Cursor_visit.argtypes = [Cursor, Cursor_visit_callback, py_object]
 Cursor_visit.restype = c_uint
 
-CallExpr_visit_args = lib.clang_CallExpr_visitArgs
-CallExpr_visit_args.argtypes = [Cursor, Cursor_visit_callback, py_object]
-CallExpr_visit_args.restype = c_uint
+CallExpr_getArg = lib.clang_CallExpr_getArg
+CallExpr_getArg.argtypes = [Cursor, c_uint]
+CallExpr_getArg.restype = Cursor
+
+CallExpr_getNumArgs = lib.clang_CallExpr_getNumArgs
+CallExpr_getNumArgs.argtypes = [Cursor]
+CallExpr_getNumArgs.restype = c_uint
 
 CXXMethod_isVirtual = lib.clang_CXXMethod_isVirtual
 CXXMethod_isVirtual.argtypes = [Cursor]
