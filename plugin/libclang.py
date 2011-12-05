@@ -104,7 +104,13 @@ class VimInterface(object):
     self._vim = self.LoggingVim(self)
     self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
     self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Omitted default argument" : 3}
+    self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
+    self._cached_variables = {}
+    self.refresh_variables()
 
+  def refresh_variables(self):
+    for variable_name in self._cached_variable_names:
+      self._cached_variables[variable_name] = self._get_uncached_variable(variable_name)
 
   # Get a tuple (file_name, filecontent) for the file opened in the current
   # vim buffer. The filecontent contains the unsafed buffer content.
@@ -112,7 +118,7 @@ class VimInterface(object):
     file = "\n".join(self._vim.eval("getline(1, '$')"))
     return (self.file_name(), file)
 
-  def _get_variable(self, variable_name, default_value = ""):
+  def _get_uncached_variable(self, variable_name, default_value = ""):
     try:
       if int(self._vim.eval("exists('" + variable_name + "')")):
         return self._vim.eval(variable_name)
@@ -120,6 +126,9 @@ class VimInterface(object):
         return default_value
     except:
       return default_value
+
+  def _get_variable(self, variable_name):
+    return self._cached_variables[variable_name]
 
   def _split_options(self, options):
     optsList = []
