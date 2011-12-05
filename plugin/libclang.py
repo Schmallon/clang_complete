@@ -551,7 +551,7 @@ class FindParametersPassedByNonConstReferenceAction(object):
 class NoCurrentTranslationUnit(Exception):
   pass
 
-class TranslationParsingAction(object):
+class TranslationUnitParsingAction(object):
   def __init__(self, editor, index, translation_units, up_to_date, file):
     self._editor = editor
     self._index = index
@@ -641,7 +641,7 @@ class SynchronizedTranslationUnitParser(object):
       return function(arg)
 
   def _parse(self, file):
-    action = TranslationParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
+    action = TranslationUnitParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
     return action.parse()
 
   def clear_caches(self):
