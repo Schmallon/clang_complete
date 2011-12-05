@@ -209,33 +209,36 @@ function! s:parsePathOption()
 endfunction
 
 function! s:initClangCompletePython()
-  python import sys
-  python import vim
+  " Only parse the python library once
+  if !exists('s:libclang_loaded')
+    python import sys
+    python import vim
+    if exists('g:clang_library_path')
+      " Load the library from the given library path.
+      exe 'python sys.argv = ["' . escape(g:clang_library_path, '\') . '"]'
+    else
+      " By setting argv[0] to '' force the python bindings to load the library
+      " from the normal system search path.
+      python sys.argv[0] = ''
+    endif
 
-  if exists('g:clang_library_path')
-    " Load the library from the given library path.
-    exe 'python sys.argv = ["' . escape(g:clang_library_path, '\') . '"]'
-  else
-    " By setting argv[0] to '' force the python bindings to load the library
-    " from the normal system search path.
-    python sys.argv[0] = ''
+    exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
+    exe 'pyfile ' . s:plugin_path . '/libclang.py'
+    python vim_interface = VimInterface()
+    python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
+
+    augroup ClangComplete
+      "Does not really detect all changes, e.g. yanks. Any better ideas?
+      autocmd FileChangedShellPost *.cpp,*.c,*.h python clang_plugin.file_changed()
+      autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
+      autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
+      "autocmd InsertCharPre * python clang_plugin.file_changed()
+      autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
+      autocmd VimLeave * python clang_plugin.terminate()
+      autocmd BufEnter *.cpp,*.c,*.h call <SID>DoPeriodicQuickFix()
+    augroup end
+  let s:libclang_loaded = 1
   endif
-
-  exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
-  exe 'pyfile ' . s:plugin_path . '/libclang.py'
-  python vim_interface = VimInterface()
-  python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
-
-  augroup ClangComplete
-    "Does not really detect all changes, e.g. yanks. Any better ideas?
-    autocmd FileChangedShellPost *.cpp,*.c,*.h python clang_plugin.file_changed()
-    autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
-    autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
-    "autocmd InsertCharPre * python clang_plugin.file_changed()
-    autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
-    autocmd VimLeave * python clang_plugin.terminate()
-    autocmd BufEnter *.cpp,*.c,*.h call <SID>DoPeriodicQuickFix()
-  augroup end
 endfunction
 
 function! s:NoopKeypress()
