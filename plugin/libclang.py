@@ -863,12 +863,6 @@ class Completer(object):
           self._complete_flags)
     return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
-  def _format_chunk_for_word(self, chunk):
-    if chunk.isKindPlaceHolder():
-      return "<#" + chunk.spelling + "#>"
-    else:
-      return chunk.spelling
-
   def format_results(self, result):
     completion = dict()
 
