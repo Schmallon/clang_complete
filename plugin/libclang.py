@@ -880,7 +880,7 @@ class Completer(object):
     completion['menu'] = word
     completion['info'] = word
     completion['args_pos'] = args_pos
-    completion['dup'] = 1
+    completion['dup'] = 0
 
     # Replace the number that represents a specific kind with a better
     # textual representation.
