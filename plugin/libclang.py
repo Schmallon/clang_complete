@@ -853,6 +853,12 @@ class Completer(object):
           self._complete_flags)
     return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
+  def _format_chunk_for_word(self, chunk):
+    if chunk.isKindPlaceHolder():
+      return "<#" + chunk.spelling + "#>"
+    else:
+      return chunk.spelling
+
   def format_results(self, result):
     completion = dict()
 
@@ -866,8 +872,8 @@ class Completer(object):
     else:
       return_str = ""
 
-    info = return_str + "".join(map(lambda x: x.spelling, word))
-    word = abbr
+    info = "".join(map(self._format_chunk_for_word, word))
+    word = return_str + "".join(map(lambda x: x.spelling, word))
 
     completion['word'] = word
     completion['abbr'] = abbr
