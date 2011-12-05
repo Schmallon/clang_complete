@@ -348,23 +348,11 @@ function! ClangComplete(findstart, base)
 
     for item in l:res
       if g:clang_snippets == 1
-        let l:args_pos = []
-        let l:startidx = match(l:item['info'], '<#')
-        while l:startidx != -1
-          let l:item['info'] = substitute(l:item['info'], '<#', '', '')
-          let l:endidx = match(l:item['info'], '#>')
-          let l:item['info'] = substitute(l:item['info'], '#>', '', '')
-          let l:args_pos += [[ l:startidx, l:endidx ]]
-          let l:startidx = match(l:item['info'], '<#')
-        endwhile
         let Snip = function('snippets#' . g:clang_snippets_engine . '#add_snippet')
-        let item['word'] = Snip(item['info'], l:args_pos)
+        let item['word'] = Snip(item['info'], item['args_pos'])
       else
-        let item['info'] = substitute(item['info'], '<#', '', 'g')
-        let item['info'] = substitute(item['info'], '#>', '', 'g')
         let item['word'] = item['abbr']
       endif
-      let item['menu'] = item['info']
     endfor
     if g:clang_snippets == 1
       inoremap <expr> <buffer> <C-Y> <SID>HandlePossibleSelectionCtrlY()

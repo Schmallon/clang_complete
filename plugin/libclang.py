@@ -863,22 +863,23 @@ class Completer(object):
     completion = dict()
 
     abbr = self.get_abbr(result.string)
-    info = filter(lambda x: not x.isKindInformative(), result.string)
-    word = filter(lambda x: not x.isKindResultType(), info)
-    return_value = filter(lambda x: x.isKindResultType(), info)
 
-    if len(return_value) > 0:
-      return_str = return_value[0].spelling + " "
-    else:
-      return_str = ""
+    word = filter(lambda x: not x.isKindInformative() and not x.isKindResultType(), result.string)
+    args_pos = []
+    cur_pos = 0
+    for chunk in word:
+      chunk_len = len(chunk.spelling)
+      if chunk.isKindPlaceHolder():
+        args_pos += [[ cur_pos, cur_pos + chunk_len ]]
+      cur_pos += chunk_len
 
-    info = "".join(map(self._format_chunk_for_word, word))
-    word = return_str + "".join(map(lambda x: x.spelling, word))
+    word = "".join(map(lambda x: x.spelling, word))
 
     completion['word'] = word
     completion['abbr'] = abbr
-    completion['menu'] = info
-    completion['info'] = info
+    completion['menu'] = word
+    completion['info'] = word
+    completion['args_pos'] = args_pos
     completion['dup'] = 1
 
     # Replace the number that represents a specific kind with a better
