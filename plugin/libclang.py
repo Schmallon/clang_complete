@@ -935,6 +935,8 @@ class CompleteThread(threading.Thread):
     self._line = line
     self._column = column
     self._translation_unit_accessor = translation_unit_accessor
+    self._current_file = editor.current_file()
+    self._file_name = editor.file_name()
 
     self.result = None
 
@@ -949,8 +951,8 @@ class CompleteThread(threading.Thread):
 
   def get_current_completion_results(self, line, column):
     def _do_it(translation_unit):
-      current_file = self._editor.current_file()
-      return translation_unit.codeComplete(self._editor.file_name(), line, column, [current_file],
+      current_file = self._current_file
+      return translation_unit.codeComplete(self._file_name, line, column, [current_file],
           self._complete_flags)
     return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
