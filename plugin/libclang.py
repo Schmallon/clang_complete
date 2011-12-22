@@ -239,7 +239,7 @@ class VimInterface(object):
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
-      return str(entry).replace('"', '\\"').replace("\\", "\\\\")
+      return str(entry).replace("\\", "\\\\").replace('"', '\\"')
 
     def translate_entry(entry):
       return '"' + escape(entry) + '" : "' + escape(dictionary[entry]) + '"'
