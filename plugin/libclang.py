@@ -514,10 +514,13 @@ class FindOmittedDefaultArgumentsAction(object):
     return result
 
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
+  return cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
+
+def cursors_of_kind_do(do_it, translation_unit, kind):
   def recurse(cursor):
     for child in cursor.get_children():
       recurse(child)
-    if cursor.kind == clang.cindex.CursorKind.CALL_EXPR:
+    if cursor.kind == kind:
       do_it(cursor)
 
   for top_level_cursor in translation_unit.cursor.get_children():
