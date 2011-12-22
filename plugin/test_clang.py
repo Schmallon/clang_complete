@@ -231,29 +231,28 @@ class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAcc
     file_name = "test_sources/test_find_parameters_passed_by_reference_to_stream_operators.cpp"
     self.assert_returns_ranges(file_name, [range_from_tuples(file_name, (15, 3), (15, 6))])
 
-class TestFindCallsOfVirtualMethods(TestCaseWithTranslationUnitAccessor):
-  def assert_returns_ranges(self, file_name, expected_ranges):
+class TestActions(TestCaseWithTranslationUnitAccessor):
+
+  def assert_returns_ranges(self, action, file_name, expected_ranges):
+    actual_ranges = []
     def do_it(translation_unit):
-      action = libclang.FindVirtualMethodCallsAction()
-      ranges = action.find_ranges(translation_unit)
-      self.assertEquals(list(set(ranges)), [range_from_tuples(file_name, (13, 3), (13, 23))])
-    return self.translation_unit_do(file_name, do_it)
+      actual_ranges.extend(list(set(action.find_ranges(translation_unit))))
+    self.translation_unit_do(file_name, do_it)
+    self.assertEquals(list(set(actual_ranges)), expected_ranges)
 
   def test_find_virtual_method_calls(self):
     file_name = "test_sources/test_find_virtual_method_calls.cpp"
-    self.assert_returns_ranges(file_name, [range_from_tuples(file_name, (13, 3), (13, 23))])
-
-class TestFindOmittedDefaultArguments(TestCaseWithTranslationUnitAccessor):
-  def assert_returns_ranges(self, file_name, expected_ranges):
-    def do_it(translation_unit):
-      action = libclang.FindOmittedDefaultArgumentsAction()
-      ranges = action.find_ranges(translation_unit)
-      self.assertEquals(list(set(ranges)), expected_ranges)
-    return self.translation_unit_do(file_name, do_it)
+    self.assert_returns_ranges(
+        libclang.FindVirtualMethodCallsAction(),
+        file_name,
+        [range_from_tuples(file_name, (13, 3), (13, 23))])
 
   def test_find_omitted_default_arguments(self):
     file_name = "test_sources/test_find_omitted_default_arguments.cpp"
-    self.assert_returns_ranges(file_name, [range_from_tuples(file_name, (5, 3), (5, 37))])
+    self.assert_returns_ranges(
+      libclang.FindOmittedDefaultArgumentsAction(),
+      file_name,
+      [range_from_tuples(file_name, (5, 3), (5, 37))])
 
 if __name__ == '__main__':
     unittest.main()
