@@ -770,7 +770,7 @@ class TranslationUnitAccessor(object):
 
   def current_translation_unit_do(self, function):
     current_file = self._editor.current_file()
-    return self._translation_unit_do(current_file, function)
+    return self.translation_unit_do(current_file, function)
 
   def current_translation_unit_if_parsed_do(self, function):
     current_file = self._editor.current_file()
@@ -779,7 +779,7 @@ class TranslationUnitAccessor(object):
   def translation_unit_for_file_named_do(self, file_name, function):
     try:
       file = get_file_for_file_name(file_name)
-      return self._translation_unit_do(file, function)
+      return self.translation_unit_do(file, function)
     except IOError:
       return None
 
@@ -789,7 +789,7 @@ class TranslationUnitAccessor(object):
   def enqueue_translation_unit_creation(self, file):
     self._idle_translation_unit_parser_thread_distributor.enqueue_file(file)
 
-  def _translation_unit_do(self, file, function):
+  def translation_unit_do(self, file, function):
     return self._parser.translation_unit_do(file, function)
 
 class DiagnosticsHighlighter(object):
@@ -958,10 +958,10 @@ class CompleteThread(threading.Thread):
 
   def get_current_completion_results(self, line, column):
     def _do_it(translation_unit):
-      current_file = self._current_file
-      return translation_unit.codeComplete(self._file_name, line, column, [current_file],
-          self._complete_flags)
-    return self._translation_unit_accessor.current_translation_unit_do(_do_it)
+      return translation_unit.codeComplete(
+          self._file_name, line, column, [self._current_file], self._complete_flags)
+
+    return self._translation_unit_accessor.translation_unit_do(self._current_file, _do_it)
 
 
 class DeclarationFinder(object):
