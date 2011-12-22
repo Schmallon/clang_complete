@@ -77,27 +77,27 @@ class VimInterface(object):
       self._logger = logger
       self._creator_thread = threading.currentThread()
 
-    def _check_thread(self):
+    def _check_thread(self, command):
       current_thread = threading.currentThread()
       if self._creator_thread != current_thread:
-        self._logger.display_message("Warning: Calling vim command from different thread: " + current_thread.getName())
+        self._logger.display_message("Warning: Calling vim command %s from different thread: %s" % (command, current_thread.getName()))
 
     def eval(self, x):
-      self._check_thread()
+      self._check_thread("eval(%s)" % str(x))
       self._logger.display_message(str(x))
       result = self._vim.eval(x)
       self._logger.display_message("Succeeded")
       return result
 
     def command(self, x):
-      self._check_thread()
+      self._check_thread("command(%s)" % str(x))
       self._logger.display_message(str(x))
       result = self._vim.command(x)
       self._logger.display_message("Succeeded")
       return result
 
     def current(self):
-      self._check_thread()
+      self._check_thread("current")
       return self._vim.current
 
   def __init__(self):
