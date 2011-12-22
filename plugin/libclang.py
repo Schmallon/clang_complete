@@ -5,7 +5,7 @@ import os
 import sys
 import Levenshtein
 import Queue
-import cProfile
+import traceback
 
 """
 Ideas:
@@ -81,6 +81,7 @@ class VimInterface(object):
       current_thread = threading.currentThread()
       if self._creator_thread != current_thread:
         self._logger.display_message("Warning: Calling vim command %s from different thread: %s" % (command, current_thread.getName()))
+        self._logger.print_stack()
 
     def eval(self, x):
       self._check_thread("eval(%s)" % str(x))
@@ -199,10 +200,16 @@ class VimInterface(object):
   def display_message(self, message):
     self._print_to_file(message)
 
+  def _log_file(self):
+    return open("clang_log.txt", "a")
+
   def _print_to_file(self, message):
-    f = open("clang_log.txt", "a")
-    f.write(message + "\n")
-    f.close()
+    with self._log_file() as f:
+      f.write(message + "\n")
+
+  def print_stack(self):
+    with self._log_file() as f:
+      traceback.print_stack(file=f)
 
   def _display_in_editor(self, message):
     print(message)
