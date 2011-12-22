@@ -856,13 +856,6 @@ class Completer(object):
     self._translation_unit_accessor = translation_unit_accessor
     self._complete_flags = complete_flags
 
-  def get_current_completion_results(self, line, column):
-    def _do_it(translation_unit):
-      current_file = self._editor.current_file()
-      return translation_unit.codeComplete(self._editor.file_name(), line, column, [current_file],
-          self._complete_flags)
-    return self._translation_unit_accessor.current_translation_unit_do(_do_it)
-
   def format_results(self, result):
     completion = dict()
 
@@ -897,7 +890,8 @@ class Completer(object):
     sort_by_priority = self._editor.sort_algorithm() == 'priority'
 
     thread = CompleteThread(self._editor,
-        self,
+        self._translation_unit_accessor,
+        self._complete_flags,
         self._editor.current_line(),
         self._editor.current_column())
 
@@ -934,23 +928,31 @@ class Completer(object):
 class CompleteThread(threading.Thread):
   lock = threading.Lock()
 
-  def __init__(self, editor, completer, line, column):
+  def __init__(self, editor, translation_unit_accessor, complete_flags, line, column):
     threading.Thread.__init__(self)
     self._editor = editor
-    self._completer = completer
+    self._complete_flags = complete_flags
     self._line = line
     self._column = column
+    self._translation_unit_accessor = translation_unit_accessor
 
     self.result = None
 
   def run(self):
     try:
       CompleteThread.lock.acquire()
-      self.result = self._completer.get_current_completion_results(self._line, self._column)
+      self.result = self.get_current_completion_results(self._line, self._column)
     except Exception, e:
       self._editor.display_message("Exception thrown in completion thread: " + str(e))
     finally:
       CompleteThread.lock.release()
+
+  def get_current_completion_results(self, line, column):
+    def _do_it(translation_unit):
+      current_file = self._editor.current_file()
+      return translation_unit.codeComplete(self._editor.file_name(), line, column, [current_file],
+          self._complete_flags)
+    return self._translation_unit_accessor.current_translation_unit_do(_do_it)
 
 
 class DeclarationFinder(object):
