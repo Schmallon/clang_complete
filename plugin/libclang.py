@@ -103,8 +103,8 @@ class VimInterface(object):
 
   def __init__(self):
     self._vim = self.LoggingVim(self)
-    self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellLocal']
-    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Omitted default argument" : 3}
+    self._highlight_groups = ['SpellBad', 'SpellRare', 'SpellCap', 'SpellCap', 'SpellLocal', 'TabLine']
+    self._id_to_highlight_style_index = {'Diagnostic' : 0, "Non-const reference" : 1, "Virtual method call" : 2, "Virtual method declaration" : 3, "Omitted default argument" : 4}
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
     self._cached_variables = {}
     self.refresh_variables()
@@ -262,7 +262,7 @@ class VimInterface(object):
     try:
       return self._highlight_groups[self._id_to_highlight_style_index[id]]
     except KeyError:
-      self._id_to_highlight_style_index[id] = self._highlight_groups[len(self._id_to_highlight_style_index)]
+      self._id_to_highlight_style_index[id] = len(self._id_to_highlight_style_index)
       return self._highlight_groups[self._id_to_highlight_style_index[id]]
 
 
@@ -328,6 +328,7 @@ class ClangPlugin(object):
     styles_and_actions = [
         ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
         ("Virtual method call", FindVirtualMethodCallsAction()),
+        ("Virtual method declarations", FindVirtualMethodDeclarationsAction()),
         ("Omitted default argument", FindOmittedDefaultArgumentsAction())]
 
     for highlight_style, action in styles_and_actions:
