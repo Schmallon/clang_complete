@@ -254,5 +254,35 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
       file_name,
       [range_from_tuples(file_name, (5, 3), (5, 37))])
 
+class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
+
+  def assert_gets_range(self, file_name, location, expected_range):
+    def do_it(translation_unit):
+      clang_location = libclang.ExportedLocation(file_name, location[0], location[1]).clang_location(translation_unit)
+      cursor = translation_unit.getCursor(clang_location)
+      identifier_range = libclang.ExportedRange.from_clang_range(cursor.identifier_range)
+      expected_range_real_range = range_from_tuples(file_name, expected_range[0], expected_range[1])
+      self.assertEquals(identifier_range, expected_range_real_range)
+
+    self.translation_unit_do(file_name, do_it)
+
+  def test_static_method_declaration(self):
+    self.assert_gets_range(
+      "test_sources/test_get_identifier_range.cpp",
+      (4, 12),
+      ((4, 15), (4, 28)))
+
+  def test_virtual_method_declaration(self):
+    self.assert_gets_range(
+      "test_sources/test_get_identifier_range.cpp",
+      (5, 3),
+      ((5, 16), (5, 30)))
+
+  def test_virtual_method_definition(self):
+    self.assert_gets_range(
+      "test_sources/test_get_identifier_range.cpp",
+      (18, 1),
+      ((18, 11), (18, 25)))
+
 if __name__ == '__main__':
     unittest.main()
