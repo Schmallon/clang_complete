@@ -490,6 +490,15 @@ class FindVirtualMethodCallsAction(object):
     call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
     return result
 
+class FindVirtualMethodDeclarationsAction(object):
+  def find_ranges(self, translation_unit):
+    def do_it(cursor):
+      if cursor.is_virtual():
+        result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+
+    result = set()
+    cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+    return result
 
 class FindOmittedDefaultArgumentsAction(object):
 

@@ -238,7 +238,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
     def do_it(translation_unit):
       actual_ranges.extend(list(set(action.find_ranges(translation_unit))))
     self.translation_unit_do(file_name, do_it)
-    self.assertEquals(list(set(actual_ranges)), expected_ranges)
+    self.assertEquals(set(actual_ranges), set(expected_ranges))
 
   def test_find_virtual_method_calls(self):
     file_name = "test_sources/test_find_virtual_method_calls.cpp"
@@ -253,6 +253,14 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
       libclang.FindOmittedDefaultArgumentsAction(),
       file_name,
       [range_from_tuples(file_name, (5, 3), (5, 37))])
+
+  def test_find_virtual_method_declarations(self):
+    self.maxDiff = None
+    file_name = "test_sources/test_find_virtual_method_declarations.cpp"
+    self.assert_returns_ranges(
+      libclang.FindVirtualMethodDeclarationsAction(),
+      file_name,
+      [range_from_tuples(file_name, (5, 16), (5, 30)), range_from_tuples(file_name, (8, 11), (8, 25))])
 
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
