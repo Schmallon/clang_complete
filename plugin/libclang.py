@@ -104,11 +104,11 @@ class VimInterface(object):
   def __init__(self):
     self._vim = self.LoggingVim(self)
     self._id_to_highlight_group = {
-        'Diagnostic' : 'SpellBad',
-        "Non-const reference" : 'TabLineFill',
-        "Virtual method call" : 'StatusLine',
-        "Virtual method declaration" : 'TabLine',
-        "Omitted default argument" : 'SpellLocal'}
+        'Diagnostic' : {'group': 'SpellBad'},
+        "Non-const reference" : {'group': 'TabLineFill'},
+        "Virtual method call" : {'group': 'StatusLine'},
+        "Virtual method declaration" : {'group': 'TabLine'},
+        "Omitted default argument" : {'group': 'SpellLocal'}}
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
     self._cached_variables = {}
     self.refresh_variables()
@@ -263,7 +263,7 @@ class VimInterface(object):
     self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + self._quick_fix_list_to_str(quick_fix_list) + ")")
 
   def _highlight_group_for_id(self, id):
-    return self._id_to_highlight_group[id]
+    return self._id_to_highlight_group[id]["group"]
 
 class EmacsInterface(object):
 
