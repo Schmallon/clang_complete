@@ -104,14 +104,20 @@ class VimInterface(object):
   def __init__(self):
     self._vim = self.LoggingVim(self)
     self._id_to_highlight_group = {
-        'Diagnostic' : {'group': 'SpellBad'},
-        "Non-const reference" : {'group': 'TabLineFill'},
-        "Virtual method call" : {'group': 'StatusLine'},
-        "Virtual method declaration" : {'group': 'TabLine'},
-        "Omitted default argument" : {'group': 'SpellLocal'}}
+        'Diagnostic' : {'group': 'clang_diagnostic', 'default': 'gui=undercurl guisp=Red'},
+        "Non-const reference" : {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'},
+        "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'gui=underline guibg=LightGrey'},
+        "Virtual method declaration" : {'group': 'clang_virtual_method_declaration_', 'default' : 'gui=underline guibg=LightGrey'},
+        "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
     self._cached_variables = {}
     self.refresh_variables()
+    self.init_highlight_groups()
+
+  def init_highlight_groups(self):
+    for group in self._id_to_highlight_group.values():
+      if self._vim.eval("hlexists('%s')" % group['group']):
+        self._vim.command("highlight %(group)s %(default)s" % group)
 
   def refresh_variables(self):
     for variable_name in self._cached_variable_names:
