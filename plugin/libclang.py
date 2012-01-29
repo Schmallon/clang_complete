@@ -48,15 +48,15 @@ Ideas:
    - Macros
 """
 
-def abort_after_first_call(computation, result_consumer):
-  class Found(Exception):
+def abort_after_first_call(producer, consumer):
+  class ConsumeWasCalled(Exception):
     pass
-  def f(x):
-    result_consumer(x)
-    raise Found
+  def consume_and_abort(x):
+    consumer(x)
+    raise ConsumeWasCalled
   try:
-    return computation(f)
-  except Found:
+    producer(consume_and_abort)
+  except ConsumeWasCalled:
     pass
 
 def get_file_for_file_name(file_name):
