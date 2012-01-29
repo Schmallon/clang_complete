@@ -1030,12 +1030,11 @@ class NoDefinitionFound(Exception):
 
 
 def get_definition_or_reference(cursor):
-  result = cursor.get_definition()
-  if not result and cursor.get_cursor_referenced():
-    #self.editor.display_message("Cursor is a reference but we could not find a definition. Jumping to reference.")
-    result = cursor.get_cursor_referenced()
-  return result
-
+  definition = cursor.get_definition()
+  if definition:
+    return definition
+  else:
+    return cursor.get_cursor_referenced()
 
 class DefinitionFinder(object):
 
