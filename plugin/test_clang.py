@@ -262,6 +262,14 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
       file_name,
       [range_from_tuples(file_name, (5, 16), (5, 30)), range_from_tuples(file_name, (8, 11), (8, 25))])
 
+  def test_find_static_method_declarations(self):
+    self.maxDiff = None
+    file_name = "test_sources/test_find_static_method_declarations.cpp"
+    self.assert_returns_ranges(
+      libclang.FindStaticMethodDeclarationsAction(),
+      file_name,
+      [range_from_tuples(file_name, (5, 15), (5, 28)), range_from_tuples(file_name, (8, 11), (8, 24))])
+
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
   def assert_gets_range(self, file_name, location, expected_range):

@@ -965,6 +965,9 @@ class Cursor(Structure):
     def is_virtual(self):
       return CXXMethod_isVirtual(self)
 
+    def is_static(self):
+      return CXXMethod_isStatic(self)
+
     def get_semantic_parent(self):
       return Cursor_semantic_parent(self)
 
@@ -1759,6 +1762,10 @@ CallExpr_getNumArgs.restype = c_uint
 CXXMethod_isVirtual = lib.clang_CXXMethod_isVirtual
 CXXMethod_isVirtual.argtypes = [Cursor]
 CXXMethod_isVirtual.restype = bool
+
+CXXMethod_isStatic = lib.clang_CXXMethod_isStatic
+CXXMethod_isStatic.argtypes = [Cursor]
+CXXMethod_isStatic.restype = bool
 
 # Type Functions
 Type_get_canonical = lib.clang_getCanonicalType
