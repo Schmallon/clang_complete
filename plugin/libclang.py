@@ -553,11 +553,18 @@ def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
   return cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
 
 def cursors_of_kind_do(do_it, translation_unit, kind):
-  def recurse(cursor):
-    for child in cursor.get_children():
-      recurse(child)
+  def f(cursor, recurse):
+    recurse()
     if cursor.kind == kind:
       do_it(cursor)
+  return cursors_do(f, translation_unit)
+
+def cursors_do(do_it, translation_unit):
+  def recurse(cursor):
+    def recurse_further():
+      for child in cursor.get_children():
+        recurse(child)
+    do_it(cursor, recurse_further)
 
   for top_level_cursor in translation_unit.cursor.get_children():
     if top_level_cursor.location.file and top_level_cursor.location.file.name == translation_unit.spelling:
