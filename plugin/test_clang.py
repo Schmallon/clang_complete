@@ -276,7 +276,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
     self.assert_returns_ranges(
       libclang.FindMemberReferencesAction(),
       file_name,
-      [range_from_tuples(file_name, (6, 12), (6, 35))])
+      [range_from_tuples(file_name, (12, 12), (12, 35))])
 
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 

@@ -519,13 +519,35 @@ class FindStaticMethodDeclarationsAction(object):
     return result
 
 class FindMemberReferencesAction(object):
-  def find_ranges(self, translation_unit):
-    def do_it(cursor):
-      result.add(ExportedRange.from_clang_range(cursor.identifier_range))
 
-    result = set()
-    cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.MEMBER_REF_EXPR)
-    return result
+  def __init__(self):
+    self._current_methods = []
+    self._result = set()
+
+  def _current_method(self):
+    return self._current_methods[-1]
+
+  def _is_in_method(self):
+    return self._current_methods != []
+
+  def _is_method(self, cursor):
+    return cursor.kind == clang.cindex.CursorKind.CXX_METHOD
+
+  def do_it(self, cursor, recurse):
+    if self._is_method(cursor):
+      self._current_methods.append(cursor)
+      recurse()
+      self._current_methods.pop()
+    elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
+      if self._current_method().get_semantic_parent() == cursor.get_cursor_referenced().get_semantic_parent():
+        self._result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+      pass
+    else:
+      recurse()
+
+  def find_ranges(self, translation_unit):
+    cursors_do(self.do_it, translation_unit)
+    return self._result
 
 class FindOmittedDefaultArgumentsAction(object):
 
