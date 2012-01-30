@@ -518,6 +518,15 @@ class FindStaticMethodDeclarationsAction(object):
     cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
     return result
 
+class FindMemberReferencesAction(object):
+  def find_ranges(self, translation_unit):
+    def do_it(cursor):
+      result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+
+    result = set()
+    cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.MEMBER_REF_EXPR)
+    return result
+
 class FindOmittedDefaultArgumentsAction(object):
 
   def _omits_default_argument(self, cursor):

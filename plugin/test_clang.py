@@ -270,6 +270,14 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
       file_name,
       [range_from_tuples(file_name, (5, 15), (5, 28)), range_from_tuples(file_name, (8, 11), (8, 24))])
 
+  def test_find_member_references(self):
+    self.maxDiff = None
+    file_name = "test_sources/test_find_member_references.cpp"
+    self.assert_returns_ranges(
+      libclang.FindMemberReferencesAction(),
+      file_name,
+      [range_from_tuples(file_name, (6, 12), (6, 35))])
+
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
   def assert_gets_range(self, file_name, location, expected_range):
