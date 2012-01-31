@@ -162,6 +162,7 @@ def range_from_tuples(file_name, start, end):
   return libclang.ExportedRange(start_pos, end_pos)
 
 
+#We really shouldn't solve this via inheritance.
 class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
   def setUp(self):
     self.editor = TestEditor()

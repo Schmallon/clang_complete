@@ -62,7 +62,7 @@ def abort_after_first_call(producer, consumer):
 def get_file_for_file_name(file_name):
   return (file_name, open(file_name, 'r').read())
 
-def print_cursor_with_children(self, cursor, n = 0):
+def print_cursor_with_children(cursor, n = 0):
   sys.stdout.write(n * " ")
   print(str(cursor.kind.name))
   for child in cursor.get_children():
@@ -337,8 +337,8 @@ class ClangPlugin(object):
         ("Virtual method call", FindVirtualMethodCallsAction()),
         ("Virtual method declaration", FindVirtualMethodDeclarationsAction()),
         ("Static method declaration", FindStaticMethodDeclarationsAction()),
-        ("Member reference", FindMemberReferencesAction()),
-        ("Omitted default argument", FindOmittedDefaultArgumentsAction())]
+        ("Member reference", FindMemberReferencesAction())]
+        #("Omitted default argument", FindOmittedDefaultArgumentsAction())]
 
     for highlight_style, action in styles_and_actions:
       self._editor.clear_highlights(highlight_style)
@@ -540,6 +540,9 @@ class FindMemberReferencesAction(object):
     def do_it(cursor, recurse):
       if self._is_method(cursor):
         self._current_methods.append(cursor)
+
+        #class_of_current_method = cursor.get_semantic_parent()
+
         recurse()
         self._current_methods.pop()
       elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
@@ -548,6 +551,7 @@ class FindMemberReferencesAction(object):
       else:
         recurse()
 
+    print_cursor_with_children(translation_unit.cursor)
     cursors_do(do_it, translation_unit)
     return self._result
 
