@@ -520,40 +520,42 @@ class FindStaticMethodDeclarationsAction(object):
     cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
     return result
 
+
+
 class FindMemberReferencesAction(object):
-
-  def __init__(self):
-    self._current_methods = []
-    self._result = set()
-
-  def _current_method(self):
-    return self._current_methods[-1]
-
-  def _is_in_method(self):
-    return self._current_methods != []
-
-  def _is_method(self, cursor):
-    return cursor.kind == clang.cindex.CursorKind.CXX_METHOD
-
   def find_ranges(self, translation_unit):
+    class Run(object):
+      def __init__(self, translation_unit):
+        self._translation_unit = translation_unit
+        self._current_methods = []
+        self.result = set()
 
-    def do_it(cursor, recurse):
-      if self._is_method(cursor):
-        self._current_methods.append(cursor)
+      def _current_method(self):
+        return self._current_methods[-1]
 
-        #class_of_current_method = cursor.get_semantic_parent()
+      def _is_in_method(self):
+        return self._current_methods != []
 
-        recurse()
-        self._current_methods.pop()
-      elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
-        if self._current_method().get_semantic_parent() == cursor.get_cursor_referenced().get_semantic_parent():
-          self._result.add(ExportedRange.from_clang_range(cursor.identifier_range))
-      else:
-        recurse()
+      def _is_method(self, cursor):
+        return cursor.kind == clang.cindex.CursorKind.CXX_METHOD
 
-    print_cursor_with_children(translation_unit.cursor)
-    cursors_do(do_it, translation_unit)
-    return self._result
+      def run(self, cursor, recurse):
+        if self._is_method(cursor):
+          self._current_methods.append(cursor)
+
+          #class_of_current_method = cursor.get_semantic_parent()
+
+          recurse()
+          self._current_methods.pop()
+        elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
+          if self._current_method().get_semantic_parent() == cursor.get_cursor_referenced().get_semantic_parent():
+            self.result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+        else:
+          recurse()
+
+    run = Run(translation_unit)
+    cursors_do(run.run, translation_unit)
+    return run.result
 
 class FindOmittedDefaultArgumentsAction(object):
 
