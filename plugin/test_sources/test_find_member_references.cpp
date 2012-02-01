@@ -1,6 +1,7 @@
-class AnotherClass
+class Other
 {
   public:
+    void some_method();
     int x;
 };
 
@@ -13,15 +14,37 @@ public:
 class Test : public TestSuper
 {
 public:
-  int bar(Test test, AnotherClass parameter)
+  int reference_member()
   {
-    int non_member_being_referenced = 42;
-    return member_being_referenced +
-      DefinedInSuper() +
-      test.member_being_referenced +
-      non_member_being_referenced +
-      parameter.x;
+    return member_being_referenced;
+  }
+
+  int reference_super_member()
+  {
+    return DefinedInSuper();
+  }
+
+  int call_method_on_member()
+  {
+    return member->call_method_on_member();
+  }
+
+  void call_method_on_member_of_field_with_other_class()
+  {
+    mpOther->some_method();
+  }
+
+  int reference_parameter(int parameter)
+  {
+    return parameter;
+  }
+
+  int reference_member_of_non_this(Test test)
+  {
+    return test.member_being_referenced;
   }
 
   int member_being_referenced;
+  Test *member;
+  Other *mpOther;
 };
