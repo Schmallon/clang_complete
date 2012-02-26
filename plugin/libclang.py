@@ -548,7 +548,9 @@ class FindMemberReferencesAction(object):
           recurse()
           self._current_methods.pop()
         elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
-          if self._current_method().get_semantic_parent() == cursor.get_cursor_referenced().get_semantic_parent():
+          referenced_cursor = cursor.get_cursor_referenced()
+          if (referenced_cursor and
+              self._current_method().get_semantic_parent() == referenced_cursor.get_semantic_parent()):
             self.result.add(ExportedRange.from_clang_range(cursor.identifier_range))
           recurse()
         else:
