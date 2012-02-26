@@ -511,6 +511,10 @@ CursorKind.LABEL_REF = CursorKind(48)
 # that has not yet been resolved to a specific function or function template.
 CursorKind.OVERLOADED_DECL_REF = CursorKind(49)
 
+# A reference to a variable that occurs in some non-expression
+# context, e.g., a C++ lambda capture list.
+CursorKind.VARIABLE_REF = CursorKind(50)
+
 ###
 # Invalid/Error Kinds
 
@@ -693,6 +697,18 @@ CursorKind.PACK_EXPANSION_EXPR = CursorKind(142)
 # Represents an expression that computes the length of a parameter
 # pack.
 CursorKind.SIZE_OF_PACK_EXPR = CursorKind(143)
+
+
+# Represents a C++ lambda expression that produces a local function object.
+#
+# void abssort(float *x, unsigned N) {
+#   std::sort(x, x + N,
+#             [](float a, float b) {
+#               return std::abs(a) < std::abs(b);
+#             });
+# }
+
+CursorKind.LAMBDA_EXPR = CursorKind(144)
 
 
 # A statement whose specific kind is not exposed via this interface.
@@ -1064,6 +1080,9 @@ TypeKind.DEPENDENT = TypeKind(26)
 TypeKind.OBJCID = TypeKind(27)
 TypeKind.OBJCCLASS = TypeKind(28)
 TypeKind.OBJCSEL = TypeKind(29)
+
+
+
 TypeKind.COMPLEX = TypeKind(100)
 TypeKind.POINTER = TypeKind(101)
 TypeKind.BLOCKPOINTER = TypeKind(102)
