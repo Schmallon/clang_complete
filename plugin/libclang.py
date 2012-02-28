@@ -366,6 +366,9 @@ class ClangPlugin(object):
     self._editor.display_message("Noticed opening of new file")
     self._load_files_in_background()
 
+  def file_closed(self):
+    self._editor.clear_all_highlights()
+
   def _load_files_in_background(self):
     self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
