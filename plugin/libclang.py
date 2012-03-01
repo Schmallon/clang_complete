@@ -254,7 +254,7 @@ class VimInterface(object):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column + 1) + 'c'
-    match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "')")
+    match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "', -1)")
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
