@@ -109,7 +109,7 @@ class VimInterface(object):
         "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'gui=underline guibg=LightGrey'},
         "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'gui=underline guibg=LightGrey'},
         "Static method declaration" : {'group': 'clang_static_method_declaration', 'default' : 'gui=underline guibg=LightGrey guifg=DarkGreen'},
-        "Member reference" : {'group': 'clang_static_method_declaration', 'default' : 'gui=underline guibg=LightGrey'},
+        "Member reference" : {'group': 'clang_static_method_declaration', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
         "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
     self._cached_variables = {}
