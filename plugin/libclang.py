@@ -6,6 +6,7 @@ import sys
 import Levenshtein
 import Queue
 import traceback
+import time
 
 """
 Ideas:
@@ -217,6 +218,7 @@ class VimInterface(object):
 
   def _print_to_file(self, message):
     with self._log_file() as f:
+      f.write(str(time.time()) + " - ")
       f.write(message + "\n")
 
   def print_stack(self):
