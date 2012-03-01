@@ -512,7 +512,7 @@ class FindVirtualMethodDeclarationsAction(object):
         result.add(ExportedRange.from_clang_range(cursor.identifier_range))
 
     result = set()
-    cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+    cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
     return result
 
 class FindStaticMethodDeclarationsAction(object):
@@ -522,10 +522,8 @@ class FindStaticMethodDeclarationsAction(object):
         result.add(ExportedRange.from_clang_range(cursor.identifier_range))
 
     result = set()
-    cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+    cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
     return result
-
-
 
 class FindMemberReferencesAction(object):
   def find_ranges(self, translation_unit):
@@ -588,9 +586,9 @@ class FindOmittedDefaultArgumentsAction(object):
     return result
 
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
-  return cursors_of_kind_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
+  return cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
 
-def cursors_of_kind_do(do_it, translation_unit, kind):
+def cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, kind):
   def f(cursor, recurse):
     recurse()
     if cursor.kind == kind:
