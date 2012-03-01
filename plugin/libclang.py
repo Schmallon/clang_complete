@@ -562,7 +562,7 @@ class FindMemberReferencesAction(object):
           recurse()
 
     run = Run(translation_unit)
-    cursors_do(run.run, translation_unit)
+    cursors_in_file_of_translation_unit_do(run.run, translation_unit)
     return run.result
 
 class FindOmittedDefaultArgumentsAction(object):
@@ -595,9 +595,9 @@ def cursors_of_kind_do(do_it, translation_unit, kind):
     recurse()
     if cursor.kind == kind:
       do_it(cursor)
-  return cursors_do(f, translation_unit)
+  return cursors_in_file_of_translation_unit_do(f, translation_unit)
 
-def cursors_do(do_it, translation_unit):
+def cursors_in_file_of_translation_unit_do(do_it, translation_unit):
   def recurse(cursor):
     def recurse_further():
       for child in cursor.get_children():
