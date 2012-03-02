@@ -255,7 +255,7 @@ class VimInterface(object):
   def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
-        + '\%' + str(end_column + 1) + 'c'
+        + '\%' + str(end_column) + 'c'
     match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "', -1)")
 
   def _python_dict_to_vim_dict(self, dictionary):
