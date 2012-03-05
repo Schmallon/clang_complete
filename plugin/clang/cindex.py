@@ -984,6 +984,9 @@ class Cursor(Structure):
     def is_static(self):
       return CXXMethod_isStatic(self)
 
+    def is_implicit_access(self):
+      return MemberRefExpr_IsImplicitAccess(self)
+
     def get_semantic_parent(self):
       return Cursor_semantic_parent(self)
 
@@ -1930,6 +1933,9 @@ _clang_getCompletionPriority = lib.clang_getCompletionPriority
 _clang_getCompletionPriority.argtypes = [c_void_p]
 _clang_getCompletionPriority.restype = c_int
 
+MemberRefExpr_IsImplicitAccess = lib.clang_MemberRefExpr_IsImplicitAccess
+MemberRefExpr_IsImplicitAccess.argtypes = [Cursor]
+MemberRefExpr_IsImplicitAccess.restype = bool
 
 ###
 
