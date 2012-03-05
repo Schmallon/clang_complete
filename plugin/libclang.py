@@ -342,10 +342,10 @@ class ClangPlugin(object):
 
     styles_and_actions = [
         ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
-        ("Virtual method call", FindVirtualMethodCallsAction()),
         ("Virtual method declaration", FindVirtualMethodDeclarationsAction()),
         ("Static method declaration", FindStaticMethodDeclarationsAction()),
         ("Member reference", FindMemberReferencesAction())]
+        #("Virtual method call", FindVirtualMethodCallsAction()),
         #("Omitted default argument", FindOmittedDefaultArgumentsAction())]
 
     for highlight_style, action in styles_and_actions:
