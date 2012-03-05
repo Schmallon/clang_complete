@@ -278,7 +278,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
       libclang.FindMemberReferencesAction(),
       file_name,
       [range_from_tuples(file_name, (19, 12), (19, 35)),
-       range_from_tuples(file_name, (24, 12), (24, 28)),
+       range_from_tuples(file_name, (24, 12), (24, 26)),
        range_from_tuples(file_name, (29, 12), (29, 18)),
        range_from_tuples(file_name, (34, 5), (34, 12))])
 

@@ -11,6 +11,8 @@ import time
 """
 Ideas:
 
+  - Highlight methods that don't refer to members (could-be-static)
+
   - Highlight unused pre-declarations
 
   - Highlight unused includes (probably not possible)
@@ -109,7 +111,7 @@ class VimInterface(object):
         "Non-const reference" : {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'},
         "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'gui=underline guibg=LightGrey'},
         "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'gui=underline guibg=LightGrey'},
-        "Static method declaration" : {'group': 'clang_static_method_declaration', 'default' : 'gui=underline guibg=LightGrey guifg=DarkGreen'},
+        "Static method declaration" : {'group':  'clang_static_method_declaration2', 'default' : 'gui=underline guibg=LightGrey guifg=DarkGreen'},
         "Member reference" : {'group': 'clang_static_method_declaration', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
         "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
@@ -355,6 +357,7 @@ class ClangPlugin(object):
         self._highlight_range_if_in_current_file(range, highlight_style)
 
   def try_update_diagnostics(self):
+    self._editor.display_message("Trying to update diagnostics")
     class Success(Exception):
       pass
     def do_it(translation_unit):
@@ -532,35 +535,13 @@ class FindMemberReferencesAction(object):
   def find_ranges(self, translation_unit):
     class Run(object):
       def __init__(self, translation_unit):
-        self._translation_unit = translation_unit
-        self._current_methods = []
         self.result = set()
 
-      def _current_method(self):
-        return self._current_methods[-1]
-
-      def _is_in_method(self):
-        return self._current_methods != []
-
-      def _is_method(self, cursor):
-        return cursor.kind == clang.cindex.CursorKind.CXX_METHOD
-
       def run(self, cursor, recurse):
-        if self._is_method(cursor):
-          self._current_methods.append(cursor)
-
-          #class_of_current_method = cursor.get_semantic_parent()
-
-          recurse()
-          self._current_methods.pop()
-        elif self._is_in_method() and cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
-          referenced_cursor = cursor.get_cursor_referenced()
-          if (referenced_cursor and
-              self._current_method().get_semantic_parent() == referenced_cursor.get_semantic_parent()):
+        if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
+          if cursor.is_implicit_access():
             self.result.add(ExportedRange.from_clang_range(cursor.identifier_range))
-          recurse()
-        else:
-          recurse()
+        recurse()
 
     run = Run(translation_unit)
     cursors_in_file_of_translation_unit_do(run.run, translation_unit)
