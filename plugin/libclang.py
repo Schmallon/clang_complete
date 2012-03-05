@@ -178,7 +178,13 @@ class VimInterface(object):
     self.open_file(location.file.name, location.line, location.column)
 
   def open_file(self, file_name, line, column):
-    self._vim.command("e +" + str(line) + " " + file_name)
+    if self.file_name() == file_name:
+      self._vim.command("normal " + str(line) + "G")
+    else:
+      self._vim.command("e +" + str(line) + " " + file_name)
+    self._vim.command("normal 0")
+    if column > 1:
+      self._vim.command("normal " + str(column - 1) + "l")
 
   def debug_enabled(self):
     return int(self._vim.eval("g:clang_debug")) == 1
