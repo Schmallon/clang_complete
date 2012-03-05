@@ -233,10 +233,9 @@ function! s:initClangCompletePython()
       autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
       autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
       "autocmd InsertCharPre * python clang_plugin.file_changed()
-      autocmd BufReadPre *.cpp,*.c,*.h python clang_plugin.file_closed()
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
       autocmd VimLeave * python clang_plugin.terminate()
-      autocmd BufEnter *.cpp,*.c,*.h call <SID>DoPeriodicQuickFix()
+      autocmd BufEnter *.cpp,*.c,*.h call <SID>OnBufferEntered()
     augroup end
   let s:libclang_loaded = 1
   endif
@@ -260,6 +259,11 @@ function! g:TogglePeriodicQuickfix()
 
 endfunction
 
+function! s:OnBufferEntered()
+  python clang_plugin.file_opened()
+  let b:update_succeeded = 0
+  call <SID>DoPeriodicQuickFix()
+endfunction
 
 function! s:DoPeriodicQuickFix()
   if !g:clang_periodic_quickfix
