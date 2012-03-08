@@ -113,7 +113,10 @@ class VimInterface(object):
         "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'gui=underline guibg=LightGrey'},
         "Static method declaration" : {'group':  'clang_static_method_declaration2', 'default' : 'gui=underline guibg=LightGrey guifg=DarkGreen'},
         "Member reference" : {'group': 'clang_static_method_declaration', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
+        "Referenced Range" : {'group': 'clang_referenced_range', 'default' : 'gui=bold guifg=#FFFF00 guibg=#0000FF', 'priority' : '-10'},
+        "Referencing Range" : {'group': 'clang_referencing_range', 'default' : 'gui=bold guifg=#00FFFF guibg=#FF0000', 'priority' : '-5'},
         "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
+
     self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
     self._cached_variables = {}
     self.refresh_variables()
@@ -414,7 +417,7 @@ class ClangPlugin(object):
     references = self.find_references_to_outside_of_selection()
 
     style_referenced_range = "Referenced Range"
-    style_referencing_range = "Referenced Range"
+    style_referencing_range = "Referencing Range"
     self._editor.clear_highlights(style_referenced_range)
     self._editor.clear_highlights(style_referencing_range)
     for reference in references:
