@@ -264,7 +264,10 @@ class VimInterface(object):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column) + 'c'
-    match_id = self._vim.eval("matchadd('" + self._highlight_group_for_id(highlight_style) + "', '" + pattern + "', -1)")
+
+    group = self._highlight_group_for_id(highlight_style)
+    priority = self._priority_for_id(highlight_style)
+    match_id = self._vim.eval("matchadd('" + group  + "', '" + pattern + "', " + priority + ")")
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -282,6 +285,12 @@ class VimInterface(object):
 
   def _highlight_group_for_id(self, id):
     return self._id_to_highlight_group[id]["group"]
+
+  def _priority_for_id(self, id):
+    try:
+      return self._id_to_highlight_group[id]["priority"]
+    except KeyError:
+      return str(-100)
 
 class EmacsInterface(object):
 
