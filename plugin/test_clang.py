@@ -184,11 +184,15 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
       function(action, translation_unit)
     return self.translation_unit_do(file_name, do_it)
 
-  def assert_returns_ranges(self, file_name, given_range, expected_ranges):
+  def assert_returns_ranges(self, file_name, given_range, expected_referenced_ranges, expected_referencing_ranges):
     def do_it(action, translation_unit):
       references = action.find_references_to_outside_of_selection(translation_unit, given_range)
+
       referenced_ranges = map(lambda reference: reference.referenced_range, references)
-      self.assertEquals(list(set(referenced_ranges)), expected_ranges)
+      self.assertEquals(list(set(referenced_ranges)), expected_referenced_ranges)
+
+      referencing_ranges = map(lambda reference: reference.referencing_range, references)
+      self.assertEquals(list(set(referencing_ranges)), expected_referencing_ranges)
     self.action_do(file_name, do_it)
 
   def test_find_references_to_outside_of_selection2(self):
@@ -196,21 +200,24 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (7, 5), (7, 54)),
-        [range_from_tuples(file_name, (3, 3), (3, 36))])
+        [range_from_tuples(file_name, (3, 3), (3, 36))],
+        [range_from_tuples(file_name, (7, 25), (7, 50))])
 
   def test_find_references_to_variable_defined_on_same_level(self):
     file_name = "test_sources/test_find_references_to_variable_defined_on_same_level.cpp"
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (5, 3), (5, 27)),
-        [range_from_tuples(file_name, (3, 3), (3, 28))])
+        [range_from_tuples(file_name, (3, 3), (3, 28))],
+        [range_from_tuples(file_name, (5, 3), (5, 24))])
 
   def test_find_references_with_selecting_extra_whitespace_works(self):
     file_name = "test_sources/test_find_references_to_variable_defined_on_same_level.cpp"
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (5, 1), (5, 27)),
-        [range_from_tuples(file_name, (3, 3), (3, 28))])
+        [range_from_tuples(file_name, (3, 3), (3, 28))],
+        [range_from_tuples(file_name, (5, 3), (5, 24))])
 
 class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):
   def assert_returns_ranges(self, file_name, expected_ranges):
