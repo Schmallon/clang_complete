@@ -148,7 +148,7 @@ class TestClangPlugin(unittest.TestCase):
     self.editor.select_range((7,5),(7,54))
     references = self.clang_plugin.find_references_to_outside_of_selection()
     referenced_ranges = map(lambda reference: reference.referenced_range, references)
-    self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(self.full_file_name(file_name), (3, 3), (3, 36))])
+    self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(self.full_file_name(file_name), (3, 7), (3, 36))])
 
 class TestTranslationUnitParser(unittest.TestCase):
   def test_can_parse(self):
@@ -200,7 +200,7 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (7, 5), (7, 54)),
-        [range_from_tuples(file_name, (3, 3), (3, 36))],
+        [range_from_tuples(file_name, (3, 7), (3, 36))],
         [range_from_tuples(file_name, (7, 25), (7, 50))])
 
   def test_find_references_to_variable_defined_on_same_level(self):
@@ -208,7 +208,7 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (5, 3), (5, 27)),
-        [range_from_tuples(file_name, (3, 3), (3, 28))],
+        [range_from_tuples(file_name, (3, 7), (3, 28))],
         [range_from_tuples(file_name, (5, 3), (5, 24))])
 
   def test_find_references_with_selecting_extra_whitespace_works(self):
@@ -216,7 +216,7 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
     self.assert_returns_ranges(
         file_name,
         range_from_tuples(file_name, (5, 1), (5, 27)),
-        [range_from_tuples(file_name, (3, 3), (3, 28))],
+        [range_from_tuples(file_name, (3, 7), (3, 28))],
         [range_from_tuples(file_name, (5, 3), (5, 24))])
 
 class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):

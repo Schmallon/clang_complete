@@ -500,8 +500,12 @@ class FindReferencesToOutsideOfSelectionAction(object):
       referenced_cursor = cursor.get_cursor_referenced()
       if referenced_cursor:
         if not intersects_with_selection(referenced_cursor):
+          # Limit the extent to start at the name
+          constrained_extent = ExportedRange(
+              ExportedLocation.from_clang_location(referenced_cursor.location),
+              ExportedLocation.from_clang_location(referenced_cursor.extent.end))
           result.add(Reference(
-            ExportedRange.from_clang_range(referenced_cursor.extent),
+            constrained_extent,
             ExportedRange.from_clang_range(cursor.extent)))
 
       for child in cursor.get_children():
