@@ -259,6 +259,10 @@ function! g:TogglePeriodicQuickfix()
 
 endfunction
 
+function! s:OnBufferLeft()
+  python clang_plugin.file_closed()
+endfunction
+
 function! s:OnBufferEntered()
   python clang_plugin.file_opened()
   let b:update_succeeded = 0

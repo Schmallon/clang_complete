@@ -384,9 +384,14 @@ class ClangPlugin(object):
       return 1
     return 0
 
+  def file_closed(self):
+    self._editor.display_message("Noticed closing of a file")
+    self._editor.clear_all_highlights()
+
   def file_opened(self):
     self._editor.display_message("Noticed opening of new file")
-    self._editor.clear_all_highlights()
+    # Why clear on opening, closing is enough.
+    #self._editor.clear_all_highlights()
     self._load_files_in_background()
 
   def _load_files_in_background(self):
