@@ -502,7 +502,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
           self.referenced_range = referenced_range
           self.referencing_range = referencing_range
 
-      referenced_cursor = cursor.get_cursor_referenced()
+      referenced_cursor = get_definition_or_reference(cursor)
       if referenced_cursor:
         if not intersects_with_selection(referenced_cursor):
           # Limit the extent to start at the name
