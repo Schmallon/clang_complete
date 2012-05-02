@@ -882,7 +882,7 @@ class DiagnosticsHighlighter(object):
 
   def _highlight_diagnostic(self, diagnostic):
 
-    if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error):
+    if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error, diagnostic.Note):
       return
 
     single_location_range = ExportedRange(diagnostic.location, diagnostic.location)
