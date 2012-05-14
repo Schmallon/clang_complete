@@ -250,15 +250,9 @@ class VimInterface(object):
     self._vim.command("normal " + "v")
     self._go_to(end_line, end_column)
 
-  def clear_all_highlights(self):
-    self._vim.command("call clearmatches()")
-
   def clear_highlights(self, highlight_style):
     "Assumes that (group -> highlight_style) is injective"
-    all_matches = self._vim.eval("getmatches()")
-    group = self._highlight_group_for_id(highlight_style)
-    other_matches = filter(lambda match: match['group'] != group, all_matches)
-    self._vim.eval("setmatches(" + self._quick_fix_list_to_str(other_matches) + ")")
+    self._vim.command("syntax clear %s" % self._highlight_group_for_id(highlight_style))
 
   def highlight_range(self, range, highlight_style):
     self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
@@ -267,10 +261,8 @@ class VimInterface(object):
     pattern = '\%' + str(start_line) + 'l' + '\%' \
         + str(start_column) + 'c' + '.*' \
         + '\%' + str(end_column) + 'c'
-
     group = self._highlight_group_for_id(highlight_style)
-    priority = self._priority_for_id(highlight_style)
-    match_id = self._vim.eval("matchadd('" + group  + "', '" + pattern + "', " + priority + ")")
+    self._vim.command("syntax match %s /%s/" % (group, pattern))
 
   def _python_dict_to_vim_dict(self, dictionary):
     def escape(entry):
@@ -341,7 +333,6 @@ class ClangPlugin(object):
     self._translation_unit_accessor.terminate()
 
   def file_changed(self):
-    self._editor.clear_all_highlights()
     self._editor.display_message("File change was notified, clearing all caches.")
     self._translation_unit_accessor.clear_caches()
     self._load_files_in_background()
@@ -386,12 +377,10 @@ class ClangPlugin(object):
 
   def file_closed(self):
     self._editor.display_message("Noticed closing of a file")
-    self._editor.clear_all_highlights()
 
   def file_opened(self):
     self._editor.display_message("Noticed opening of new file")
     # Why clear on opening, closing is enough.
-    #self._editor.clear_all_highlights()
     self._load_files_in_background()
 
   def _load_files_in_background(self):
