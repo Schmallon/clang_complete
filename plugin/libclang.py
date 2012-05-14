@@ -375,9 +375,6 @@ class ClangPlugin(object):
       return 1
     return 0
 
-  def file_closed(self):
-    self._editor.display_message("Noticed closing of a file")
-
   def file_opened(self):
     self._editor.display_message("Noticed opening of new file")
     # Why clear on opening, closing is enough.
