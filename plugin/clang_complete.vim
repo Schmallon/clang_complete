@@ -236,6 +236,7 @@ function! s:initClangCompletePython()
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
       autocmd VimLeave * python clang_plugin.terminate()
       autocmd BufEnter *.cpp,*.c,*.h call <SID>OnBufferEntered()
+      autocmd BufLeave *.cpp,*.c,*.h call <SID>OnBufferLeft()
     augroup end
   let s:libclang_loaded = 1
   endif
