@@ -289,6 +289,15 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
        range_from_tuples(file_name, (29, 12), (29, 18)),
        range_from_tuples(file_name, (34, 5), (34, 12))])
 
+  #def test_find_private_method_declarations(self):
+    #self.maxDiff = None
+    #file_name = "test_sources/test_find_private_public_method_declarations.cpp"
+    #self.assert_returns_ranges(
+      #libclang.FindPrivateMethodDeclarationsAction(),
+      #file_name,
+      #[range_from_tuples(file_name, (4, 8), (4, 22)),
+       #range_from_tuples(file_name, (13, 6), (13, 25))])
+
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
   def assert_gets_range(self, file_name, location, expected_range):

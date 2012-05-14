@@ -542,6 +542,16 @@ class FindVirtualMethodDeclarationsAction(object):
     cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
     return result
 
+class FindPrivateMethodDeclarationsAction(object):
+  def find_ranges(self, translation_unit):
+    def do_it(cursor):
+      if cursor.is_static():
+        result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+
+    result = set()
+    cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+    return result
+
 class FindStaticMethodDeclarationsAction(object):
   def find_ranges(self, translation_unit):
     def do_it(cursor):
