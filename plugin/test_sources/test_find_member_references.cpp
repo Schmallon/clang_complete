@@ -44,6 +44,11 @@ public:
     return test.member_being_referenced;
   }
 
+  int reference_member_using_this()
+  {
+    return this->member_being_referenced;
+  }
+
   int member_being_referenced;
   Test *member;
   Other *mpOther;
