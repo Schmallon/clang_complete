@@ -1132,12 +1132,17 @@ class DefinitionFinder(object):
       self._translation_unit_accessor.translation_unit_for_file_named_do(file, function)
 
   def _definitions_of_current_cursor_do(self, translation_unit, function):
+    def call_function_with_definition_if_exists(cursor):
+      definition = cursor.get_definition()
+      if definition:
+        function(definition)
+
     definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
     if definition_or_declaration_cursor:
       if not definition_or_declaration_cursor.is_definition():
         self._corresponding_cursors_in_any_alternate_translation_unit_do(
-            definition_or_declaration_cursor,
-            lambda cursor: function(get_definition_or_reference(cursor)))
+          definition_or_declaration_cursor,
+          call_function_with_definition_if_exists)
       function(definition_or_declaration_cursor)
 
   def _definition_cursors_do(self, function):
