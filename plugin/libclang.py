@@ -1147,8 +1147,8 @@ class DefinitionFinder(object):
 
   def _definition_cursors_do(self, function):
     for translation_unit_do in [
-        lambda f: self._guessed_alternate_translation_units_do(self._editor.file_name(), f),
         self._translation_unit_accessor.current_translation_unit_do,
+        lambda f: self._guessed_alternate_translation_units_do(self._editor.file_name(), f),
         ]:
       translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
 
