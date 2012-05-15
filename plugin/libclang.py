@@ -1134,13 +1134,11 @@ class DefinitionFinder(object):
   def _definitions_of_current_cursor_do(self, translation_unit, function):
     definition_or_declaration_cursor = self._definition_or_declaration_cursor_of_current_cursor_in(translation_unit)
     if definition_or_declaration_cursor:
-      if definition_or_declaration_cursor.is_definition():
-        function(definition_or_declaration_cursor)
-      else:
+      if not definition_or_declaration_cursor.is_definition():
         self._corresponding_cursors_in_any_alternate_translation_unit_do(
             definition_or_declaration_cursor,
             lambda cursor: function(get_definition_or_reference(cursor)))
-        function(definition_or_declaration_cursor)
+      function(definition_or_declaration_cursor)
 
   def _definition_cursors_do(self, function):
     for translation_unit_do in [
