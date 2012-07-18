@@ -108,11 +108,11 @@ class VimInterface(object):
     self._vim = self.LoggingVim(self)
     self._id_to_highlight_group = {
         'Diagnostic' : {'group': 'clang_diagnostic', 'default': 'gui=undercurl guisp=Red'},
-        "Non-const reference" : {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'},
-        "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'gui=underline guibg=LightGrey'},
-        "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'gui=underline guibg=LightGrey'},
-        "Static method declaration" : {'group':  'clang_static_method_declaration2', 'default' : 'gui=underline guibg=LightGrey guifg=DarkGreen'},
-        "Member reference" : {'group': 'clang_static_method_declaration', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
+        "Non-const reference" : {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 guibg=Yellow'},
+        "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'guibg=LightRed'},
+        "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'guibg=LightRed'},
+        "Static method declaration" : {'group':  'clang_static_method_declaration', 'default' : 'gui=underline'},
+        "Member reference" : {'group': 'clang_member_reference', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
         "Referenced Range" : {'group': 'clang_referenced_range', 'default' : 'gui=bold guifg=#FFFF00 guibg=#0000FF', 'priority' : '-10'},
         "Referencing Range" : {'group': 'clang_referencing_range', 'default' : 'gui=bold guifg=#00FFFF guibg=#FF0000', 'priority' : '-5'},
         "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
