@@ -7,6 +7,7 @@ import Levenshtein
 import Queue
 import traceback
 import time
+import functools
 
 """
 Ideas:
@@ -51,7 +52,8 @@ Ideas:
    - Macros
 """
 
-def abort_after_first_call(producer, consumer):
+
+def abort_after_first_call(consumer, producer):
   class ConsumeWasCalled(Exception):
     pass
   def consume_and_abort(x):
@@ -72,6 +74,27 @@ def print_cursor_with_children(cursor, n = 0):
     print_cursor_with_children(child, n + 1)
 
 class VimInterface(object):
+
+  """Abortable perform doesn't yet work. We must stay within one OS-thread. TODO:
+    Find some green-thread implementation for python"""
+  def user_abortable_perform(self, consumer, producer):
+    stop_running = False
+
+    def pass_to_consumer_if_not_aborted(result):
+      if not stop_running:
+        consumer(result)
+      stop_running = True
+
+    def do_it():
+      producer(pass_to_consumer_if_not_aborted)
+
+    threading.Thread(target = do_it).start()
+    while not stop_running:
+      try:
+        self.eval("getchar(0)")
+      except:
+        stop_running = True
+      time.sleep(1)
 
   class LoggingVim(object):
     def __init__(self, logger):
@@ -384,10 +407,13 @@ class ClangPlugin(object):
     self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
   def jump_to_definition(self):
-    abort_after_first_call(self._definition_finder.definition_locations_do, self._editor.open_location)
+    #self._editor.user_abortable_perform(
+      #functools.partial(abort_after_first_call, self._editor.open_location),
+      #self._definition_finder.definition_locations_do)
+    abort_after_first_call(self._editor.open_location, self._definition_finder.definition_locations_do)
 
   def jump_to_declaration(self):
-    abort_after_first_call(self._declaration_finder.declaration_locations_do, self._editor.open_location)
+    abort_after_first_call(self._editor.open_location, self._declaration_finder.declaration_locations_do)
 
   def get_current_completions(self, base):
     "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
