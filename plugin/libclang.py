@@ -79,8 +79,8 @@ def print_cursor_with_children(cursor, n=0):
 
 class VimInterface(object):
 
-    """Abortable perform doesn't yet work. We must stay within one OS-thread. TODO:
-      Find some green-thread implementation for python"""
+    """Abortable perform doesn't yet work. We must stay within one OS-thread.
+    TODO: Find some green-thread implementation for python"""
     def user_abortable_perform(self, consumer, producer):
         stop_running = [False]
 
@@ -144,7 +144,8 @@ class VimInterface(object):
             "Referencing Range" : {'group': 'clang_referencing_range', 'default' : 'gui=bold guifg=#00FFFF guibg=#FF0000', 'priority' : '-5'},
             "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
 
-        self._cached_variable_names = ["g:clang_user_options", "b:clang_user_options", "g:clang_excluded_directories"]
+        self._cached_variable_names = ["g:clang_user_options",
+            "b:clang_user_options", "g:clang_excluded_directories"]
         self._cached_variables = {}
         self.refresh_variables()
         self.init_highlight_groups()
@@ -196,8 +197,10 @@ class VimInterface(object):
         return optsList
 
     def user_options(self):
-        user_options_global = self._split_options(self._get_variable("g:clang_user_options"))
-        user_options_local = self._split_options(self._get_variable("b:clang_user_options"))
+        user_options_global = self._split_options(
+            self._get_variable("g:clang_user_options"))
+        user_options_local = self._split_options(
+            self._get_variable("b:clang_user_options"))
         return user_options_global + user_options_local
 
     def excluded_directories(self):
@@ -279,10 +282,12 @@ class VimInterface(object):
 
     def clear_highlights(self, highlight_style):
         "Assumes that (group -> highlight_style) is injective"
-        self._vim.command("syntax clear %s" % self._highlight_group_for_id(highlight_style))
+        self._vim.command("syntax clear %s" %
+            self._highlight_group_for_id(highlight_style))
 
     def highlight_range(self, range, highlight_style):
-        self.highlight(range.start.line, range.start.column, range.end.line, range.end.column, highlight_style)
+        self.highlight(range.start.line, range.start.column,
+            range.end.line, range.end.column, highlight_style)
 
     def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
         pattern = '\%' + str(start_line) + 'l' + '\%' \
@@ -303,7 +308,8 @@ class VimInterface(object):
         return '[' + ','.join(map(self._python_dict_to_vim_dict, quick_fix_list)) + ']'
 
     def display_diagnostics(self, quick_fix_list):
-        self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + self._quick_fix_list_to_str(quick_fix_list) + ")")
+        self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + \
+            self._quick_fix_list_to_str(quick_fix_list) + ")")
 
     def _highlight_group_for_id(self, id):
         return self._id_to_highlight_group[id]["group"]
@@ -352,8 +358,10 @@ class ClangPlugin(object):
     def __init__(self, editor, clang_complete_flags):
         self._editor = editor
         self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
-        self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
-        self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
+        self._definition_finder = DefinitionFinder(
+            self._editor, self._translation_unit_accessor)
+        self._declaration_finder = DeclarationFinder(
+            self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
@@ -362,7 +370,8 @@ class ClangPlugin(object):
         self._translation_unit_accessor.terminate()
 
     def file_changed(self):
-        self._editor.display_message("File change was notified, clearing all caches.")
+        self._editor.display_message(
+            "File change was notified, clearing all caches.")
         self._translation_unit_accessor.clear_caches()
         self._load_files_in_background()
 
@@ -376,8 +385,10 @@ class ClangPlugin(object):
 
         styles_and_actions = [
             ("Non-const reference", FindParametersPassedByNonConstReferenceAction(self._editor)),
-            ("Virtual method declaration", FindVirtualMethodDeclarationsAction()),
-            ("Static method declaration", FindStaticMethodDeclarationsAction()),
+            ("Virtual method declaration",
+                FindVirtualMethodDeclarationsAction()),
+            ("Static method declaration",
+                FindStaticMethodDeclarationsAction()),
             ("Member reference", FindMemberReferencesAction())]
                 #("Virtual method call", FindVirtualMethodCallsAction()),
                 #("Omitted default argument", FindOmittedDefaultArgumentsAction())]
@@ -386,7 +397,8 @@ class ClangPlugin(object):
             self._editor.clear_highlights(highlight_style)
             ranges = action.find_ranges(memoized_translation_unit)
             for range in ranges:
-                self._highlight_range_if_in_current_file(range, highlight_style)
+                self._highlight_range_if_in_current_file(
+                    range, highlight_style)
 
     def try_update_diagnostics(self):
         self._editor.display_message("Trying to update diagnostics")
@@ -396,7 +408,8 @@ class ClangPlugin(object):
 
         def do_it(translation_unit):
             self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
-            self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
+            self._diagnostics_highlighter.highlight_in_translation_unit(
+                translation_unit)
             #self._highlight_interesting_ranges(translation_unit)
             raise Success()
 
@@ -412,16 +425,19 @@ class ClangPlugin(object):
         self._load_files_in_background()
 
     def _load_files_in_background(self):
-        self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
+        self._translation_unit_accessor.enqueue_translation_unit_creation(
+            self._editor.current_file())
 
     def jump_to_definition(self):
         #self._editor.user_abortable_perform(
             #functools.partial(abort_after_first_call, self._editor.open_location),
             #self._definition_finder.definition_locations_do)
-        abort_after_first_call(self._editor.open_location, self._definition_finder.definition_locations_do)
+        abort_after_first_call(self._editor.open_location,
+            self._definition_finder.definition_locations_do)
 
     def jump_to_declaration(self):
-        abort_after_first_call(self._editor.open_location, self._declaration_finder.declaration_locations_do)
+        abort_after_first_call(self._editor.open_location,
+            self._declaration_finder.declaration_locations_do)
 
     def get_current_completions(self, base):
         "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -552,7 +568,8 @@ class FindVirtualMethodCallsAction(object):
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
 
         result = set()
-        call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
+        call_expressions_in_file_of_translation_unit_do(
+            do_it, translation_unit)
         return result
 
 
@@ -560,10 +577,12 @@ class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_virtual():
-                result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(
+                    cursor.identifier_range))
 
         result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+        cursors_of_kind_in_file_of_translation_unit_do(do_it,
+            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -571,10 +590,12 @@ class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_static():
-                result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(
+                    cursor.identifier_range))
 
         result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+        cursors_of_kind_in_file_of_translation_unit_do(do_it,
+            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -582,10 +603,12 @@ class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_static():
-                result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(
+                    cursor.identifier_range))
 
         result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+        cursors_of_kind_in_file_of_translation_unit_do(do_it,
+            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -598,7 +621,8 @@ class FindMemberReferencesAction(object):
             def run(self, cursor, recurse):
                 if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
                     if cursor.is_implicit_access():
-                        self.result.add(ExportedRange.from_clang_range(cursor.identifier_range))
+                        self.result.add(ExportedRange.from_clang_range(
+                            cursor.identifier_range))
                 recurse()
 
         run = Run(translation_unit)
@@ -625,7 +649,8 @@ class FindOmittedDefaultArgumentsAction(object):
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
 
         result = set()
-        call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
+        call_expressions_in_file_of_translation_unit_do(
+            do_it, translation_unit)
         return result
 
 
@@ -782,10 +807,13 @@ class SynchronizedTranslationUnitParser(object):
             return function(arg)
 
     def _parse(self, file):
-        self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + file[0])
-        action = TranslationUnitParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
+        self._editor.display_message("[" + threading.currentThread(
+            ).name + " ] - Starting parse: " + file[0])
+        action = TranslationUnitParsingAction(self._editor, self._index,
+            self._translation_units, self._up_to_date, file)
         result = action.parse()
-        self._editor.display_message("[" + threading.currentThread().name + " ] - Finished parse: " + file[0])
+        self._editor.display_message("[" + threading.currentThread(
+            ).name + " ] - Finished parse: " + file[0])
         return result
 
     def clear_caches(self):
@@ -841,10 +869,12 @@ class IdleTranslationUnitParserThread(threading.Thread):
                 ignored_priority, current_file = self._remaining_files.get()
                 if self._termination_requested:
                     return
-                self._parser.translation_unit_do(current_file, self._enqueue_related_files)
+                self._parser.translation_unit_do(
+                    current_file, self._enqueue_related_files)
                 self._remaining_files.task_done()
         except Exception, e:
-            self._editor.display_message("Exception thrown in idle thread: " + str(e))
+            self._editor.display_message(
+                "Exception thrown in idle thread: " + str(e))
 
     def terminate(self):
         self._termination_requested = True
@@ -857,12 +887,15 @@ class IdleTranslationUnitParserThread(threading.Thread):
     def _enqueue_includes(self, translation_unit):
         for include in translation_unit.get_includes():
             file_name = include.source.name
-            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority=False)
+            self._enqueue_in_any_thread(get_file_for_file_name(
+                file_name), high_priority=False)
 
     def _enqueue_definition_files(self, translation_unit):
-        finder = DefinitionFileFinder(self._editor.excluded_directories(), translation_unit.spelling)
+        finder = DefinitionFileFinder(self._editor.excluded_directories(
+            ), translation_unit.spelling)
         for file_name in finder.definition_files():
-            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority=False)
+            self._enqueue_in_any_thread(get_file_for_file_name(
+                file_name), high_priority=False)
 
 
 class AlreadyLocked(Exception):
@@ -927,7 +960,8 @@ class TranslationUnitAccessor(object):
         self._parser.clear_caches()
 
     def enqueue_translation_unit_creation(self, file):
-        self._idle_translation_unit_parser_thread_distributor.enqueue_file(file)
+        self._idle_translation_unit_parser_thread_distributor.enqueue_file(
+            file)
 
     def translation_unit_do(self, file, function):
         return self._parser.translation_unit_do(file, function)
@@ -944,8 +978,10 @@ class DiagnosticsHighlighter(object):
         if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error, diagnostic.Note):
             return
 
-        single_location_range = ExportedRange(diagnostic.location, diagnostic.location)
-        self._editor.highlight_range(single_location_range, self._highlight_style)
+        single_location_range = ExportedRange(
+            diagnostic.location, diagnostic.location)
+        self._editor.highlight_range(
+            single_location_range, self._highlight_style)
 
         # Use this wired kind of iterator as the python clang libraries
                     # have a bug in the range iterator that stops us to use:
@@ -1010,7 +1046,8 @@ class Completer(object):
 
         abbr = self.get_abbr(result.string)
 
-        word = filter(lambda x: not x.isKindInformative() and not x.isKindResultType(), result.string)
+        word = filter(lambda x: not x.isKindInformative(
+            ) and not x.isKindResultType(), result.string)
         args_pos = []
         cur_pos = 0
         for chunk in word:
@@ -1054,7 +1091,8 @@ class Completer(object):
             return []
 
         regexp = re.compile("^" + base)
-        filtered_result = filter(lambda x: regexp.match(self.get_abbr(x.string)),
+        filtered_result = filter(
+            lambda x: regexp.match(self.get_abbr(x.string)),
             completionResult.results)
 
         get_priority = lambda x: x.string.priority
@@ -1092,7 +1130,8 @@ class CompleteThread(threading.Thread):
     def run(self):
         try:
             CompleteThread.lock.acquire()
-            self.result = self.get_current_completion_results(self._line, self._column)
+            self.result = self.get_current_completion_results(
+                self._line, self._column)
         except Exception, e:
             self._editor.display_message("Exception thrown in completion thread: " + str(e))
         finally:
@@ -1113,11 +1152,13 @@ class DeclarationFinder(object):
         self._translation_unit_accessor = translation_unit_accessor
 
     def _get_current_cursor_in_translation_unit(self, translation_unit):
-        location = self._editor.current_location().clang_location(translation_unit)
+        location = self._editor.current_location(
+            ).clang_location(translation_unit)
         return translation_unit.getCursor(location)
 
     def _find_declaration_in_translation_unit(self, translation_unit):
-        current_location_cursor = self._get_current_cursor_in_translation_unit(translation_unit)
+        current_location_cursor = self._get_current_cursor_in_translation_unit(
+            translation_unit)
         parent_cursor = current_location_cursor.get_semantic_parent()
         if parent_cursor == clang.cindex.Cursor.nullCursor():
             return current_location_cursor.get_cursor_referenced()
@@ -1128,14 +1169,17 @@ class DeclarationFinder(object):
 
     def _declaration_cursors_do(self, function):
         def call_function_with_declaration_in(translation_unit):
-            declaration_cursor = self._find_declaration_in_translation_unit(translation_unit)
+            declaration_cursor = self._find_declaration_in_translation_unit(
+                translation_unit)
             if declaration_cursor:
                 function(declaration_cursor)
 
-        self._translation_unit_accessor.current_translation_unit_do(call_function_with_declaration_in)
+        self._translation_unit_accessor.current_translation_unit_do(
+            call_function_with_declaration_in)
 
     def declaration_locations_do(self, function):
-        self._declaration_cursors_do(lambda cursor: function(cursor.extent.start))
+        self._declaration_cursors_do(
+            lambda cursor: function(cursor.extent.start))
 
 
 class NoDefinitionFound(Exception):
@@ -1160,7 +1204,8 @@ class DefinitionFinder(object):
         file = cursor.extent.start.file
         other_file = other_translation_unit.getFile(file.name)
         for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-            location = other_translation_unit.getLocationForOffset(other_file, offset)
+            location = other_translation_unit.getLocationForOffset(
+                other_file, offset)
             cursor_at_location = other_translation_unit.getCursor(location)
             if cursor_at_location.get_usr() == cursor.get_usr():
                 return cursor_at_location
@@ -1172,7 +1217,8 @@ class DefinitionFinder(object):
             if alternate_cursor:
                 function(alternate_cursor)
         for file_name in self._alternate_files(cursor.extent.start.file.name):
-            self._translation_unit_accessor.translation_unit_for_file_named_do(file_name, call_function_with_alternate_cursor)
+            self._translation_unit_accessor.translation_unit_for_file_named_do(
+                file_name, call_function_with_alternate_cursor)
 
     def _find_definition_in_translation_unit(self, translation_unit, location):
         cursor = translation_unit.getCursor(location)
@@ -1181,16 +1227,19 @@ class DefinitionFinder(object):
         return get_definition_or_reference(cursor)
 
     def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
-        current_location = self._editor.current_location().clang_location(translation_unit)
+        current_location = self._editor.current_location(
+            ).clang_location(translation_unit)
         return self._find_definition_in_translation_unit(translation_unit, current_location)
 
     def _alternate_files(self, file_name):
-        finder = DefinitionFileFinder(self._editor.excluded_directories(), file_name)
+        finder = DefinitionFileFinder(
+            self._editor.excluded_directories(), file_name)
         return finder.definition_files()
 
     def _guessed_alternate_translation_units_do(self, file_name, function):
         for file in self._alternate_files(file_name):
-            self._translation_unit_accessor.translation_unit_for_file_named_do(file, function)
+            self._translation_unit_accessor.translation_unit_for_file_named_do(
+                file, function)
 
     def _definitions_of_current_cursor_do(self, translation_unit, function):
         def call_function_with_definition_if_exists(cursor):
@@ -1209,23 +1258,27 @@ class DefinitionFinder(object):
     def _definition_cursors_do(self, function):
         for translation_unit_do in [
             self._translation_unit_accessor.current_translation_unit_do,
-            lambda f: self._guessed_alternate_translation_units_do(self._editor.file_name(), f),
+            lambda f: self._guessed_alternate_translation_units_do(
+                self._editor.file_name(), f),
             ]:
             translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
 
     def definition_locations_do(self, function):
-        self._definition_cursors_do(lambda cursor: function(cursor.extent.start))
+        self._definition_cursors_do(
+            lambda cursor: function(cursor.extent.start))
 
 
 class DefinitionFileFinder(object):
     """
-    Given the name of a file (e.g. foo.h), finds similarly named files (e.g. foo.cpp,
+    Given the name of a file (
+        e.g. foo.h), finds similarly named files (e.g. foo.cpp,
     fooI.cpp) somewhere nearby in the file system.
     """
     def __init__(self, excluded_directories, target_file_name):
         self._excluded_directories = excluded_directories
         self._target_file_name = target_file_name
-        self._split_target = os.path.splitext(os.path.basename(self._target_file_name))
+        self._split_target = os.path.splitext(
+            os.path.basename(self._target_file_name))
         self._visited_directories = set()
         self._search_limit = 50
         self._num_directories_searched = 0
@@ -1238,7 +1291,8 @@ class DefinitionFileFinder(object):
     def _search_directory_and_parent_directories(self, directory_name):
         for result in self._search_directory_and_subdirectories(directory_name):
             yield result
-        parent_directory_name = os.path.abspath(os.path.join(directory_name, '..'))
+        parent_directory_name = os.path.abspath(
+            os.path.join(directory_name, '..'))
         if parent_directory_name != directory_name:
             for result in self._search_directory_and_parent_directories(parent_directory_name):
                 yield result
@@ -1250,7 +1304,8 @@ class DefinitionFileFinder(object):
         self._visited_directories.add(os.path.abspath(directory_name))
         try:
             for file_name in os.listdir(directory_name):
-                absolute_name = os.path.abspath(os.path.join(directory_name, file_name))
+                absolute_name = os.path.abspath(
+                    os.path.join(directory_name, file_name))
                 if os.path.isdir(absolute_name) and file_name not in self._excluded_directories:
                     if absolute_name not in self._visited_directories:
                         for result in self._search_directory_and_subdirectories(absolute_name):
