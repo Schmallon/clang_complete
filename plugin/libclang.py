@@ -82,12 +82,12 @@ class VimInterface(object):
     """Abortable perform doesn't yet work. We must stay within one OS-thread. TODO:
       Find some green-thread implementation for python"""
     def user_abortable_perform(self, consumer, producer):
-        stop_running = False
+        stop_running = [False]
 
         def pass_to_consumer_if_not_aborted(result):
             if not stop_running:
                 consumer(result)
-            stop_running = True
+            stop_running.append(True)
 
         def do_it():
             producer(pass_to_consumer_if_not_aborted)
