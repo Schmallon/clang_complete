@@ -389,7 +389,7 @@ class ClangPlugin(object):
     def do_it(translation_unit):
       self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
       self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
-      self._highlight_interesting_ranges(translation_unit)
+      #self._highlight_interesting_ranges(translation_unit)
       raise Success()
 
     try:
