@@ -758,8 +758,11 @@ class SynchronizedTranslationUnitParser(object):
       return function(arg)
 
   def _parse(self, file):
+    self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + file[0])
     action = TranslationUnitParsingAction(self._editor, self._index, self._translation_units, self._up_to_date, file)
-    return action.parse()
+    result = action.parse()
+    self._editor.display_message("[" + threading.currentThread().name + " ] - Finished parse: " + file[0])
+    return result
 
   def clear_caches(self):
     self._up_to_date.clear()
@@ -812,7 +815,6 @@ class IdleTranslationUnitParserThread(threading.Thread):
         ignored_priority, current_file = self._remaining_files.get()
         if self._termination_requested:
           return
-        self._editor.display_message("[" + threading.currentThread().name + " ] - Starting parse: " + current_file[0])
         self._parser.translation_unit_do(current_file, self._enqueue_related_files)
         self._remaining_files.task_done()
     except Exception, e:
