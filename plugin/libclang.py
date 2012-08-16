@@ -56,6 +56,7 @@ Ideas:
 def abort_after_first_call(consumer, producer):
     class ConsumeWasCalled(Exception):
         pass
+
     def consume_and_abort(x):
         consumer(x)
         raise ConsumeWasCalled
@@ -64,14 +65,17 @@ def abort_after_first_call(consumer, producer):
     except ConsumeWasCalled:
         pass
 
+
 def get_file_for_file_name(file_name):
     return (file_name, open(file_name, 'r').read())
 
-def print_cursor_with_children(cursor, n = 0):
+
+def print_cursor_with_children(cursor, n=0):
     sys.stdout.write(n * " ")
     print(str(cursor.kind.name))
     for child in cursor.get_children():
         print_cursor_with_children(child, n + 1)
+
 
 class VimInterface(object):
 
@@ -88,7 +92,7 @@ class VimInterface(object):
         def do_it():
             producer(pass_to_consumer_if_not_aborted)
 
-        threading.Thread(target = do_it).start()
+        threading.Thread(target=do_it).start()
         while not stop_running:
             try:
                 self.eval("getchar(0)")
@@ -160,7 +164,7 @@ class VimInterface(object):
         file = "\n".join(self._vim.eval("getline(1, '$')"))
         return (self.file_name(), file)
 
-    def _get_uncached_variable(self, variable_name, default_value = ""):
+    def _get_uncached_variable(self, variable_name, default_value=""):
         try:
             if int(self._vim.eval("exists('" + variable_name + "')")):
                 return self._vim.eval(variable_name)
@@ -310,6 +314,7 @@ class VimInterface(object):
         except KeyError:
             return str(-100)
 
+
 class EmacsInterface(object):
 
     def __init__(self):
@@ -341,6 +346,7 @@ class EmacsInterface(object):
 
     def display_message(self, message):
         self._emacs.minibuffer_message(message)
+
 
 class ClangPlugin(object):
     def __init__(self, editor, clang_complete_flags):
@@ -384,8 +390,10 @@ class ClangPlugin(object):
 
     def try_update_diagnostics(self):
         self._editor.display_message("Trying to update diagnostics")
+
         class Success(Exception):
             pass
+
         def do_it(translation_unit):
             self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
             self._diagnostics_highlighter.highlight_in_translation_unit(translation_unit)
@@ -448,6 +456,7 @@ class ClangPlugin(object):
 
         self._editor.display_diagnostics(qf)
 
+
 class ExportedLocation(object):
     def __init__(self, file_name, line, column):
         self.file_name = file_name
@@ -472,6 +481,7 @@ class ExportedLocation(object):
     @classmethod
     def from_clang_location(cls, clang_location):
         return cls(clang_location.file.name if clang_location.file else None, clang_location.line, clang_location.column)
+
 
 class ExportedRange(object):
     def __init__(self, start, end):
@@ -533,6 +543,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
         do_it(translation_unit.cursor, result)
         return result
 
+
 class FindVirtualMethodCallsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(call_expr):
@@ -544,6 +555,7 @@ class FindVirtualMethodCallsAction(object):
         call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
         return result
 
+
 class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
@@ -553,6 +565,7 @@ class FindVirtualMethodDeclarationsAction(object):
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
+
 
 class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
@@ -564,6 +577,7 @@ class FindPrivateMethodDeclarationsAction(object):
         cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
+
 class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
@@ -573,6 +587,7 @@ class FindStaticMethodDeclarationsAction(object):
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
+
 
 class FindMemberReferencesAction(object):
     def find_ranges(self, translation_unit):
@@ -589,6 +604,7 @@ class FindMemberReferencesAction(object):
         run = Run(translation_unit)
         cursors_in_file_of_translation_unit_do(run.run, translation_unit)
         return run.result
+
 
 class FindOmittedDefaultArgumentsAction(object):
 
@@ -612,8 +628,10 @@ class FindOmittedDefaultArgumentsAction(object):
         call_expressions_in_file_of_translation_unit_do(do_it, translation_unit)
         return result
 
+
 def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
     return cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
+
 
 def cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, kind):
     def f(cursor, recurse):
@@ -621,6 +639,7 @@ def cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, kind
         if cursor.kind == kind:
             do_it(cursor)
     return cursors_in_file_of_translation_unit_do(f, translation_unit)
+
 
 def cursors_in_file_of_translation_unit_do(do_it, translation_unit):
     def recurse(cursor):
@@ -632,6 +651,7 @@ def cursors_in_file_of_translation_unit_do(do_it, translation_unit):
     for top_level_cursor in translation_unit.cursor.get_children():
         if top_level_cursor.location.file and top_level_cursor.location.file.name == translation_unit.spelling:
             recurse(top_level_cursor)
+
 
 class FindParametersPassedByNonConstReferenceAction(object):
 
@@ -665,8 +685,10 @@ class FindParametersPassedByNonConstReferenceAction(object):
             translation_unit)
         return result
 
+
 class NoCurrentTranslationUnit(Exception):
     pass
+
 
 class TranslationUnitParsingAction(object):
     def __init__(self, editor, index, translation_units, up_to_date, file):
@@ -712,6 +734,7 @@ class TranslationUnitParsingAction(object):
         tu.reparse([self._file])
         return tu
 
+
 class SynchronizedTranslationUnitParser(object):
     def __init__(self, editor):
         self._editor = editor
@@ -728,6 +751,7 @@ class SynchronizedTranslationUnitParser(object):
 
     def translation_unit_if_parsed_do(self, file, function):
         doer = self._synchronized_doer_for_file_named(file[0])
+
         def do_it():
             if file[0] in self._up_to_date:
                 return self._call_if_not_null(function, self._parse(file))
@@ -774,6 +798,7 @@ class SynchronizedTranslationUnitParser(object):
         doer = self._synchronized_doer_for_file_named(file_name)
         return doer.is_locked()
 
+
 class IdleTranslationUnitParserThreadDistributor():
     def __init__(self, editor, translation_unit_parser):
         self._editor = editor
@@ -790,7 +815,7 @@ class IdleTranslationUnitParserThreadDistributor():
         for thread in self._threads:
             self._remaining_files.put((-1, None))
 
-    def enqueue_file(self, file, high_priority = True):
+    def enqueue_file(self, file, high_priority=True):
         if self._parser.is_parsed_or_parsing(file[0]):
             return
         if high_priority:
@@ -799,6 +824,7 @@ class IdleTranslationUnitParserThreadDistributor():
             priority = 1
         if (priority, file) not in self._remaining_files.queue:
             self._remaining_files.put((priority, file))
+
 
 class IdleTranslationUnitParserThread(threading.Thread):
     def __init__(self, editor, translation_unit_parser, _remaining_files, enqueue_in_any_thread):
@@ -831,15 +857,17 @@ class IdleTranslationUnitParserThread(threading.Thread):
     def _enqueue_includes(self, translation_unit):
         for include in translation_unit.get_includes():
             file_name = include.source.name
-            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
+            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority=False)
 
     def _enqueue_definition_files(self, translation_unit):
         finder = DefinitionFileFinder(self._editor.excluded_directories(), translation_unit.spelling)
         for file_name in finder.definition_files():
-            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority = False)
+            self._enqueue_in_any_thread(get_file_for_file_name(file_name), high_priority=False)
+
 
 class AlreadyLocked(Exception):
     pass
+
 
 class SynchronizedDoer(object):
     def __init__(self):
@@ -853,7 +881,7 @@ class SynchronizedDoer(object):
             self._lock.release()
 
     def do_if_not_locked(self, action):
-        if self._lock.acquire(blocking = 0):
+        if self._lock.acquire(blocking=0):
             try:
                 return action()
             finally:
@@ -862,13 +890,14 @@ class SynchronizedDoer(object):
             raise AlreadyLocked()
 
     def is_locked(self):
-        if self._lock.acquire(blocking = 0):
+        if self._lock.acquire(blocking=0):
             try:
                 return False
             finally:
                 self._lock.release()
         else:
             return True
+
 
 class TranslationUnitAccessor(object):
     def __init__(self, editor):
@@ -903,6 +932,7 @@ class TranslationUnitAccessor(object):
     def translation_unit_do(self, file, function):
         return self._parser.translation_unit_do(file, function)
 
+
 class DiagnosticsHighlighter(object):
 
     def __init__(self, editor):
@@ -929,6 +959,7 @@ class DiagnosticsHighlighter(object):
     def highlight_in_translation_unit(self, translation_unit):
         self._editor.clear_highlights(self._highlight_style)
         map(self._highlight_diagnostic, translation_unit.diagnostics)
+
 
 class QuickFixListGenerator(object):
 
@@ -1106,6 +1137,7 @@ class DeclarationFinder(object):
     def declaration_locations_do(self, function):
         self._declaration_cursors_do(lambda cursor: function(cursor.extent.start))
 
+
 class NoDefinitionFound(Exception):
     pass
 
@@ -1116,6 +1148,7 @@ def get_definition_or_reference(cursor):
         return definition
     else:
         return cursor.get_cursor_referenced()
+
 
 class DefinitionFinder(object):
 
@@ -1182,6 +1215,7 @@ class DefinitionFinder(object):
 
     def definition_locations_do(self, function):
         self._definition_cursors_do(lambda cursor: function(cursor.extent.start))
+
 
 class DefinitionFileFinder(object):
     """
