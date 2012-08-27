@@ -7,7 +7,6 @@ import Levenshtein
 import Queue
 import traceback
 import time
-import functools
 
 """
 Ideas:
@@ -42,7 +41,8 @@ Ideas:
   - Allow jumping through pimpls
   - When opening a new file, right away get possible translation units
    - keep a set of translation unit (name -> translation unit)
-    - ensure that accessing this set always uses the most current version of the file
+    - ensure that accessing this set always uses the most current version of
+      the file
    - the current file
    - an alternate file (.h -> .cpp)
    - *not required* referencing translation unit, as we already were there
@@ -110,7 +110,8 @@ class VimInterface(object):
         def _check_thread(self, command):
             current_thread = threading.currentThread()
             if self._creator_thread != current_thread:
-                self._logger.display_message("Warning: Calling vim command %s from different thread: %s" % (command, current_thread.getName()))
+                self._logger.display_message(
+                    "Warning: Calling vim command %s from different thread: %s" % (command, current_thread.getName()))
                 self._logger.print_stack()
 
         def eval(self, x):
@@ -134,18 +135,18 @@ class VimInterface(object):
     def __init__(self):
         self._vim = self.LoggingVim(self)
         self._id_to_highlight_group = {
-            'Diagnostic' : {'group': 'clang_diagnostic', 'default': 'gui=undercurl guisp=Red'},
-            "Non-const reference" : {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 guibg=Yellow'},
-            "Virtual method call" : {'group': 'clang_virtual_method_call', 'default' : 'guibg=LightRed'},
-            "Virtual method declaration" : {'group': 'clang_virtual_method_declaration', 'default' : 'guibg=LightRed'},
-            "Static method declaration" : {'group':  'clang_static_method_declaration', 'default' : 'gui=underline'},
-            "Member reference" : {'group': 'clang_member_reference', 'default' : 'gui=bold guifg=#005079 guibg=#DBF2FF'},
-            "Referenced Range" : {'group': 'clang_referenced_range', 'default' : 'gui=bold guifg=#FFFF00 guibg=#0000FF', 'priority' : '-10'},
-            "Referencing Range" : {'group': 'clang_referencing_range', 'default' : 'gui=bold guifg=#00FFFF guibg=#FF0000', 'priority' : '-5'},
-            "Omitted default argument" : {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
+            'Diagnostic': {'group': 'clang_diagnostic', 'default': 'gui=undercurl guisp=Red'},
+            "Non-const reference": {'group': 'clang_non_const_reference', 'default': 'ctermbg=6 guibg=Yellow'},
+            "Virtual method call": {'group': 'clang_virtual_method_call', 'default': 'guibg=LightRed'},
+            "Virtual method declaration": {'group': 'clang_virtual_method_declaration', 'default': 'guibg=LightRed'},
+            "Static method declaration": {'group': 'clang_static_method_declaration', 'default': 'gui=underline'},
+            "Member reference": {'group': 'clang_member_reference', 'default': 'gui=bold guifg=#005079 guibg=#DBF2FF'},
+            "Referenced Range": {'group': 'clang_referenced_range', 'default': 'gui=bold guifg=#FFFF00 guibg=#0000FF', 'priority': '-10'},
+            "Referencing Range": {'group': 'clang_referencing_range', 'default': 'gui=bold guifg=#00FFFF guibg=#FF0000', 'priority': '-5'},
+            "Omitted default argument": {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
 
         self._cached_variable_names = ["g:clang_user_options",
-            "b:clang_user_options", "g:clang_excluded_directories"]
+                                       "b:clang_user_options", "g:clang_excluded_directories"]
         self._cached_variables = {}
         self.refresh_variables()
         self.init_highlight_groups()
@@ -241,7 +242,7 @@ class VimInterface(object):
         selection_end = ExportedLocation(
             self.file_name(),
             int(self._vim.eval('line("\'>")')),
-              int(self._vim.eval('col("\'>")')))
+            int(self._vim.eval('col("\'>")')))
         result = ExportedRange(selection_start, selection_end)
         return result
 
@@ -283,11 +284,11 @@ class VimInterface(object):
     def clear_highlights(self, highlight_style):
         "Assumes that (group -> highlight_style) is injective"
         self._vim.command("syntax clear %s" %
-            self._highlight_group_for_id(highlight_style))
+                          self._highlight_group_for_id(highlight_style))
 
     def highlight_range(self, range, highlight_style):
         self.highlight(range.start.line, range.start.column,
-            range.end.line, range.end.column, highlight_style)
+                       range.end.line, range.end.column, highlight_style)
 
     def highlight(self, start_line, start_column, end_line, end_column, highlight_style):
         pattern = '\%' + str(start_line) + 'l' + '\%' \
@@ -308,8 +309,8 @@ class VimInterface(object):
         return '[' + ','.join(map(self._python_dict_to_vim_dict, quick_fix_list)) + ']'
 
     def display_diagnostics(self, quick_fix_list):
-        self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" + \
-            self._quick_fix_list_to_str(quick_fix_list) + ")")
+        self._vim.command("call g:CalledFromPythonClangDisplayQuickFix(" +
+                          self._quick_fix_list_to_str(quick_fix_list) + ")")
 
     def _highlight_group_for_id(self, id):
         return self._id_to_highlight_group[id]["group"]
@@ -433,11 +434,11 @@ class ClangPlugin(object):
             #functools.partial(abort_after_first_call, self._editor.open_location),
             #self._definition_finder.definition_locations_do)
         abort_after_first_call(self._editor.open_location,
-            self._definition_finder.definition_locations_do)
+                               self._definition_finder.definition_locations_do)
 
     def jump_to_declaration(self):
         abort_after_first_call(self._editor.open_location,
-            self._declaration_finder.declaration_locations_do)
+                               self._declaration_finder.declaration_locations_do)
 
     def get_current_completions(self, base):
         "TODO: This must be synchronized as well, but as it runs in a separate thread it gets a bit more complete"
@@ -465,10 +466,10 @@ class ClangPlugin(object):
             self._highlight_range_if_in_current_file(reference.referenced_range, style_referenced_range)
             self._highlight_range_if_in_current_file(reference.referencing_range, style_referencing_range)
 
-        qf = [dict({ 'filename' : reference.referenced_range.start.file_name,
-          'lnum' : reference.referenced_range.start.line,
-          'col' : reference.referenced_range.start.column,
-          'text' : 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.file_name()]
+        qf = [dict({'filename': reference.referenced_range.start.file_name,
+                    'lnum': reference.referenced_range.start.line,
+                    'col': reference.referenced_range.start.column,
+                    'text': 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.file_name()]
 
         self._editor.display_diagnostics(qf)
 
@@ -528,7 +529,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
 
         def disjoint_with_selection(cursor):
             return (location_lt(cursor.extent.end, selection_range.start)
-                or location_lt(selection_range.end, cursor.extent.start))
+                    or location_lt(selection_range.end, cursor.extent.start))
 
         def intersects_with_selection(cursor):
             return not disjoint_with_selection(cursor)
@@ -548,8 +549,8 @@ class FindReferencesToOutsideOfSelectionAction(object):
                         ExportedLocation.from_clang_location(referenced_cursor.location),
                         ExportedLocation.from_clang_location(referenced_cursor.extent.end))
                     result.add(Reference(
-                      constrained_extent,
-                      ExportedRange.from_clang_range(cursor.extent)))
+                               constrained_extent,
+                               ExportedRange.from_clang_range(cursor.extent)))
 
             for child in cursor.get_children():
                 if intersects_with_selection(child):
@@ -582,7 +583,7 @@ class FindVirtualMethodDeclarationsAction(object):
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
-            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -595,7 +596,7 @@ class FindPrivateMethodDeclarationsAction(object):
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
-            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -608,7 +609,7 @@ class FindStaticMethodDeclarationsAction(object):
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
-            translation_unit, clang.cindex.CursorKind.CXX_METHOD)
+                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -746,9 +747,9 @@ class TranslationUnitParsingAction(object):
         args = self._editor.user_options()
         tu = self._index.parse(self._file_name(), args, [self._file], flags)
 
-        if tu == None:
-            self._editor.display_message("Cannot parse this source file. The following arguments " \
-                + "are used for clang: " + " ".join(args))
+        if tu is None:
+            self._editor.display_message("Cannot parse this source file. The following arguments "
+                                         + "are used for clang: " + " ".join(args))
             return None
 
         self._translation_units[self._file_name()] = tu
@@ -808,12 +809,12 @@ class SynchronizedTranslationUnitParser(object):
 
     def _parse(self, file):
         self._editor.display_message("[" + threading.currentThread(
-            ).name + " ] - Starting parse: " + file[0])
+        ).name + " ] - Starting parse: " + file[0])
         action = TranslationUnitParsingAction(self._editor, self._index,
-            self._translation_units, self._up_to_date, file)
+                                              self._translation_units, self._up_to_date, file)
         result = action.parse()
         self._editor.display_message("[" + threading.currentThread(
-            ).name + " ] - Finished parse: " + file[0])
+        ).name + " ] - Finished parse: " + file[0])
         return result
 
     def clear_caches(self):
@@ -892,7 +893,7 @@ class IdleTranslationUnitParserThread(threading.Thread):
 
     def _enqueue_definition_files(self, translation_unit):
         finder = DefinitionFileFinder(self._editor.excluded_directories(
-            ), translation_unit.spelling)
+        ), translation_unit.spelling)
         for file_name in finder.definition_files():
             self._enqueue_in_any_thread(get_file_for_file_name(
                 file_name), high_priority=False)
@@ -1024,14 +1025,14 @@ class QuickFixListGenerator(object):
         else:
             type = 'O'
 
-        return dict({ 'filename' : file_name,
-          'lnum' : diagnostic.location.line,
-          'col' : diagnostic.location.column,
-          'text' : diagnostic.spelling,
-          'type' : type})
+        return dict({'filename': file_name,
+                     'lnum': diagnostic.location.line,
+                     'col': diagnostic.location.column,
+                     'text': diagnostic.spelling,
+                     'type': type})
 
     def get_quick_fix_list(self, tu):
-        return filter (None, map (self._get_quick_fix, tu.diagnostics))
+        return filter(None, map(self._get_quick_fix, tu.diagnostics))
 
 
 class Completer(object):
@@ -1047,13 +1048,13 @@ class Completer(object):
         abbr = self.get_abbr(result.string)
 
         word = filter(lambda x: not x.isKindInformative(
-            ) and not x.isKindResultType(), result.string)
+        ) and not x.isKindResultType(), result.string)
         args_pos = []
         cur_pos = 0
         for chunk in word:
             chunk_len = len(chunk.spelling)
             if chunk.isKindPlaceHolder():
-                args_pos += [[ cur_pos, cur_pos + chunk_len ]]
+                args_pos += [[cur_pos, cur_pos + chunk_len]]
             cur_pos += chunk_len
 
         word = "".join(map(lambda x: x.spelling, word))
@@ -1076,10 +1077,10 @@ class Completer(object):
         sort_by_priority = self._editor.sort_algorithm() == 'priority'
 
         thread = CompleteThread(self._editor,
-            self._translation_unit_accessor,
-            self._complete_flags,
-            self._editor.current_line(),
-            self._editor.current_column())
+                                self._translation_unit_accessor,
+                                self._complete_flags,
+                                self._editor.current_line(),
+                                self._editor.current_column())
 
         thread.start()
         while thread.is_alive():
@@ -1153,7 +1154,7 @@ class DeclarationFinder(object):
 
     def _get_current_cursor_in_translation_unit(self, translation_unit):
         location = self._editor.current_location(
-            ).clang_location(translation_unit)
+        ).clang_location(translation_unit)
         return translation_unit.getCursor(location)
 
     def _find_declaration_in_translation_unit(self, translation_unit):
@@ -1228,7 +1229,7 @@ class DefinitionFinder(object):
 
     def _definition_or_declaration_cursor_of_current_cursor_in(self, translation_unit):
         current_location = self._editor.current_location(
-            ).clang_location(translation_unit)
+        ).clang_location(translation_unit)
         return self._find_definition_in_translation_unit(translation_unit, current_location)
 
     def _alternate_files(self, file_name):
@@ -1251,8 +1252,8 @@ class DefinitionFinder(object):
         if definition_or_declaration_cursor:
             if not definition_or_declaration_cursor.is_definition():
                 self._corresponding_cursors_in_any_alternate_translation_unit_do(
-                  definition_or_declaration_cursor,
-                  call_function_with_definition_if_exists)
+                    definition_or_declaration_cursor,
+                    call_function_with_definition_if_exists)
             function(definition_or_declaration_cursor)
 
     def _definition_cursors_do(self, function):
@@ -1260,7 +1261,7 @@ class DefinitionFinder(object):
             self._translation_unit_accessor.current_translation_unit_do,
             lambda f: self._guessed_alternate_translation_units_do(
                 self._editor.file_name(), f),
-            ]:
+        ]:
             translation_unit_do(lambda translation_unit: self._definitions_of_current_cursor_do(translation_unit, function))
 
     def definition_locations_do(self, function):
@@ -1322,113 +1323,113 @@ class DefinitionFileFinder(object):
     def _is_definition_file_name(self, file_name):
         split_file_name = os.path.splitext(file_name)
         return (self._ratio(split_file_name[0], self._split_target[0]) > 0.8 and
-            split_file_name[1] in ('.cpp', 'c'))
+                split_file_name[1] in ('.cpp', 'c'))
 
 
-kinds = dict({                                                                 \
-# Declarations                                                                 \
- 1 : 't',  # CXCursor_UnexposedDecl (A declaration whose specific kind is not  \
-           # exposed via this interface)                                       \
- 2 : 't',  # CXCursor_StructDecl (A C or C++ struct)                           \
- 3 : 't',  # CXCursor_UnionDecl (A C or C++ union)                             \
- 4 : 't',  # CXCursor_ClassDecl (A C++ class)                                  \
- 5 : 't',  # CXCursor_EnumDecl (An enumeration)                                \
- 6 : 'm',  # CXCursor_FieldDecl (A field (in C) or non-static data member      \
-           # (in C++) in a struct, union, or C++ class)                        \
- 7 : 'e',  # CXCursor_EnumConstantDecl (An enumerator constant)                \
- 8 : 'f',  # CXCursor_FunctionDecl (A function)                                \
- 9 : 'v',  # CXCursor_VarDecl (A variable)                                     \
-10 : 'a',  # CXCursor_ParmDecl (A function or method parameter)                \
-11 : '11', # CXCursor_ObjCInterfaceDecl (An Objective-C @interface)            \
-12 : '12', # CXCursor_ObjCCategoryDecl (An Objective-C @interface for a        \
-           # category)                                                         \
-13 : '13', # CXCursor_ObjCProtocolDecl (An Objective-C @protocol declaration)  \
-14 : '14', # CXCursor_ObjCPropertyDecl (An Objective-C @property declaration)  \
-15 : '15', # CXCursor_ObjCIvarDecl (An Objective-C instance variable)          \
-16 : '16', # CXCursor_ObjCInstanceMethodDecl (An Objective-C instance method)  \
-17 : '17', # CXCursor_ObjCClassMethodDecl (An Objective-C class method)        \
-18 : '18', # CXCursor_ObjCImplementationDec (An Objective-C @implementation)   \
-19 : '19', # CXCursor_ObjCCategoryImplDecll (An Objective-C @implementation    \
-           # for a category)                                                   \
-20 : 't',  # CXCursor_TypedefDecl (A typedef)                                  \
-21 : 'f',  # CXCursor_CXXMethod (A C++ class method)                           \
-22 : 'n',  # CXCursor_Namespace (A C++ namespace)                              \
-23 : '23', # CXCursor_LinkageSpec (A linkage specification, e.g. 'extern "C"') \
-24 : '+',  # CXCursor_Constructor (A C++ constructor)                          \
-25 : '~',  # CXCursor_Destructor (A C++ destructor)                            \
-26 : '26', # CXCursor_ConversionFunction (A C++ conversion function)           \
-27 : 'a',  # CXCursor_TemplateTypeParameter (A C++ template type parameter)    \
-28 : 'a',  # CXCursor_NonTypeTemplateParameter (A C++ non-type template        \
-           # parameter)                                                        \
-29 : 'a',  # CXCursor_TemplateTemplateParameter (A C++ template template       \
-           # parameter)                                                        \
-30 : 'f',  # CXCursor_FunctionTemplate (A C++ function template)               \
-31 : 'p',  # CXCursor_ClassTemplate (A C++ class template)                     \
-32 : '32', # CXCursor_ClassTemplatePartialSpecialization (A C++ class template \
-           # partial specialization)                                           \
-33 : 'n',  # CXCursor_NamespaceAlias (A C++ namespace alias declaration)       \
-34 : '34', # CXCursor_UsingDirective (A C++ using directive)                   \
-35 : '35', # CXCursor_UsingDeclaration (A using declaration)                   \
+kinds = dict({
+             # Declarations
+             1: 't',  # CXCursor_UnexposedDecl (A declaration whose specific kind is not
+             # exposed via this interface)
+             2: 't',  # CXCursor_StructDecl (A C or C++ struct)
+             3: 't',  # CXCursor_UnionDecl (A C or C++ union)
+             4: 't',  # CXCursor_ClassDecl (A C++ class)
+             5: 't',  # CXCursor_EnumDecl (An enumeration)
+             6: 'm',  # CXCursor_FieldDecl (A field (in C) or non-static data member
+             # (in C++) in a struct, union, or C++ class)
+             7: 'e',  # CXCursor_EnumConstantDecl (An enumerator constant)
+             8: 'f',  # CXCursor_FunctionDecl (A function)
+             9: 'v',  # CXCursor_VarDecl (A variable)
+             10: 'a',  # CXCursor_ParmDecl (A function or method parameter)
+             11: '11',  # CXCursor_ObjCInterfaceDecl (An Objective-C @interface)
+             12: '12',  # CXCursor_ObjCCategoryDecl (An Objective-C @interface for a
+             # category)
+             13: '13',  # CXCursor_ObjCProtocolDecl (An Objective-C @protocol declaration)
+             14: '14',  # CXCursor_ObjCPropertyDecl (An Objective-C @property declaration)
+             15: '15',  # CXCursor_ObjCIvarDecl (An Objective-C instance variable)
+             16: '16',  # CXCursor_ObjCInstanceMethodDecl (An Objective-C instance method)
+             17: '17',  # CXCursor_ObjCClassMethodDecl (An Objective-C class method)
+             18: '18',  # CXCursor_ObjCImplementationDec (An Objective-C @implementation)
+             19: '19',  # CXCursor_ObjCCategoryImplDecll (An Objective-C @implementation
+             # for a category)
+             20: 't',  # CXCursor_TypedefDecl (A typedef)
+             21: 'f',  # CXCursor_CXXMethod (A C++ class method)
+             22: 'n',  # CXCursor_Namespace (A C++ namespace)
+             23: '23',  # CXCursor_LinkageSpec (A linkage specification, e.g. 'extern "C"')
+             24: '+',  # CXCursor_Constructor (A C++ constructor)
+             25: '~',  # CXCursor_Destructor (A C++ destructor)
+             26: '26',  # CXCursor_ConversionFunction (A C++ conversion function)
+             27: 'a',  # CXCursor_TemplateTypeParameter (A C++ template type parameter)
+             28: 'a',  # CXCursor_NonTypeTemplateParameter (A C++ non-type template
+             # parameter)
+             29: 'a',  # CXCursor_TemplateTemplateParameter (A C++ template template
+             # parameter)
+             30: 'f',  # CXCursor_FunctionTemplate (A C++ function template)
+             31: 'p',  # CXCursor_ClassTemplate (A C++ class template)
+             32: '32',  # CXCursor_ClassTemplatePartialSpecialization (A C++ class template
+             # partial specialization)
+             33: 'n',  # CXCursor_NamespaceAlias (A C++ namespace alias declaration)
+             34: '34',  # CXCursor_UsingDirective (A C++ using directive)
+             35: '35',  # CXCursor_UsingDeclaration (A using declaration)
                                                                                \
-# References                                                                   \
-40 : '40', # CXCursor_ObjCSuperClassRef                                        \
-41 : '41', # CXCursor_ObjCProtocolRef                                          \
-42 : '42', # CXCursor_ObjCClassRef                                             \
-43 : '43', # CXCursor_TypeRef                                                  \
-44 : '44', # CXCursor_CXXBaseSpecifier                                         \
-45 : '45', # CXCursor_TemplateRef (A reference to a class template, function   \
-           # template, template template parameter, or class template partial  \
-           # specialization)                                                   \
-46 : '46', # CXCursor_NamespaceRef (A reference to a namespace or namespace    \
-           # alias)                                                            \
-47 : '47', # CXCursor_MemberRef (A reference to a member of a struct, union,   \
-           # or class that occurs in some non-expression context, e.g., a      \
-           # designated initializer)                                           \
-48 : '48', # CXCursor_LabelRef (A reference to a labeled statement)            \
-49 : '49', # CXCursor_OverloadedDeclRef (A reference to a set of overloaded    \
-           # functions or function templates that has not yet been resolved to \
-           # a specific function or function template)                         \
+             # References
+             40: '40',  # CXCursor_ObjCSuperClassRef
+             41: '41',  # CXCursor_ObjCProtocolRef
+             42: '42',  # CXCursor_ObjCClassRef
+             43: '43',  # CXCursor_TypeRef
+             44: '44',  # CXCursor_CXXBaseSpecifier
+             45: '45',  # CXCursor_TemplateRef (A reference to a class template, function
+             # template, template template parameter, or class template partial
+             # specialization)
+             46: '46',  # CXCursor_NamespaceRef (A reference to a namespace or namespace
+             # alias)
+             47: '47',  # CXCursor_MemberRef (A reference to a member of a struct, union,
+             # or class that occurs in some non-expression context, e.g., a
+             # designated initializer)
+             48: '48',  # CXCursor_LabelRef (A reference to a labeled statement)
+             49: '49',  # CXCursor_OverloadedDeclRef (A reference to a set of overloaded
+             # functions or function templates that has not yet been resolved to
+             # a specific function or function template)
                                                                                \
-# Error conditions                                                             \
-#70 : '70', # CXCursor_FirstInvalid                                            \
-70 : '70',  # CXCursor_InvalidFile                                             \
-71 : '71',  # CXCursor_NoDeclFound                                             \
-72 : 'u',   # CXCursor_NotImplemented                                          \
-73 : '73',  # CXCursor_InvalidCode                                             \
+             # Error conditions
+             #70 : '70', # CXCursor_FirstInvalid
+             70: '70',  # CXCursor_InvalidFile
+             71: '71',  # CXCursor_NoDeclFound
+             72: 'u',   # CXCursor_NotImplemented
+             73: '73',  # CXCursor_InvalidCode
                                                                                \
-# Expressions                                                                  \
-100 : '100',  # CXCursor_UnexposedExpr (An expression whose specific kind is   \
-              # not exposed via this interface)                                \
-101 : '101',  # CXCursor_DeclRefExpr (An expression that refers to some value  \
-              # declaration, such as a function, varible, or enumerator)       \
-102 : '102',  # CXCursor_MemberRefExpr (An expression that refers to a member  \
-              # of a struct, union, class, Objective-C class, etc)             \
-103 : '103',  # CXCursor_CallExpr (An expression that calls a function)        \
-104 : '104',  # CXCursor_ObjCMessageExpr (An expression that sends a message   \
-              # to an Objective-C object or class)                             \
-105 : '105',  # CXCursor_BlockExpr (An expression that represents a block      \
-              # literal)                                                       \
+             # Expressions
+             100: '100',  # CXCursor_UnexposedExpr (An expression whose specific kind is
+             # not exposed via this interface)
+             101: '101',  # CXCursor_DeclRefExpr (An expression that refers to some value
+             # declaration, such as a function, varible, or enumerator)
+             102: '102',  # CXCursor_MemberRefExpr (An expression that refers to a member
+             # of a struct, union, class, Objective-C class, etc)
+             103: '103',  # CXCursor_CallExpr (An expression that calls a function)
+             104: '104',  # CXCursor_ObjCMessageExpr (An expression that sends a message
+             # to an Objective-C object or class)
+             105: '105',  # CXCursor_BlockExpr (An expression that represents a block
+             # literal)
                                                                                \
-# Statements                                                                   \
-200 : '200',  # CXCursor_UnexposedStmt (A statement whose specific kind is not \
-              # exposed via this interface)                                    \
-201 : '201',  # CXCursor_LabelStmt (A labelled statement in a function)        \
+             # Statements
+             200: '200',  # CXCursor_UnexposedStmt (A statement whose specific kind is not
+             # exposed via this interface)
+             201: '201',  # CXCursor_LabelStmt (A labelled statement in a function)
                                                                                \
-# Translation unit                                                             \
-300 : '300',  # CXCursor_TranslationUnit (Cursor that represents the           \
-              # translation unit itself)                                       \
+             # Translation unit
+             300: '300',  # CXCursor_TranslationUnit (Cursor that represents the
+             # translation unit itself)
                                                                                \
-# Attributes                                                                   \
-400 : '400',  # CXCursor_UnexposedAttr (An attribute whose specific kind is    \
-              # not exposed via this interface)                                \
-401 : '401',  # CXCursor_IBActionAttr                                          \
-402 : '402',  # CXCursor_IBOutletAttr                                          \
-403 : '403',  # CXCursor_IBOutletCollectionAttr                                \
+             # Attributes
+             400: '400',  # CXCursor_UnexposedAttr (An attribute whose specific kind is
+             # not exposed via this interface)
+             401: '401',  # CXCursor_IBActionAttr
+             402: '402',  # CXCursor_IBOutletAttr
+             403: '403',  # CXCursor_IBOutletCollectionAttr
                                                                                \
-# Preprocessing                                                                \
-500 : '500', # CXCursor_PreprocessingDirective                                 \
-501 : 'd',   # CXCursor_MacroDefinition                                        \
-502 : '502', # CXCursor_MacroInstantiation                                     \
-503 : '503'  # CXCursor_InclusionDirective                                     \
-})
+             # Preprocessing
+             500: '500',  # CXCursor_PreprocessingDirective
+             501: 'd',   # CXCursor_MacroDefinition
+             502: '502',  # CXCursor_MacroInstantiation
+             503: '503'  # CXCursor_InclusionDirective
+             })
 # vim: set ts=2 sts=2 sw=2 expandtab :
