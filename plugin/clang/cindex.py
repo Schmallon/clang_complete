@@ -939,7 +939,7 @@ class Cursor(Structure):
     @property
     def identifier_range(self):
         if not hasattr(self, '_identifier_range'):
-            self._identifier_range = Cursor_identifier_range(self)
+          self._identifier_range = FunctionDecl_identifier_range(self)
         return self._identifier_range
 
     @property
@@ -1754,9 +1754,9 @@ Cursor_extent = lib.clang_getCursorExtent
 Cursor_extent.argtypes = [Cursor]
 Cursor_extent.restype = SourceRange
 
-Cursor_identifier_range = lib.clang_getIdentifierRange
-Cursor_identifier_range.argtypes = [Cursor]
-Cursor_identifier_range.restype = SourceRange
+FunctionDecl_identifier_range = lib.clang_FunctionDecl_getIdentifierRange
+FunctionDecl_identifier_range.argtypes = [Cursor]
+FunctionDecl_identifier_range.restype = SourceRange
 
 Cursor_ref = lib.clang_getCursorReferenced
 Cursor_ref.argtypes = [Cursor]
