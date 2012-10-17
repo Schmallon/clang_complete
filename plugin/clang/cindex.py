@@ -1773,13 +1773,13 @@ Cursor_visit = lib.clang_visitChildren
 Cursor_visit.argtypes = [Cursor, Cursor_visit_callback, py_object]
 Cursor_visit.restype = c_uint
 
-CallExpr_getArg = lib.clang_CallExpr_getArg
+CallExpr_getArg = lib.clang_Cursor_getArgument
 CallExpr_getArg.argtypes = [Cursor, c_uint]
 CallExpr_getArg.restype = Cursor
 
-CallExpr_getNumArgs = lib.clang_CallExpr_getNumArgs
+CallExpr_getNumArgs = lib.clang_Cursor_getNumArguments
 CallExpr_getNumArgs.argtypes = [Cursor]
-CallExpr_getNumArgs.restype = c_uint
+CallExpr_getNumArgs.restype = c_int
 
 CXXMethod_isVirtual = lib.clang_CXXMethod_isVirtual
 CXXMethod_isVirtual.argtypes = [Cursor]
