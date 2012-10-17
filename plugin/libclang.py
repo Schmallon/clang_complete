@@ -1049,6 +1049,8 @@ class Completer(object):
 
         word = filter(lambda x: not x.isKindInformative(
         ) and not x.isKindResultType(), result.string)
+        return_value = filter(lambda x: x.isKindResultType(), result.string)
+
         args_pos = []
         cur_pos = 0
         for chunk in word:
@@ -1059,9 +1061,13 @@ class Completer(object):
 
         word = "".join(map(lambda x: x.spelling, word))
 
+        menu = word
+        if len(return_value) > 0:
+            menu = return_value[0].spelling + " " + menu
+
         completion['word'] = word
         completion['abbr'] = abbr
-        completion['menu'] = word
+        completion['menu'] = menu
         completion['info'] = word
         completion['args_pos'] = args_pos
         completion['dup'] = 0
