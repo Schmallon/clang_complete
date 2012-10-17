@@ -60,6 +60,14 @@ function! s:ClangCompleteInit()
     let g:clang_user_options = ''
   endif
 
+  if !exists('g:clang_conceal_snippets')
+    let g:clang_conceal_snippets = has('conceal')
+  endif
+
+  if !exists('g:clang_trailing_placeholder')
+    let g:clang_trailing_placeholder = 0
+  endif
+
   if !exists('g:clang_complete_macros')
     let g:clang_complete_macros = 0
   endif
