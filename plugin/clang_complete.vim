@@ -142,7 +142,7 @@ function! s:ClangCompleteInit()
   if has('python')
 
     if s:python_for_clang_loaded == 0
-      exe s:initClangCompletePython()
+      call s:initClangCompletePython()
       let s:python_for_clang_loaded = 1
     endif
   else
