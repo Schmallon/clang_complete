@@ -77,7 +77,7 @@ function! s:ClangCompleteInit()
   endif
 
   if !exists('g:clang_auto_user_options')
-    let g:clang_auto_user_options = 'path, .clang_complete, gcc'
+    let g:clang_auto_user_options = 'path, .clang_complete, clang'
   endif
 
   call LoadUserOptions()

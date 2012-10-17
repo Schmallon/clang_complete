@@ -146,7 +146,9 @@ class VimInterface(object):
             "Omitted default argument": {'group': 'clang_omitted_default_argument', 'default': 'ctermbg=6 gui=undercurl guisp=DarkCyan'}}
 
         self._cached_variable_names = ["g:clang_user_options",
-                                       "b:clang_user_options", "g:clang_excluded_directories"]
+                                       "b:clang_user_options",
+                                       "b:clang_parameters",
+                                       "g:clang_excluded_directories"]
         self._cached_variables = {}
         self.refresh_variables()
         self.init_highlight_groups()
@@ -202,6 +204,8 @@ class VimInterface(object):
             self._get_variable("g:clang_user_options"))
         user_options_local = self._split_options(
             self._get_variable("b:clang_user_options"))
+        parameters_local = self._split_options(
+            self._get_variable("b:clang_parameters"))
         return user_options_global + user_options_local
 
     def excluded_directories(self):
