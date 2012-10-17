@@ -742,7 +742,7 @@ class TranslationUnitParsingAction(object):
         return tu
 
     def _read_new_translation_unit(self):
-        flags = clang.cindex.TranslationUnit.PrecompiledPreamble | clang.cindex.TranslationUnit.CXXPrecompiledPreamble | clang.cindex.TranslationUnit.CacheCompletionResults
+        flags = clang.cindex.TranslationUnit.PrecompiledPreamble | clang.cindex.TranslationUnit.CacheCompletionResults
 
         args = self._editor.user_options()
         tu = self._index.parse(self._file_name(), args, [self._file], flags)
