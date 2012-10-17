@@ -1045,25 +1045,34 @@ class Completer(object):
     def format_results(self, result):
         completion = dict()
 
-        abbr = self.get_abbr(result.string)
-
-        word = filter(lambda x: not x.isKindInformative(
-        ) and not x.isKindResultType(), result.string)
-        return_value = filter(lambda x: x.isKindResultType(), result.string)
+        return_value = None
+        abbr = ""
+        chunks = filter(lambda x: not x.isKindInformative(), result.string)
 
         args_pos = []
         cur_pos = 0
-        for chunk in word:
-            chunk_len = len(chunk.spelling)
+        word = ""
+
+        for chunk in chunks:
+            if chunk.isKindResultType():
+                return_value = chunk
+                continue
+            chunk_spelling = chunk.spelling
+
+            if chunk.isKindTypedText():
+              abbr = chunk_spelling
+
+            chunk_len = len(chunk_spelling)
             if chunk.isKindPlaceHolder():
                 args_pos += [[cur_pos, cur_pos + chunk_len]]
             cur_pos += chunk_len
 
-        word = "".join(map(lambda x: x.spelling, word))
+        word += chunk_spelling
+        word = "".join(map(lambda x: x.spelling, chunks))
 
         menu = word
-        if len(return_value) > 0:
-            menu = return_value[0].spelling + " " + menu
+        if return_value:
+            menu = return_value.spelling + " " + menu
 
         completion['word'] = word
         completion['abbr'] = abbr
@@ -1080,7 +1089,7 @@ class Completer(object):
 
     def get_current_completions(self, base):
 
-        sort_by_priority = self._editor.sort_algorithm() == 'priority'
+        sorting = self._editor.sort_algorithm()
 
         thread = CompleteThread(self._editor,
                                 self._translation_unit_accessor,
@@ -1097,19 +1106,22 @@ class Completer(object):
         if completionResult is None:
             return []
 
-        regexp = re.compile("^" + base)
-        filtered_result = filter(
-            lambda x: regexp.match(self.get_abbr(x.string)),
-            completionResult.results)
+        results = completionResult.results
 
-        get_priority = lambda x: x.string.priority
-        get_abbreviation = lambda x: self.get_abbr(x.string).lower()
-        if sort_by_priority:
+        if base != "":
+            regexp = re.compile("^" + base)
+            results = filter(lambda x: regexp.match(self.get_abbr(x.string)),
+                results)
+
+        if sorting == 'priority':
+            get_priority = lambda x: x.string.priority
             key = get_priority
-        else:
+            results = sorted(results, None, key)
+        if sorting == 'alpha':
+            get_abbreviation = lambda x: self.get_abbr(x.string).lower()
             key = get_abbreviation
-        sorted_result = sorted(filtered_result, None, key)
-        return map(self.format_results, sorted_result)
+            results = sorted(results, None, key)
+        return map(self.format_results, results)
 
     def get_abbr(self, strings):
         tmplst = filter(lambda x: x.isKindTypedText(), strings)
