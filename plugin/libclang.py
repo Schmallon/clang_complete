@@ -11,45 +11,45 @@ import time
 """
 Ideas:
 
-  - Highlight methods that don't refer to members (could-be-static)
+    - Highlight methods that don't refer to members (could-be-static)
 
-  - Highlight unused pre-declarations
+    - Highlight unused pre-declarations
 
-  - Highlight unused includes (probably not possible)
+    - Highlight unused includes (probably not possible)
 
-  - Implement completion and diagnostics for emacs
-  For that to work I should first check which parts that are currently
-  implemented in vimscript are actually vim specific and vice versa.
+    - Implement completion and diagnostics for emacs
+    For that to work I should first check which parts that are currently
+    implemented in vimscript are actually vim specific and vice versa.
 
-  - Allow generic configuration for both vim and emacs
+    - Allow generic configuration for both vim and emacs
 
-  - Integrate with tags
-  For the time that we do not have an index that contains all of a projects
-  files, we could make use of tags (as extracted by ctags) to determine which
-  files to parse next when looking for definitions.
+    - Integrate with tags
+    For the time that we do not have an index that contains all of a projects
+    files, we could make use of tags (as extracted by ctags) to determine which
+    files to parse next when looking for definitions.
 
-  - Add a "jump to declaration"
-  Often we want to jump to a declaration (e.g. declarations usually a coupled
-  with comments). If there was a way to find all declarations referenced by a
-  cursor, we could use some heuristics to find the declaration that we want to
-  display.
+    - Add a "jump to declaration"
+    Often we want to jump to a declaration (e.g. declarations usually a coupled
+    with comments). If there was a way to find all declarations referenced by a
+    cursor, we could use some heuristics to find the declaration that we want to
+    display.
 
-  - Code cleanup
-   - There seems to be some confusion between returning NULL or nullCursor
-     - get_semantic_parent returns nullCursor
-     - get_definition returns NULL
-  - Allow jumping through pimpls
-  - When opening a new file, right away get possible translation units
-   - keep a set of translation unit (name -> translation unit)
-    - ensure that accessing this set always uses the most current version of
-      the file
-   - the current file
-   - an alternate file (.h -> .cpp)
-   - *not required* referencing translation unit, as we already were there
+    - Code cleanup
+     - There seems to be some confusion between returning NULL or nullCursor
+       - get_semantic_parent returns nullCursor
+       - get_definition returns NULL
+    - Allow jumping through pimpls
+    - When opening a new file, right away get possible translation units
+     - keep a set of translation unit (name -> translation unit)
+      - ensure that accessing this set always uses the most current version of
+        the file
+     - the current file
+     - an alternate file (.h -> .cpp)
+     - *not required* referencing translation unit, as we already were there
 
-  - Integrate Jump-To-Definition with tags-based searching
-   - Allow finding definitions of commented code
-   - Macros
+    - Integrate Jump-To-Definition with tags-based searching
+     - Allow finding definitions of commented code
+     - Macros
 """
 
 
