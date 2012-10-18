@@ -1065,20 +1065,20 @@ class Completer(object):
             if chunk.isKindResultType():
                 return_value = chunk
                 continue
+
             chunk_spelling = chunk.spelling
 
             if chunk.isKindTypedText():
-              abbr = chunk_spelling
+                abbr = chunk_spelling
 
             chunk_len = len(chunk_spelling)
             if chunk.isKindPlaceHolder():
                 args_pos += [[cur_pos, cur_pos + chunk_len]]
             cur_pos += chunk_len
-
-        word += chunk_spelling
-        word = "".join(map(lambda x: x.spelling, chunks))
+            word += chunk_spelling
 
         menu = word
+
         if return_value:
             menu = return_value.spelling + " " + menu
 
