@@ -53,6 +53,15 @@ Ideas:
 """
 
 
+def get_identifier_range(cursor):
+    for token in cursor.get_tokens():
+        if (token.kind == clang.cindex.TokenKind.IDENTIFIER
+                and token.cursor == cursor):
+            return token.extent
+
+    return cursor.extent
+
+
 def abort_after_first_call(consumer, producer):
     class ConsumeWasCalled(Exception):
         pass
@@ -586,8 +595,7 @@ class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_virtual_method():
-                result.add(ExportedRange.from_clang_range(
-                    cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
@@ -599,8 +607,7 @@ class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_static_method():
-                result.add(ExportedRange.from_clang_range(
-                    cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
@@ -612,8 +619,7 @@ class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
             if cursor.is_static_method():
-                result.add(ExportedRange.from_clang_range(
-                    cursor.identifier_range))
+                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
 
         result = set()
         cursors_of_kind_in_file_of_translation_unit_do(do_it,
@@ -631,7 +637,7 @@ class FindMemberReferencesAction(object):
                 if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
                     if cursor.is_implicit_access():
                         self.result.add(ExportedRange.from_clang_range(
-                            cursor.identifier_range))
+                            get_identifier_range(cursor)))
                 recurse()
 
         run = Run(translation_unit)

@@ -1154,12 +1154,6 @@ class Cursor(Structure):
         return self._extent
 
     @property
-    def identifier_range(self):
-        if not hasattr(self, '_identifier_range'):
-            self._identifier_range = conf.lib.clang_FunctionDecl_getIdentifierRange(self)
-        return self._identifier_range
-
-    @property
     def type(self):
         """
         Retrieve the Type (if any) of the entity pointed at by the cursor.
@@ -2625,10 +2619,6 @@ functionList = [
   ("clang_getCursorLocation",
    [Cursor],
    SourceLocation),
-
-  ("clang_FunctionDecl_getIdentifierRange",
-   [Cursor],
-   SourceRange),
 
   ("clang_getCursorReferenced",
    [Cursor],

@@ -342,8 +342,7 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
             cursor = libclang.clang.cindex.Cursor.from_location(
                 translation_unit, clang_location)
-            identifier_range = libclang.ExportedRange.from_clang_range(
-                cursor.identifier_range)
+            identifier_range = libclang.ExportedRange.from_clang_range(libclang.get_identifier_range(cursor))
             expected_range_real_range = range_from_tuples(
                 file_name, expected_range[0], expected_range[1])
             self.assertEquals(identifier_range, expected_range_real_range)
