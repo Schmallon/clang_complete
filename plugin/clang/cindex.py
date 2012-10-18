@@ -2423,6 +2423,7 @@ class Token(Structure):
         cursor = Cursor()
 
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
+        cursor._tu = self._tu
 
         return cursor
 
