@@ -360,7 +360,12 @@ class EmacsInterface(object):
 
 
 class ClangPlugin(object):
-    def __init__(self, editor, clang_complete_flags):
+    def __init__(self, editor, clang_complete_flags, library_path = None):
+        #if library_path:
+            #clang.cindex.Config.set_library_path(library_path)
+
+        clang.cindex.Config.set_compatibility_check(False)
+
         self._editor = editor
         self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
         self._definition_finder = DefinitionFinder(
@@ -494,10 +499,7 @@ class ExportedLocation(object):
         return self.line * 80 + self.column
 
     def clang_location(self, translation_unit):
-        file = translation_unit.getFile(self.file_name)
-        if not file:
-            return None
-        return translation_unit.getLocation(file, self.line, self.column)
+        return translation_unit.get_location(self.file_name, (self.line, self.column))
 
     @classmethod
     def from_clang_location(cls, clang_location):
@@ -569,7 +571,7 @@ class FindVirtualMethodCallsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(call_expr):
             cursor_referenced = call_expr.get_cursor_referenced()
-            if cursor_referenced and cursor_referenced.is_virtual():
+            if cursor_referenced and cursor_referenced.is_virtual_method():
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
 
         result = set()
@@ -581,7 +583,7 @@ class FindVirtualMethodCallsAction(object):
 class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
-            if cursor.is_virtual():
+            if cursor.is_virtual_method():
                 result.add(ExportedRange.from_clang_range(
                     cursor.identifier_range))
 
@@ -594,7 +596,7 @@ class FindVirtualMethodDeclarationsAction(object):
 class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
-            if cursor.is_static():
+            if cursor.is_static_method():
                 result.add(ExportedRange.from_clang_range(
                     cursor.identifier_range))
 
@@ -607,7 +609,7 @@ class FindPrivateMethodDeclarationsAction(object):
 class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(cursor):
-            if cursor.is_static():
+            if cursor.is_static_method():
                 result.add(ExportedRange.from_clang_range(
                     cursor.identifier_range))
 
@@ -746,7 +748,7 @@ class TranslationUnitParsingAction(object):
         return tu
 
     def _read_new_translation_unit(self):
-        flags = clang.cindex.TranslationUnit.PrecompiledPreamble | clang.cindex.TranslationUnit.CacheCompletionResults
+        flags = clang.cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE
 
         args = self._editor.user_options()
         tu = self._index.parse(self._file_name(), args, [self._file], flags)
@@ -1179,13 +1181,13 @@ class DeclarationFinder(object):
     def _get_current_cursor_in_translation_unit(self, translation_unit):
         location = self._editor.current_location(
         ).clang_location(translation_unit)
-        return translation_unit.getCursor(location)
+        return clang.cindex.Cursor.from_location(translation_unit, location)
 
     def _find_declaration_in_translation_unit(self, translation_unit):
         current_location_cursor = self._get_current_cursor_in_translation_unit(
             translation_unit)
-        parent_cursor = current_location_cursor.get_semantic_parent()
-        if parent_cursor == clang.cindex.Cursor.nullCursor():
+        parent_cursor = current_location_cursor.semantic_parent
+        if parent_cursor:
             return current_location_cursor.get_cursor_referenced()
         for child_cursor in parent_cursor.get_children():
             if child_cursor.get_canonical() == current_location_cursor.get_canonical():
@@ -1227,11 +1229,9 @@ class DefinitionFinder(object):
 
     def _find_corresponding_cursor_in_alternate_translation_unit(self, cursor, other_translation_unit):
         file = cursor.extent.start.file
-        other_file = other_translation_unit.getFile(file.name)
         for offset in range(cursor.extent.start.offset, cursor.extent.end.offset + 1):
-            location = other_translation_unit.getLocationForOffset(
-                other_file, offset)
-            cursor_at_location = other_translation_unit.getCursor(location)
+            location = other_translation_unit.get_location(file.name, offset)
+            cursor_at_location = clang.cindex.Cursor.from_location(other_translation_unit, location)
             if cursor_at_location.get_usr() == cursor.get_usr():
                 return cursor_at_location
         return None
@@ -1246,7 +1246,7 @@ class DefinitionFinder(object):
                 file_name, call_function_with_alternate_cursor)
 
     def _find_definition_in_translation_unit(self, translation_unit, location):
-        cursor = translation_unit.getCursor(location)
+        cursor = clang.cindex.Cursor.from_location(translation_unit, location)
         if cursor.kind.is_unexposed:
             self._editor.display_message("Item at current location is not exposed. Cursor kind: " + str(cursor.kind))
         return get_definition_or_reference(cursor)

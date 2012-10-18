@@ -238,19 +238,17 @@ function! s:initClangCompletePython()
   if !exists('s:libclang_loaded')
     python import sys
     python import vim
-    if exists('g:clang_library_path')
-      " Load the library from the given library path.
-      exe 'python sys.argv = ["' . escape(g:clang_library_path, '\') . '"]'
-    else
-      " By setting argv[0] to '' force the python bindings to load the library
-      " from the normal system search path.
-      python sys.argv[0] = ''
-    endif
 
     exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
     exe 'pyfile ' . s:plugin_path . '/libclang.py'
+
     python vim_interface = VimInterface()
-    python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
+
+    if exists('g:clang_library_path')
+      python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'), vim.eval('g:clang_library_path'))
+    else
+      python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
+    endif
 
     augroup ClangComplete
       "Does not really detect all changes, e.g. yanks. Any better ideas?

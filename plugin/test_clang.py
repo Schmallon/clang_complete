@@ -1,9 +1,13 @@
 import sys
-sys.argv = ["/Users/mkl/projects/llvm/build/Release+Asserts/lib"]
+
+clang_path = "/Users/mkl/projects/llvm/build/Release+Asserts/lib"
+sys.argv = [clang_path]
+
 #sys.argv = ["/Users/mkl/projects/llvm/debug/Debug+Asserts/lib"]
 import libclang
 import unittest
 
+libclang.clang.cindex.Config.set_library_path(clang_path)
 
 class TestEditor(object):
   def __init__(self):
@@ -303,7 +307,8 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
   def assert_gets_range(self, file_name, location, expected_range):
     def do_it(translation_unit):
       clang_location = libclang.ExportedLocation(file_name, location[0], location[1]).clang_location(translation_unit)
-      cursor = translation_unit.getCursor(clang_location)
+
+      cursor = libclang.clang.cindex.Cursor.from_location(translation_unit, clang_location)
       identifier_range = libclang.ExportedRange.from_clang_range(cursor.identifier_range)
       expected_range_real_range = range_from_tuples(file_name, expected_range[0], expected_range[1])
       self.assertEquals(identifier_range, expected_range_real_range)
