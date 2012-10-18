@@ -20,6 +20,11 @@ let s:python_for_clang_loaded = 0
 let s:plugin_path = escape(expand('<sfile>:p:h'), '\')
 
 function! s:ClangCompleteInit()
+  let l:bufname = bufname("%")
+  if l:bufname == '' || !filereadable(l:bufname)
+    return
+  endif
+
   if !exists('g:clang_auto_select')
     let g:clang_auto_select = 0
   endif
