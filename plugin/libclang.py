@@ -1195,10 +1195,10 @@ class DeclarationFinder(object):
         current_location_cursor = self._get_current_cursor_in_translation_unit(
             translation_unit)
         parent_cursor = current_location_cursor.semantic_parent
-        if parent_cursor:
+        if not parent_cursor:
             return current_location_cursor.get_cursor_referenced()
         for child_cursor in parent_cursor.get_children():
-            if child_cursor.get_canonical() == current_location_cursor.get_canonical():
+            if child_cursor.canonical == current_location_cursor.canonical:
                 return child_cursor
         return current_location_cursor.get_cursor_referenced()
 
