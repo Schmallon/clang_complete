@@ -386,7 +386,8 @@ class ClangPlugin(object):
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
-        self._num_updates_needed = 1
+        self._file_has_changed = True
+        self._file_at_previous_diagnostics_update = None
 
     def terminate(self):
         self._translation_unit_accessor.terminate()
@@ -399,7 +400,7 @@ class ClangPlugin(object):
         self._editor.display_message(
             "File change was notified, clearing all caches.")
         self._start_rescan()
-        self._num_updates_needed += 1
+        self._file_has_changed = True
 
     def _highlight_interesting_ranges(self, translation_unit):
 
@@ -427,16 +428,19 @@ class ClangPlugin(object):
                     range, highlight_style)
 
     def tick(self):
-        if self._num_updates_needed:
+        if self._file_has_changed:
 
             def do_it(translation_unit):
                 self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
                 self._diagnostics_highlighter.highlight_in_translation_unit(
                     translation_unit)
                 #self._highlight_interesting_ranges(translation_unit)
-                self._num_updates_needed -= 1
-                if self._num_updates_needed:
+
+                if self._editor.current_file() == self._file_at_previous_diagnostics_update:
+                    self._file_has_changed = False
+                else:
                     self._start_rescan()
+                    self._file_at_previous_diagnostics_update = self._editor.current_file()
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
 
