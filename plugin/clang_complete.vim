@@ -207,9 +207,6 @@ function! s:parseConfig()
     if matchstr(l:opt, '\C-I\s*/') != ''
       let l:opt = substitute(l:opt, '\C-I\s*\(/\%(\w\|\\\s\)*\)',
             \ '-I' . '\1', 'g')
-    elseif s:isWindows() && matchstr(l:opt, '\C-I\s*[a-zA-Z]:/') != ''
-      let l:opt = substitute(l:opt, '\C-I\s*\([a-zA-Z:]/\%(\w\|\\\s\)*\)',
-            \ '-I' . '\1', 'g')
     else
       let l:opt = substitute(l:opt, '\C-I\s*\(\%(\w\|\.\|/\|\\\s\)*\)',
             \ '-I' . l:root . '/\1', 'g')
