@@ -386,15 +386,20 @@ class ClangPlugin(object):
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
+        self._num_updates_needed = 1
 
     def terminate(self):
         self._translation_unit_accessor.terminate()
 
+    def _start_rescan(self):
+        self._translation_unit_accessor.clear_caches()
+        self._load_files_in_background()
+
     def file_changed(self):
         self._editor.display_message(
             "File change was notified, clearing all caches.")
-        self._translation_unit_accessor.clear_caches()
-        self._load_files_in_background()
+        self._start_rescan()
+        self._num_updates_needed += 1
 
     def _highlight_interesting_ranges(self, translation_unit):
 
@@ -421,24 +426,19 @@ class ClangPlugin(object):
                 self._highlight_range_if_in_current_file(
                     range, highlight_style)
 
-    def try_update_diagnostics(self):
-        self._editor.display_message("Trying to update diagnostics")
+    def tick(self):
+        if self._num_updates_needed:
 
-        class Success(Exception):
-            pass
+            def do_it(translation_unit):
+                self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
+                self._diagnostics_highlighter.highlight_in_translation_unit(
+                    translation_unit)
+                #self._highlight_interesting_ranges(translation_unit)
+                self._num_updates_needed -= 1
+                if self._num_updates_needed:
+                    self._start_rescan()
 
-        def do_it(translation_unit):
-            self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
-            self._diagnostics_highlighter.highlight_in_translation_unit(
-                translation_unit)
-            #self._highlight_interesting_ranges(translation_unit)
-            raise Success()
-
-        try:
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
-        except Success:
-            return 1
-        return 0
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")

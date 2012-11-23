@@ -12,7 +12,6 @@ autocmd FileType c,cpp,objc,objcpp call <SID>ClangCompleteInit()
 let b:clang_parameters = ''
 let b:clang_user_options = ''
 let b:my_changedtick = 0
-let b:update_succeeded = 0
 let s:python_for_clang_loaded = 0
 
 " Store plugin path, as this is available only when sourcing the file,
@@ -119,7 +118,6 @@ function! s:ClangCompleteInit()
 
   let b:should_overload = 0
   let b:my_changedtick = b:changedtick
-  let b:update_succeeded = 0
   let b:clang_parameters = '-x c'
 
   if &filetype == 'objc'
@@ -248,11 +246,6 @@ function! s:initClangCompletePython()
     endif
 
     augroup ClangComplete
-      "Does not really detect all changes, e.g. yanks. Any better ideas?
-      autocmd FileChangedShellPost *.cpp,*.c,*.h python clang_plugin.file_changed()
-      autocmd BufWritePost *.cpp,*.c,*.h python clang_plugin.file_changed()
-      autocmd InsertLeave *.cpp,*.c,*.h python clang_plugin.file_changed()
-      "autocmd InsertCharPre * python clang_plugin.file_changed()
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
       autocmd VimLeave * python clang_plugin.terminate()
     augroup end
@@ -286,17 +279,13 @@ function! s:DoPeriodicQuickFix()
   if b:my_changedtick != b:changedtick
     python clang_plugin.file_changed()
     let b:my_changedtick = b:changedtick
-    let b:update_succeeded = 0
   endif
 
-  if !b:update_succeeded
-    python vim.command('let b:update_succeeded = ' + str(clang_plugin.try_update_diagnostics()))
-  endif
+  python clang_plugin.tick()
 
-  if !b:update_succeeded
-    "Results in another update
-    call s:NoopKeypress()
-  endif
+  "Results in another update
+  call s:NoopKeypress()
+
 endfunction
 
 function! g:CalledFromPythonClangDisplayQuickFix(quick_fix)
