@@ -4,6 +4,7 @@ clang_path = "/Users/mkl/projects/llvm/build/Release+Asserts/lib"
 sys.argv = [clang_path]
 
 #sys.argv = ["/Users/mkl/projects/llvm/debug/Debug+Asserts/lib"]
+import time
 import libclang
 import unittest
 
@@ -14,18 +15,26 @@ class TestEditor(object):
     def __init__(self):
         self._current_column = -1
         self._current_line = -1
-        self._file_name = 'invalid filename'
+        self._file_name = 'some_file.c'
         self._contents = 'invalid contents'
         self._selection = ((1, 1), (1, 1))
+        self._highlights = {}
 
     def display_diagnostics(self, quickfix_list):
         pass
 
-    def higlight_range(self, start, end):
-        pass
-
     def excluded_directories(self):
         return []
+
+    def clear_highlights(self, style):
+        self._highlights[style] = []
+
+    def highlight_range(self, range, style):
+        highlights = self._highlights[style]
+        highlights.append(range)
+
+    def highlights(self):
+        return self._highlights
 
     def sort_algorithm(self):
         return 'priority'
@@ -65,6 +74,9 @@ class TestEditor(object):
         self._contents = open(file_name, 'r').read()
         self._current_line = line
         self._current_column = column
+
+    def set_content(self, content):
+        self._contents = content
 
     def open_location(self, location):
         self.open_file(location.file.name, location.line, location.column)
@@ -166,6 +178,24 @@ class TestClangPlugin(unittest.TestCase):
             lambda reference: reference.referenced_range, references)
         self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(
             self.full_file_name(file_name), (3, 7), (3, 36))])
+
+    def wait_until_parsed(self):
+        time.sleep(0.2)
+
+    def test_diagnostics_are_shown(self):
+        self.editor.set_content("foo")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.assertTrue(self.editor.highlights()["Diagnostic"])
+
+        self.editor.set_content("void foo(){}")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.assertFalse(self.editor.highlights()["Diagnostic"])
 
 
 class TestTranslationUnitParser(unittest.TestCase):
