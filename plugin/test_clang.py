@@ -432,5 +432,43 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
             (18, 1),
             ((18, 11), (18, 25)))
 
+
+class TestTranslationUnitAccessor(unittest.TestCase):
+    """Would be nice to decompose this into MustBeRunMixin and
+    TestTranslationUnitAccessorMixin. Need more python-fu for that."""
+
+    def setUp(self):
+        self.must_be_run = {}
+
+        self.editor = TestEditor()
+        self.translation_unit_accessor = libclang.TranslationUnitAccessor(
+            self.editor)
+
+    def tearDown(self):
+        self.translation_unit_accessor.terminate()
+        for marker, was_run in self.must_be_run.items():
+            self.assertTrue(was_run)
+
+    def assert_was_run(self, f):
+        class Marker(object):
+            pass
+        marker = Marker()
+        self.must_be_run[marker] = False
+
+        def do_it(*args):
+            self.must_be_run[marker] = True
+            return f(*args)
+        return do_it
+
+    def test_can_parse_current_file(self):
+        self.editor.set_content("void foo() {}")
+        self.translation_unit_accessor.current_translation_unit_do(
+                self.assert_was_run(
+                    lambda tu: self.assertEquals(
+                        "TRANSLATION_UNIT",
+                        tu.cursor.kind.name)))
+
+
+
 if __name__ == '__main__':
     unittest.main()
