@@ -468,7 +468,13 @@ class TestTranslationUnitAccessor(unittest.TestCase):
                         "TRANSLATION_UNIT",
                         tu.cursor.kind.name)))
 
-
+    def test_can_parse_file(self):
+        self.translation_unit_accessor.translation_unit_for_file_named_do(
+                "test_sources/simple.cpp",
+                self.assert_was_run(
+                    lambda tu: self.assertEquals(
+                        "TRANSLATION_UNIT",
+                        tu.cursor.kind.name)))
 
 if __name__ == '__main__':
     unittest.main()
