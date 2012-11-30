@@ -779,30 +779,10 @@ class TranslationUnitParsingAction(object):
         return tu
 
 
-class SynchronizedTranslationUnitParser(object):
-    def __init__(self, editor):
-        self._editor = editor
-        self._index = clang.cindex.Index.create()
-        self._translation_units = dict()
-        self._up_to_date = set()
+class SynchronizedTranslationUnitAccess(object):
+    def __init__(self):
         self._synchronized_doers = {}
         self._doer_lock = SynchronizedDoer()
-
-    def translation_unit_do(self, file, function):
-        def do_it():
-            return self._call_if_not_null(function, self._parse(file))
-        return self._file_synchronized_do(file, do_it)
-
-    def translation_unit_if_parsed_do(self, file, function):
-        doer = self._synchronized_doer_for_file_named(file[0])
-
-        def do_it():
-            if file[0] in self._up_to_date:
-                return self._call_if_not_null(function, self._parse(file))
-        try:
-            return doer.do_if_not_locked(do_it)
-        except AlreadyLocked:
-            pass
 
     def _synchronized_doer_for_file_named(self, file_name):
         def do_it():
@@ -814,9 +794,38 @@ class SynchronizedTranslationUnitParser(object):
                 return doer
         return self._doer_lock.do(do_it)
 
-    def _file_synchronized_do(self, file, action):
+    def file_synchronized_do(self, file, action):
         doer = self._synchronized_doer_for_file_named(file[0])
         return doer.do(action)
+
+    def file_synchronized_if_not_locked_do(self, file, action):
+        doer = self._synchronized_doer_for_file_named(file[0])
+        try:
+            return doer.do_if_not_locked(action)
+        except AlreadyLocked:
+            pass
+
+
+class SynchronizedTranslationUnitParser(object):
+    def __init__(self, editor):
+        self._editor = editor
+        self._index = clang.cindex.Index.create()
+        self._translation_units = dict()
+        self._up_to_date = set()
+        self._synchronized = SynchronizedTranslationUnitAccess()
+
+    def translation_unit_do(self, file, function):
+        def do_it():
+            return self._call_if_not_null(function, self._parse(file))
+        return self._synchronized.file_synchronized_do(file, do_it)
+
+    def translation_unit_if_parsed_do(self, file, function):
+        def do_it():
+            if file[0] in self._up_to_date:
+                return self._call_if_not_null(function, self._parse(file))
+
+        return self._synchronized.file_synchronized_if_not_locked_do(file, do_it)
+
 
     def _call_if_not_null(self, function, arg):
         if arg:
@@ -825,6 +834,7 @@ class SynchronizedTranslationUnitParser(object):
     def _parse(self, file):
         self._editor.display_message("[" + threading.currentThread(
         ).name + " ] - Starting parse: " + file[0])
+
         action = TranslationUnitParsingAction(self._editor, self._index,
                                               self._translation_units, self._up_to_date, file)
         result = action.parse()
