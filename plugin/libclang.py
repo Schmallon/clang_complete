@@ -824,8 +824,8 @@ class SynchronizedTranslationUnitParser(object):
             if file[0] in self._up_to_date:
                 return self._call_if_not_null(function, self._parse(file))
 
-        return self._synchronized.file_synchronized_if_not_locked_do(file, do_it)
-
+        return self._synchronized.file_synchronized_if_not_locked_do(
+                file, do_it)
 
     def _call_if_not_null(self, function, arg):
         if arg:
@@ -836,7 +836,7 @@ class SynchronizedTranslationUnitParser(object):
         ).name + " ] - Starting parse: " + file[0])
 
         action = TranslationUnitParsingAction(self._editor, self._index,
-                                              self._translation_units, self._up_to_date, file)
+                self._translation_units, self._up_to_date, file)
         result = action.parse()
         self._editor.display_message("[" + threading.currentThread(
         ).name + " ] - Finished parse: " + file[0])
@@ -848,19 +848,23 @@ class SynchronizedTranslationUnitParser(object):
     def is_parsed(self, file_name):
         return file_name in self._up_to_date
 
+
 class IdleTranslationUnitParserThreadDistributor():
     def __init__(self, editor, translation_unit_parser):
         self._editor = editor
         self._remaining_files = Queue.PriorityQueue()
         self._parser = translation_unit_parser
-        self._threads = [IdleTranslationUnitParserThread(self._editor, translation_unit_parser, self._remaining_files, self.enqueue_file) for i in range(1, 8)]
+        self._threads = [IdleTranslationUnitParserThread(self._editor,
+            translation_unit_parser, self._remaining_files, self.enqueue_file)
+            for i in range(1, 8)]
         for thread in self._threads:
             thread.start()
 
     def terminate(self):
         for thread in self._threads:
             thread.terminate()
-        # Only start waking up threads after all threads know they must terminate on notification
+        # Only start waking up threads after all threads know they must
+        # terminate on notification
         for thread in self._threads:
             self._remaining_files.put((-1, None))
 
