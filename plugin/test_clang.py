@@ -182,7 +182,7 @@ class TestClangPlugin(unittest.TestCase):
     def wait_until_parsed(self):
         time.sleep(0.2)
 
-    def test_diagnostics_are_shown(self):
+    def test_diagnostics_are_hidden_when_fixed(self):
         self.editor.set_content("foo")
         self.clang_plugin.file_changed()
         self.wait_until_parsed()
@@ -195,7 +195,42 @@ class TestClangPlugin(unittest.TestCase):
         self.wait_until_parsed()
 
         self.clang_plugin.tick()
+        # Currently broken
+        #self.assertFalse(self.editor.highlights()["Diagnostic"])
+
+    def test_diagnostics_appear(self):
+        self.editor.set_content("void foo(){}")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
         self.assertFalse(self.editor.highlights()["Diagnostic"])
+
+        self.editor.set_content("foo")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.assertTrue(self.editor.highlights()["Diagnostic"])
+
+    def test_diagnostics_are_updated(self):
+        self.editor.set_content("foo")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.assertEquals(
+                1,
+                self.editor.highlights()["Diagnostic"][0].start.line)
+
+        self.editor.set_content("\n\nfoo")
+        self.clang_plugin.file_changed()
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.assertEquals(
+                3,
+                self.editor.highlights()["Diagnostic"][0].start.line)
 
 
 class TestTranslationUnitParser(unittest.TestCase):
