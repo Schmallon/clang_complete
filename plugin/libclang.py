@@ -853,9 +853,10 @@ class IdleTranslationUnitParserThreadDistributor():
     def __init__(self, editor, translation_unit_parser):
         self._editor = editor
         self._remaining_files = Queue.PriorityQueue()
+        self._file_contents = {}
         self._parser = translation_unit_parser
         self._threads = [IdleTranslationUnitParserThread(self._editor,
-            translation_unit_parser, self._remaining_files, self.enqueue_file)
+            translation_unit_parser, self._remaining_files, self._file_contents, self.enqueue_file)
             for i in range(1, 8)]
         for thread in self._threads:
             thread.start()
@@ -875,25 +876,29 @@ class IdleTranslationUnitParserThreadDistributor():
             priority = 0
         else:
             priority = 1
-        if (priority, file) not in self._remaining_files.queue:
-            self._remaining_files.put((priority, file))
+        self._file_contents[file[0]] = file[1]
+        if (priority, file[0]) not in self._remaining_files.queue:
+            self._remaining_files.put((priority, file[0]))
 
 
 class IdleTranslationUnitParserThread(threading.Thread):
-    def __init__(self, editor, translation_unit_parser, _remaining_files, enqueue_in_any_thread):
+    def __init__(self, editor, translation_unit_parser, _remaining_files, file_contents, enqueue_in_any_thread):
         threading.Thread.__init__(self)
         self._editor = editor
         self._parser = translation_unit_parser
         self._enqueue_in_any_thread = enqueue_in_any_thread
         self._remaining_files = _remaining_files
+        self._file_contents = file_contents
         self._termination_requested = False
 
     def run(self):
         try:
             while True:
-                ignored_priority, current_file = self._remaining_files.get()
+                ignored_priority, file_name = self._remaining_files.get()
                 if self._termination_requested:
                     return
+                contents = self._file_contents[file_name]
+                current_file = (file_name, contents)
                 self._parser.translation_unit_do(
                     current_file, self._enqueue_related_files)
                 self._remaining_files.task_done()

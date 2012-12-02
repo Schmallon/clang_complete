@@ -195,8 +195,7 @@ class TestClangPlugin(unittest.TestCase):
         self.wait_until_parsed()
 
         self.clang_plugin.tick()
-        # Currently broken
-        #self.assertFalse(self.editor.highlights()["Diagnostic"])
+        self.assertFalse(self.editor.highlights()["Diagnostic"])
 
     def test_diagnostics_appear(self):
         self.editor.set_content("void foo(){}")
