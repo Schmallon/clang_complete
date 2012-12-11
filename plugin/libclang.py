@@ -814,10 +814,10 @@ class SynchronizedTranslationUnitParser(object):
         self._up_to_date = set()
         self._synchronized = SynchronizedAccess()
 
-    def translation_unit_do(self, file, function):
+    def translation_unit_do(self, file_name, get_content, function):
         def do_it():
-            return self._call_if_not_null(function, self._parse(file))
-        return self._synchronized.synchronized_do(file[0], do_it)
+            return self._call_if_not_null(function, self._parse((file_name, get_content())))
+        return self._synchronized.synchronized_do(file_name, do_it)
 
     def translation_unit_if_parsed_do(self, file, function):
         def do_it():
@@ -897,10 +897,11 @@ class IdleTranslationUnitParserThread(threading.Thread):
                 ignored_priority, file_name = self._remaining_files.get()
                 if self._termination_requested:
                     return
-                contents = self._file_contents[file_name]
-                current_file = (file_name, contents)
-                self._parser.translation_unit_do(
-                    current_file, self._enqueue_related_files)
+
+                def get_contents():
+                    return self._file_contents[file_name]
+                self._parser.translation_unit_do(file_name, get_contents,
+                    self._enqueue_related_files)
                 self._remaining_files.task_done()
         except Exception, e:
             self._editor.display_message(
@@ -994,7 +995,7 @@ class TranslationUnitAccessor(object):
             file)
 
     def translation_unit_do(self, file, function):
-        return self._parser.translation_unit_do(file, function)
+        return self._parser.translation_unit_do(file[0], lambda: file[1], function)
 
 
 class DiagnosticsHighlighter(object):

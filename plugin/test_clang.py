@@ -231,13 +231,32 @@ class TestClangPlugin(unittest.TestCase):
                 3,
                 self.editor.highlights()["Diagnostic"][0].start.line)
 
+    def test_diagnostics_are_updated2(self):
+
+        """Some large number of changes that increases the chance that a
+        background thread finishes parsing."""
+        num_changes = 10000
+        for i in range(1, num_changes):
+            self.editor.set_content("\n" * i + "foo")
+            self.clang_plugin.file_changed()
+
+        self.wait_until_parsed()
+        print "foo"
+        self.wait_until_parsed()
+
+        self.clang_plugin.tick()
+        self.clang_plugin.tick()
+
+        self.assertEquals(
+                num_changes,
+                self.editor.highlights()["Diagnostic"][0].start.line)
+
 
 class TestTranslationUnitParser(unittest.TestCase):
     def test_can_parse(self):
         parser = libclang.SynchronizedTranslationUnitParser(TestEditor())
-        file = ('test.cpp', 'void foo();')
-        parser.translation_unit_do(
-            file, lambda translation_unit: translation_unit)
+        parser.translation_unit_do('test.cpp', lambda: 'void foo();', lambda
+                translation_unit: translation_unit)
 
 
 def range_from_tuples(file_name, start, end):
