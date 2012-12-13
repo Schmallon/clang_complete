@@ -910,6 +910,13 @@ class IdleTranslationUnitParserThread(threading.Thread):
     def terminate(self):
         self._termination_requested = True
 
+    def _enqueue_if_new(self, file_name):
+        """Do not enqueue already parsed files to prevent overriding in memory
+        files with file-system files."""
+        if not file_name in self._file_contents:
+            self._enqueue_in_any_thread(get_file_for_file_name(
+                file_name), high_priority=False)
+
     def _enqueue_related_files(self, translation_unit):
         #This doesn't really add any includes in the preamble.
         #self._enqueue_includes(translation_unit)
@@ -918,15 +925,13 @@ class IdleTranslationUnitParserThread(threading.Thread):
     def _enqueue_includes(self, translation_unit):
         for include in translation_unit.get_includes():
             file_name = include.source.name
-            self._enqueue_in_any_thread(get_file_for_file_name(
-                file_name), high_priority=False)
+            self._enqueue_if_new(file_name)
 
     def _enqueue_definition_files(self, translation_unit):
         finder = DefinitionFileFinder(self._editor.excluded_directories(
         ), translation_unit.spelling)
         for file_name in finder.definition_files():
-            self._enqueue_in_any_thread(get_file_for_file_name(
-                file_name), high_priority=False)
+            self._enqueue_if_new(file_name)
 
 
 class AlreadyLocked(Exception):
