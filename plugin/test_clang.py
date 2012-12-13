@@ -7,6 +7,8 @@ sys.argv = [clang_path]
 import time
 import libclang
 import unittest
+import mock
+import threading
 
 libclang.clang.cindex.Config.set_library_path(clang_path)
 
@@ -493,6 +495,55 @@ class TestTranslationUnitAccessor(unittest.TestCase):
                     lambda tu: self.assertEquals(
                         "TRANSLATION_UNIT",
                         tu.cursor.kind.name)))
+
+
+class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
+    def setUp(self):
+        self.editor = TestEditor()
+        self.parser = mock.MagicMock(spec=[])
+        self.distributor = libclang.IdleTranslationUnitParserThreadDistributor(
+                self.editor, self.parser)
+
+    def tearDown(self):
+        self.distributor.terminate()
+
+    def test_changing_file_while_parsing_resuts_in_extra_parse(self):
+
+        is_in_parser = threading.Condition()
+        continue_parsing = threading.Condition()
+
+        contents = ""
+
+        def translation_unit_do(file_name, get_contents, enqueue_related_file):
+            self.assertEquals(contents, get_contents())
+            with is_in_parser:
+                is_in_parser.notify()
+            with continue_parsing:
+                continue_parsing.wait(1)
+
+        self.parser.is_parsed = mock.MagicMock(return_value=False)
+        self.parser.translation_unit_do = mock.MagicMock(
+                wraps=translation_unit_do)
+
+        contents = "void foo();"
+        self.distributor.enqueue_file(("file.cpp", contents))
+
+        with is_in_parser:
+            is_in_parser.wait(1)
+
+        contents = "invalid"
+        self.distributor.enqueue_file(("file.cpp", contents))
+
+        with continue_parsing:
+            continue_parsing.notify()
+
+        # We should check whether the wait was successful
+        with is_in_parser:
+            is_in_parser.wait(1)
+
+        with continue_parsing:
+            continue_parsing.notify()
+
 
 if __name__ == '__main__':
     unittest.main()
