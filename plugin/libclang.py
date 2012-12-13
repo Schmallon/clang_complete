@@ -1480,4 +1480,3 @@ kinds = dict({
              502: '502',  # CXCursor_MacroInstantiation
              503: '503'  # CXCursor_InclusionDirective
              })
-# vim: set ts=2 sts=2 sw=2 expandtab :
