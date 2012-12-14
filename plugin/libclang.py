@@ -807,9 +807,9 @@ class SynchronizedAccess(object):
 
 
 class SynchronizedTranslationUnitParser(object):
-    def __init__(self, editor):
+    def __init__(self, index, editor):
         self._editor = editor
-        self._index = clang.cindex.Index.create()
+        self._index = index
         self._translation_units = dict()
         self._up_to_date = set()
         self._synchronized = SynchronizedAccess()
@@ -843,7 +843,7 @@ class SynchronizedTranslationUnitParser(object):
         return result
 
     def clear_caches(self):
-        self._up_to_date.clear()
+        self._up_to_date = set()
 
     def is_parsed(self, file_name):
         return file_name in self._up_to_date
@@ -971,7 +971,7 @@ class SynchronizedDoer(object):
 class TranslationUnitAccessor(object):
     def __init__(self, editor):
         self._editor = editor
-        self._parser = SynchronizedTranslationUnitParser(self._editor)
+        self._parser = SynchronizedTranslationUnitParser(clang.cindex.Index.create(), self._editor)
         self._idle_translation_unit_parser_thread_distributor = IdleTranslationUnitParserThreadDistributor(self._editor, self._parser)
 
     def terminate(self):

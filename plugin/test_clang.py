@@ -255,10 +255,36 @@ class TestClangPlugin(unittest.TestCase):
 
 
 class TestTranslationUnitParser(unittest.TestCase):
-    def test_can_parse(self):
-        parser = libclang.SynchronizedTranslationUnitParser(TestEditor())
-        parser.translation_unit_do('test.cpp', lambda: 'void foo();', lambda
-                translation_unit: translation_unit)
+    def test_files_changed_while_parsing_should_not_be_up_to_date(self):
+
+        index = mock.MagicMock(spec=[])
+
+        continue_parsing = threading.Event()
+        is_in_parser = threading.Event()
+
+        def wait_for_event(*args):
+            is_in_parser.set()
+            continue_parsing.wait(1)
+
+        index.parse = mock.MagicMock(wraps=wait_for_event)
+        parser = libclang.SynchronizedTranslationUnitParser(
+                index, TestEditor())
+
+        def parse():
+            parser.translation_unit_do(
+                    "foo.cpp",
+                    lambda: "void foo();",
+                    lambda tu: tu)
+
+        thread = threading.Thread(target=parse)
+
+        thread.start()
+        is_in_parser.wait()
+        parser.clear_caches()
+        continue_parsing.set()
+        thread.join()
+
+        self.assertFalse(parser.is_parsed("foo.cpp"))
 
 
 def range_from_tuples(file_name, start, end):
