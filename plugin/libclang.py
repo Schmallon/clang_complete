@@ -900,8 +900,8 @@ class IdleTranslationUnitParserThread(threading.Thread):
 
                 def get_contents():
                     return self._file_contents[file_name]
-                self._parser.translation_unit_do(file_name, get_contents,
-                    self._enqueue_related_files)
+                self._parser.translation_unit_do(file_name, get_contents, lambda tu: tu)
+                self._enqueue_definition_files(file_name)
                 self._remaining_files.task_done()
         except Exception, e:
             self._editor.display_message(
@@ -917,19 +917,9 @@ class IdleTranslationUnitParserThread(threading.Thread):
             self._enqueue_in_any_thread(get_file_for_file_name(
                 file_name), high_priority=False)
 
-    def _enqueue_related_files(self, translation_unit):
-        #This doesn't really add any includes in the preamble.
-        #self._enqueue_includes(translation_unit)
-        self._enqueue_definition_files(translation_unit)
-
-    def _enqueue_includes(self, translation_unit):
-        for include in translation_unit.get_includes():
-            file_name = include.source.name
-            self._enqueue_if_new(file_name)
-
-    def _enqueue_definition_files(self, translation_unit):
+    def _enqueue_definition_files(self, file_name):
         finder = DefinitionFileFinder(self._editor.excluded_directories(
-        ), translation_unit.spelling)
+        ), file_name)
         for file_name in finder.definition_files():
             self._enqueue_if_new(file_name)
 
