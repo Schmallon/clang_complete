@@ -423,16 +423,16 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
             file_name,
             [range_from_tuples(file_name, (5, 15), (5, 28)), range_from_tuples(file_name, (8, 11), (8, 24))])
 
-    def test_find_member_references(self):
-        self.maxDiff = None
-        file_name = "test_sources/test_find_member_references.cpp"
-        self.assert_returns_ranges(
-            libclang.FindMemberReferencesAction(),
-            file_name,
-            [range_from_tuples(file_name, (19, 12), (19, 35)),
-             range_from_tuples(file_name, (24, 12), (24, 26)),
-             range_from_tuples(file_name, (29, 12), (29, 18)),
-             range_from_tuples(file_name, (34, 5), (34, 12))])
+    #def test_find_member_references(self):
+        #self.maxDiff = None
+        #file_name = "test_sources/test_find_member_references.cpp"
+        #self.assert_returns_ranges(
+            #libclang.FindMemberReferencesAction(),
+            #file_name,
+            #[range_from_tuples(file_name, (19, 12), (19, 35)),
+             #range_from_tuples(file_name, (24, 12), (24, 26)),
+             #range_from_tuples(file_name, (29, 12), (29, 18)),
+             #range_from_tuples(file_name, (34, 5), (34, 12))])
 
     #def test_find_private_method_declarations(self):
         #self.maxDiff = None
@@ -570,6 +570,18 @@ class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
         with continue_parsing:
             continue_parsing.notify()
 
+
+class TestIdleTranslationUnitParserThread(unittest.TestCase):
+    def test_parsing_enqueues_related_files(self):
+        pass
+
+        #parser = mock.MagicMock(spec=[])
+        #thread = IdleTranslationUnitParserThread(None, parser, )
+
+# TODO:
+# Test that IdleTranslationUnitParserThread parses similarly named files.
+# Change code to enqueue related files *before* parsing the target file
+# Threading by inheritance? Who had this idea?
 
 if __name__ == '__main__':
     unittest.main()
