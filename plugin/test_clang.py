@@ -284,7 +284,7 @@ class TestTranslationUnitParser(unittest.TestCase):
         continue_parsing.set()
         thread.join()
 
-        self.assertFalse(parser.is_parsed("foo.cpp"))
+        self.assertFalse(parser.is_up_to_date("foo.cpp"))
 
 
 def range_from_tuples(file_name, start, end):
@@ -547,7 +547,7 @@ class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
             with continue_parsing:
                 continue_parsing.wait(1)
 
-        self.parser.is_parsed = mock.MagicMock(return_value=False)
+        self.parser.is_up_to_date = mock.MagicMock(return_value=False)
         self.parser.translation_unit_do = mock.MagicMock(
                 wraps=translation_unit_do)
 

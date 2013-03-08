@@ -821,7 +821,7 @@ class SynchronizedTranslationUnitParser(object):
 
     def translation_unit_if_parsed_do(self, file, function):
         def do_it():
-            if file[0] in self._up_to_date:
+            if self.is_up_to_date(file[0]):
                 return self._call_if_not_null(function, self._parse(file))
 
         return self._synchronized.synchronized_if_not_locked_do(
@@ -845,7 +845,7 @@ class SynchronizedTranslationUnitParser(object):
     def clear_caches(self):
         self._up_to_date = set()
 
-    def is_parsed(self, file_name):
+    def is_up_to_date(self, file_name):
         return file_name in self._up_to_date
 
 
@@ -870,8 +870,9 @@ class IdleTranslationUnitParserThreadDistributor():
             self._remaining_files.put((-1, None))
 
     def enqueue_file(self, file, high_priority=True):
-        if self._parser.is_parsed(file[0]):
+        if self._parser.is_up_to_date(file[0]):
             return
+
         if high_priority:
             priority = 0
         else:
