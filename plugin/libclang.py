@@ -906,6 +906,7 @@ class IdleTranslationUnitParserThread(threading.Thread):
         except Exception, e:
             self._editor.display_message(
                 "Exception thrown in idle thread: " + str(e))
+            raise e
 
     def terminate(self):
         self._termination_requested = True
