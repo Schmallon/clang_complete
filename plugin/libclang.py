@@ -436,11 +436,8 @@ class ClangPlugin(object):
                     translation_unit)
                 #self._highlight_interesting_ranges(translation_unit)
 
-                if self._editor.current_file() == self._file_at_previous_diagnostics_update:
-                    self._file_has_changed = False
-                else:
-                    self._start_rescan()
-                    self._file_at_previous_diagnostics_update = self._editor.current_file()
+                self._file_has_changed = self._editor.current_file() != self._file_at_previous_diagnostics_update
+                self._file_at_previous_diagnostics_update = self._editor.current_file()
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
 
