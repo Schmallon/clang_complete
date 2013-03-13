@@ -215,7 +215,7 @@ class VimInterface(object):
             self._get_variable("b:clang_user_options"))
         parameters_local = self._split_options(
             self._get_variable("b:clang_parameters"))
-        return user_options_global + user_options_local
+        return user_options_global + user_options_local + parameters_local
 
     def excluded_directories(self):
         return self._split_options(self._get_variable("g:clang_excluded_directories"))
