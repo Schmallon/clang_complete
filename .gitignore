@@ -4,3 +4,4 @@
 *.vmb
 *.cache
 tags
+plugin/sandbox
