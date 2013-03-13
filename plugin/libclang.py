@@ -387,7 +387,7 @@ class ClangPlugin(object):
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
         self._file_has_changed = True
-        self._file_at_previous_diagnostics_update = None
+        self._file_at_last_change = None
 
     def terminate(self):
         self._translation_unit_accessor.terminate()
@@ -401,6 +401,7 @@ class ClangPlugin(object):
             "File change was notified, clearing all caches.")
         self._start_rescan()
         self._file_has_changed = True
+        self._file_at_last_change = self._editor.current_file()
 
     def _highlight_interesting_ranges(self, translation_unit):
 
@@ -436,8 +437,7 @@ class ClangPlugin(object):
                     translation_unit)
                 #self._highlight_interesting_ranges(translation_unit)
 
-                self._file_has_changed = self._editor.current_file() != self._file_at_previous_diagnostics_update
-                self._file_at_previous_diagnostics_update = self._editor.current_file()
+                self._file_has_changed = self._editor.current_file() != self._file_at_last_change
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
 
