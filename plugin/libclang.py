@@ -582,7 +582,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
 class FindVirtualMethodCallsAction(object):
     def find_ranges(self, translation_unit):
         def do_it(call_expr):
-            cursor_referenced = call_expr.get_cursor_referenced()
+            cursor_referenced = call_expr.referenced
             if cursor_referenced and cursor_referenced.is_virtual_method():
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
 
@@ -654,7 +654,7 @@ class FindOmittedDefaultArgumentsAction(object):
         cursors without extent. This is not ideal and is intended to serve only as
         an intermediate solution.
         """
-        for argument in cursor.get_args():
+        for argument in cursor.get_arguments():
             if argument.extent.start.offset == 0 and argument.extent.end.offset == 0:
                 return True
         return False
@@ -710,9 +710,9 @@ class FindParametersPassedByNonConstReferenceAction(object):
         return result
 
     def _handle_call_expression(self, result, cursor):
-        cursor_referenced = cursor.get_cursor_referenced()
+        cursor_referenced = cursor.referenced
         if cursor_referenced:
-            args = list(cursor.get_args())
+            args = list(cursor.get_arguments())
             for i in self._get_nonconst_reference_param_indexes(cursor_referenced):
                 try:
                     result.add(ExportedRange.from_clang_range(args[i].extent))
@@ -1206,11 +1206,11 @@ class DeclarationFinder(object):
             translation_unit)
         parent_cursor = current_location_cursor.semantic_parent
         if not parent_cursor:
-            return current_location_cursor.get_cursor_referenced()
+            return current_location_cursor.referenced
         for child_cursor in parent_cursor.get_children():
             if child_cursor.canonical == current_location_cursor.canonical:
                 return child_cursor
-        return current_location_cursor.get_cursor_referenced()
+        return current_location_cursor.referenced
 
     def _declaration_cursors_do(self, function):
         def call_function_with_declaration_in(translation_unit):
@@ -1236,7 +1236,7 @@ def get_definition_or_reference(cursor):
     if definition:
         return definition
     else:
-        return cursor.get_cursor_referenced()
+        return cursor.referenced
 
 
 class DefinitionFinder(object):
