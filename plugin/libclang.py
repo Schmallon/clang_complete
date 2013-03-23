@@ -1008,14 +1008,8 @@ class DiagnosticsHighlighter(object):
         self._editor.highlight_range(
             single_location_range, self._highlight_style)
 
-        # Use this wired kind of iterator as the python clang libraries
-                    # have a bug in the range iterator that stops us to use:
-                    #
-                    # | for range in diagnostic.ranges
-                    #
-        for i in range(len(diagnostic.ranges)):
-            range_i = diagnostic.ranges[i]
-            self._editor.highlight_range(range_i, self._highlight_style)
+        for range in diagnostic.ranges:
+            self._editor.highlight_range(range, self._highlight_style)
 
     def highlight_in_translation_unit(self, translation_unit):
         self._editor.clear_highlights(self._highlight_style)
