@@ -369,10 +369,10 @@ class EmacsInterface(object):
 
 
 class ClangPlugin(object):
-    def __init__(self, editor, clang_complete_flags, library_path = None):
+    def __init__(self, editor, clang_complete_flags, library_path):
 
         if not clang.cindex.Config.loaded:
-            if library_path:
+            if library_path != "":
                 clang.cindex.Config.set_library_path(library_path)
 
             clang.cindex.Config.set_compatibility_check(False)

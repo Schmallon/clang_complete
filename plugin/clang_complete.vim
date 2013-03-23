@@ -72,6 +72,10 @@ function! s:ClangCompleteInit()
     let g:clang_trailing_placeholder = 0
   endif
 
+  if !exists('g:clang_library_path')
+    let g:clang_library_path = ''
+  endif
+
   if !exists('g:clang_complete_macros')
     let g:clang_complete_macros = 0
   endif
@@ -243,11 +247,7 @@ function! s:initClangCompletePython()
 
     python vim_interface = VimInterface()
 
-    if exists('g:clang_library_path')
-      python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'), vim.eval('g:clang_library_path'))
-    else
-      python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'))
-    endif
+    python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'), vim.eval('g:clang_library_path'))
 
     augroup ClangComplete
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()

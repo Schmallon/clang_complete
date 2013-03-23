@@ -93,7 +93,7 @@ class TestEditor(object):
 class TestClangPlugin(unittest.TestCase):
     def setUp(self):
         self.editor = TestEditor()
-        self.clang_plugin = libclang.ClangPlugin(self.editor, 0)
+        self.clang_plugin = libclang.ClangPlugin(self.editor, 0, "")
 
     def tearDown(self):
         self.clang_plugin.terminate()
