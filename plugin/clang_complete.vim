@@ -245,7 +245,7 @@ function! s:initClangCompletePython()
     python import vim
 
     exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
-    exe 'pyfile ' . s:plugin_path . '/libclang.py'
+    exe 'pyfile ' . fnameescape(s:plugin_path) . '/libclang.py'
 
     python vim_interface = VimInterface()
 
