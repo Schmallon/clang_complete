@@ -1064,16 +1064,17 @@ class Completer(object):
 
     def format_results(self, result):
         completion = dict()
-
         return_value = None
         abbr = ""
-        chunks = filter(lambda x: not x.isKindInformative(), result.string)
-
         args_pos = []
         cur_pos = 0
         word = ""
 
-        for chunk in chunks:
+        for chunk in result.string:
+
+            if chunk.isKindInformative():
+                continue
+
             if chunk.isKindResultType():
                 return_value = chunk
                 continue
