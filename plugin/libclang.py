@@ -1,5 +1,4 @@
 import clang.cindex
-import re
 import threading
 import os
 import sys
@@ -1130,9 +1129,7 @@ class Completer(object):
         results = completionResult.results
 
         if base != "":
-            regexp = re.compile("^" + base)
-            results = filter(lambda x: regexp.match(self.get_abbr(x.string)),
-                results)
+            results = filter(lambda x: self.get_abbr(x.string).startswith(base), results)
 
         if sorting == 'priority':
             get_priority = lambda x: x.string.priority
