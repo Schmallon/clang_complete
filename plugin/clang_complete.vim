@@ -66,6 +66,8 @@ function! s:ClangCompleteInit()
 
   if !exists('g:clang_conceal_snippets')
     let g:clang_conceal_snippets = has('conceal')
+  elseif g:clang_conceal_snippets == 1 && !has('conceal')
+    echoe 'clang_complete: conceal feature not available but requested'
   endif
 
   if !exists('g:clang_trailing_placeholder')
