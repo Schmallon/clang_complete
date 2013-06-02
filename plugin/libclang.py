@@ -1144,11 +1144,10 @@ class Completer(object):
         return map(self.format_results, results)
 
     def get_abbr(self, strings):
-        tmplst = filter(lambda x: x.isKindTypedText(), strings)
-        if len(tmplst) == 0:
+        for chunks in strings:
+            if chunks.isKindTypedText():
+                return chunks.spelling
             return ""
-        else:
-            return tmplst[0].spelling
 
 
 class CompleteThread(threading.Thread):
