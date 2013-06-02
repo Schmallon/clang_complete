@@ -24,6 +24,12 @@ function! s:ClangCompleteInit()
     return
   endif
 
+  if exists('g:clang_use_library') && g:clang_use_library == 0
+    echoe "clang_complete: You can't use clang binary anymore."
+    echoe 'For more information see g:clang_use_library help.'
+    return
+  endif
+
   if !exists('g:clang_auto_select')
     let g:clang_auto_select = 0
   endif
@@ -54,10 +60,6 @@ function! s:ClangCompleteInit()
 
   if !exists('g:clang_snippets_engine')
     let g:clang_snippets_engine = 'clang_complete'
-  endif
-
-  if !exists('g:clang_exec')
-    let g:clang_exec = 'clang'
   endif
 
   if !exists('g:clang_user_options')
@@ -100,6 +102,43 @@ function! s:ClangCompleteInit()
 
   call LoadUserOptions()
 
+  let b:my_changedtick = b:changedtick
+  let b:clang_parameters = '-x c'
+
+  if &filetype == 'objc'
+    let b:clang_parameters = '-x objective-c'
+  endif
+
+  if &filetype == 'cpp' || &filetype == 'objcpp'
+    let b:clang_parameters .= '++'
+  endif
+
+  if expand('%:e') =~ 'h.*'
+    let b:clang_parameters .= '-header'
+  endif
+
+  let g:clang_complete_lib_flags = 0
+
+  if g:clang_complete_macros == 1
+    let g:clang_complete_lib_flags = 1
+  endif
+
+  if g:clang_complete_patterns == 1
+    let g:clang_complete_lib_flags += 2
+  endif
+
+  " Load the python bindings of libclang
+  if has('python')
+
+    if s:python_for_clang_loaded == 0
+      call s:initClangCompletePython()
+      let s:python_for_clang_loaded = 1
+    endif
+  else
+    echoe 'clang_complete: No python support available.'
+    return
+  endif
+
   inoremap <expr> <buffer> <C-X><C-U> <SID>LaunchCompletion()
   inoremap <expr> <buffer> . <SID>CompleteDot()
   inoremap <expr> <buffer> > <SID>CompleteArrow()
@@ -122,54 +161,14 @@ function! s:ClangCompleteInit()
     "autocmd!
   "augroup end
 
-  let b:should_overload = 0
-  let b:my_changedtick = b:changedtick
-  let b:clang_parameters = '-x c'
-
-  if &filetype == 'objc'
-    let b:clang_parameters = '-x objective-c'
-  endif
-
-  if &filetype == 'cpp' || &filetype == 'objcpp'
-    let b:clang_parameters .= '++'
-  endif
-
-  if expand('%:e') =~ 'h.*'
-    let b:clang_parameters .= '-header'
-  endif
-
-  let g:clang_complete_lib_flags = 0
-
-  if g:clang_complete_macros == 1
-    let b:clang_parameters .= ' -code-completion-macros'
-    let g:clang_complete_lib_flags = 1
-  endif
-
-  if g:clang_complete_patterns == 1
-    let b:clang_parameters .= ' -code-completion-patterns'
-    let g:clang_complete_lib_flags += 2
-  endif
-
-  setlocal completefunc=ClangComplete
-  setlocal omnifunc=ClangComplete
-
   if g:clang_periodic_quickfix == 1
     augroup ClangComplete
       autocmd CursorHold,CursorHoldI <buffer> call <SID>DoPeriodicQuickFix()
     augroup end
   endif
 
-  " Load the python bindings of libclang
-  if has('python')
-
-    if s:python_for_clang_loaded == 0
-      call s:initClangCompletePython()
-      let s:python_for_clang_loaded = 1
-    endif
-  else
-    echoe 'clang_complete: No python support available.'
-    return
-  endif
+  setlocal completefunc=ClangComplete
+  setlocal omnifunc=ClangComplete
 
   "Ensure we have a location list
   call setloclist(0, [])
@@ -325,25 +324,15 @@ function! ClangComplete(findstart, base)
   if a:findstart
     let l:line = getline('.')
     let l:start = col('.') - 1
-    let b:clang_complete_type = 1
     let l:wsstart = l:start
     if l:line[l:wsstart - 1] =~ '\s'
       while l:wsstart > 0 && l:line[l:wsstart - 1] =~ '\s'
         let l:wsstart -= 1
       endwhile
     endif
-    if l:line[l:wsstart - 1] =~ '[(,]'
-      let b:should_overload = 1
-      let b:col = l:wsstart + 1
-      return l:wsstart
-    endif
-    let b:should_overload = 0
     while l:start > 0 && l:line[l:start - 1] =~ '\i'
       let l:start -= 1
     endwhile
-    if l:line[l:start - 2:] =~ '->' || l:line[l:start - 1] == '.'
-      let b:clang_complete_type = 0
-    endif
     let b:col = l:start + 1
     return l:start
   else
