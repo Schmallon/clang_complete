@@ -581,52 +581,40 @@ class FindReferencesToOutsideOfSelectionAction(object):
 
 class FindVirtualMethodCallsAction(object):
     def find_ranges(self, translation_unit):
-        result = set()
         for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
             cursor_referenced = call_expr.referenced
             if cursor_referenced and cursor_referenced.is_virtual_method():
-                result.add(ExportedRange.from_clang_range(call_expr.extent))
-        return result
+                yield ExportedRange.from_clang_range(call_expr.extent)
 
 
 class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        result = set()
         for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_virtual_method():
-                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-        return result
+                yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
 
 class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        result = set()
         for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_static_method():
-                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-        return result
+                yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
 
 class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        result = set()
         for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_static_method():
-                result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-        return result
+                yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
 
 class FindMemberReferencesAction(object):
     def find_ranges(self, translation_unit):
-
-        result = set()
         for cursor in cursors_in_file_of_translation_unit(translation_unit):
             if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
                 if cursor.is_implicit_access():
-                    result.add(ExportedRange.from_clang_range(
-                        get_identifier_range(cursor)))
-
-        return result
+                    yield ExportedRange.from_clang_range(
+                        get_identifier_range(cursor))
 
 
 class FindOmittedDefaultArgumentsAction(object):
@@ -643,11 +631,9 @@ class FindOmittedDefaultArgumentsAction(object):
         return False
 
     def find_ranges(self, translation_unit):
-        result = set()
         for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
             if self._omits_default_argument(call_expr):
-                result.add(ExportedRange.from_clang_range(call_expr.extent))
-        return result
+                yield ExportedRange.from_clang_range(call_expr.extent)
 
 
 def call_expressions_in_file_of_translation_unit(translation_unit):
@@ -693,21 +679,16 @@ class FindParametersPassedByNonConstReferenceAction(object):
                         result.append(index)
         return result
 
-    def _handle_call_expression(self, result, cursor):
-        cursor_referenced = cursor.referenced
-        if cursor_referenced:
-            args = list(cursor.get_arguments())
-            for i in self._get_nonconst_reference_param_indexes(cursor_referenced):
-                try:
-                    result.add(ExportedRange.from_clang_range(args[i].extent))
-                except IndexError:
-                    self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
-
     def find_ranges(self, translation_unit):
-        result = set()
         for cursor in call_expressions_in_file_of_translation_unit(translation_unit):
-            self._handle_call_expression(result, cursor)
-        return result
+            cursor_referenced = cursor.referenced
+            if cursor_referenced:
+                args = list(cursor.get_arguments())
+                for i in self._get_nonconst_reference_param_indexes(cursor_referenced):
+                    try:
+                        yield ExportedRange.from_clang_range(args[i].extent)
+                    except IndexError:
+                        self._editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
 
 
 class NoCurrentTranslationUnit(Exception):
