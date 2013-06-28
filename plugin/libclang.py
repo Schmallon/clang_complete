@@ -1,4 +1,5 @@
 import clang.cindex
+import itertools
 import threading
 import os
 import sys
@@ -629,20 +630,15 @@ class FindStaticMethodDeclarationsAction(object):
 
 class FindMemberReferencesAction(object):
     def find_ranges(self, translation_unit):
-        class Run(object):
-            def __init__(self, translation_unit):
-                self.result = set()
 
-            def run(self, cursor, recurse):
-                if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
-                    if cursor.is_implicit_access():
-                        self.result.add(ExportedRange.from_clang_range(
-                            get_identifier_range(cursor)))
-                recurse()
+        result = set()
+        for cursor in cursors_in_file_of_translation_unit(translation_unit):
+            if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
+                if cursor.is_implicit_access():
+                    result.add(ExportedRange.from_clang_range(
+                        get_identifier_range(cursor)))
 
-        run = Run(translation_unit)
-        cursors_in_file_of_translation_unit_do(run.run, translation_unit)
-        return run.result
+        return result
 
 
 class FindOmittedDefaultArgumentsAction(object):
@@ -691,6 +687,23 @@ def cursors_in_file_of_translation_unit_do(do_it, translation_unit):
     for top_level_cursor in translation_unit.cursor.get_children():
         if top_level_cursor.location.file and top_level_cursor.location.file.name == translation_unit.spelling:
             recurse(top_level_cursor)
+
+
+def dfs(tree, get_children):
+    yield tree
+    for child in get_children(tree):
+        for node in dfs(child, get_children):
+            yield node
+
+
+def cursors_in_file_of_translation_unit(translation_unit):
+    top_level_cursors_in_this_file = filter(
+        lambda cursor: cursor.location.file and cursor.location.file.name == translation_unit.spelling,
+        translation_unit.cursor.get_children())
+
+    for cursor in top_level_cursors_in_this_file:
+        for result in dfs(cursor, lambda node: node.get_children()):
+            yield result
 
 
 class FindParametersPassedByNonConstReferenceAction(object):
