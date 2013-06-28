@@ -581,50 +581,38 @@ class FindReferencesToOutsideOfSelectionAction(object):
 
 class FindVirtualMethodCallsAction(object):
     def find_ranges(self, translation_unit):
-        def do_it(call_expr):
+        result = set()
+        for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
             cursor_referenced = call_expr.referenced
             if cursor_referenced and cursor_referenced.is_virtual_method():
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
-
-        result = set()
-        call_expressions_in_file_of_translation_unit_do(
-            do_it, translation_unit)
         return result
 
 
 class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        def do_it(cursor):
+        result = set()
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_virtual_method():
                 result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-
-        result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it,
-                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
 class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        def do_it(cursor):
+        result = set()
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_static_method():
                 result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-
-        result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it,
-                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
 class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        def do_it(cursor):
+        result = set()
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
             if cursor.is_static_method():
                 result.add(ExportedRange.from_clang_range(get_identifier_range(cursor)))
-
-        result = set()
-        cursors_of_kind_in_file_of_translation_unit_do(do_it,
-                                                       translation_unit, clang.cindex.CursorKind.CXX_METHOD)
         return result
 
 
@@ -655,38 +643,22 @@ class FindOmittedDefaultArgumentsAction(object):
         return False
 
     def find_ranges(self, translation_unit):
-        def do_it(call_expr):
+        result = set()
+        for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
             if self._omits_default_argument(call_expr):
                 result.add(ExportedRange.from_clang_range(call_expr.extent))
-
-        result = set()
-        call_expressions_in_file_of_translation_unit_do(
-            do_it, translation_unit)
         return result
 
 
-def call_expressions_in_file_of_translation_unit_do(do_it, translation_unit):
-    return cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, clang.cindex.CursorKind.CALL_EXPR)
+def call_expressions_in_file_of_translation_unit(translation_unit):
+    return cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CALL_EXPR)
 
 
-def cursors_of_kind_in_file_of_translation_unit_do(do_it, translation_unit, kind):
-    def f(cursor, recurse):
-        recurse()
-        if cursor.kind == kind:
-            do_it(cursor)
-    return cursors_in_file_of_translation_unit_do(f, translation_unit)
-
-
-def cursors_in_file_of_translation_unit_do(do_it, translation_unit):
-    def recurse(cursor):
-        def recurse_further():
-            for child in cursor.get_children():
-                recurse(child)
-        do_it(cursor, recurse_further)
-
-    for top_level_cursor in translation_unit.cursor.get_children():
-        if top_level_cursor.location.file and top_level_cursor.location.file.name == translation_unit.spelling:
-            recurse(top_level_cursor)
+def cursors_of_kind_in_file_of_translation_unit(translation_unit, kind):
+    return [
+        cursor
+        for cursor in cursors_in_file_of_translation_unit(translation_unit)
+        if cursor.kind == kind]
 
 
 def dfs(tree, get_children):
@@ -733,9 +705,8 @@ class FindParametersPassedByNonConstReferenceAction(object):
 
     def find_ranges(self, translation_unit):
         result = set()
-        call_expressions_in_file_of_translation_unit_do(
-            lambda cursor: self._handle_call_expression(result, cursor),
-            translation_unit)
+        for cursor in call_expressions_in_file_of_translation_unit(translation_unit):
+            self._handle_call_expression(result, cursor)
         return result
 
 
