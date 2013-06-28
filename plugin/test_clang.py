@@ -6,6 +6,7 @@ sys.argv = [clang_path]
 #sys.argv = ["/Users/mkl/projects/llvm/debug/Debug+Asserts/lib"]
 import time
 import libclang
+import actions
 import unittest
 import mock
 import threading
@@ -309,7 +310,7 @@ class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
 
 class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAccessor):
     def create_action(self):
-        return libclang.FindReferencesToOutsideOfSelectionAction()
+        return actions.FindReferencesToOutsideOfSelectionAction()
 
     def action_do(self, file_name, function):
         def do_it(translation_unit):
@@ -361,7 +362,7 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
 class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):
     def assert_returns_ranges(self, file_name, expected_ranges):
         def do_it(translation_unit):
-            action = libclang.FindParametersPassedByNonConstReferenceAction(
+            action = actions.FindParametersPassedByNonConstReferenceAction(
                 self.editor)
             ranges = action.find_ranges(translation_unit)
             self.assertEquals(list(set(ranges)), expected_ranges)
@@ -396,14 +397,14 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
     def test_find_virtual_method_calls(self):
         file_name = "test_sources/test_find_virtual_method_calls.cpp"
         self.assert_returns_ranges(
-            libclang.FindVirtualMethodCallsAction(),
+            actions.FindVirtualMethodCallsAction(),
             file_name,
             [range_from_tuples(file_name, (13, 3), (13, 23))])
 
     def test_find_omitted_default_arguments(self):
         file_name = "test_sources/test_find_omitted_default_arguments.cpp"
         self.assert_returns_ranges(
-            libclang.FindOmittedDefaultArgumentsAction(),
+            actions.FindOmittedDefaultArgumentsAction(),
             file_name,
             [range_from_tuples(file_name, (5, 3), (5, 37))])
 
@@ -411,7 +412,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.maxDiff = None
         file_name = "test_sources/test_find_virtual_method_declarations.cpp"
         self.assert_returns_ranges(
-            libclang.FindVirtualMethodDeclarationsAction(),
+            actions.FindVirtualMethodDeclarationsAction(),
             file_name,
             [range_from_tuples(file_name, (5, 16), (5, 30)), range_from_tuples(file_name, (8, 11), (8, 25))])
 
@@ -419,7 +420,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.maxDiff = None
         file_name = "test_sources/test_find_static_method_declarations.cpp"
         self.assert_returns_ranges(
-            libclang.FindStaticMethodDeclarationsAction(),
+            actions.FindStaticMethodDeclarationsAction(),
             file_name,
             [range_from_tuples(file_name, (5, 15), (5, 28)), range_from_tuples(file_name, (8, 11), (8, 24))])
 
@@ -427,7 +428,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         #self.maxDiff = None
         #file_name = "test_sources/test_find_member_references.cpp"
         #self.assert_returns_ranges(
-            #libclang.FindMemberReferencesAction(),
+            #actions.FindMemberReferencesAction(),
             #file_name,
             #[range_from_tuples(file_name, (19, 12), (19, 35)),
              #range_from_tuples(file_name, (24, 12), (24, 26)),
@@ -438,7 +439,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         #self.maxDiff = None
         #file_name = "test_sources/test_find_private_public_method_declarations.cpp"
         #self.assert_returns_ranges(
-            #libclang.FindPrivateMethodDeclarationsAction(),
+            #actions.FindPrivateMethodDeclarationsAction(),
             #file_name,
             #[range_from_tuples(file_name, (4, 8), (4, 22)),
            #range_from_tuples(file_name, (13, 6), (13, 25))])
@@ -453,7 +454,7 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
             cursor = libclang.clang.cindex.Cursor.from_location(
                 translation_unit, clang_location)
-            identifier_range = libclang.ExportedRange.from_clang_range(libclang.get_identifier_range(cursor))
+            identifier_range = libclang.ExportedRange.from_clang_range(actions.get_identifier_range(cursor))
             expected_range_real_range = range_from_tuples(
                 file_name, expected_range[0], expected_range[1])
             self.assertEquals(identifier_range, expected_range_real_range)
