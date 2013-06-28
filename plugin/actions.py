@@ -1,5 +1,5 @@
 from common import ExportedRange, ExportedLocation, get_definition_or_reference
-import clang.cindex
+from clang.cindex import CursorKind, TypeKind, TokenKind
 
 
 class FindVirtualMethodCallsAction(object):
@@ -12,21 +12,21 @@ class FindVirtualMethodCallsAction(object):
 
 class FindVirtualMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
             if cursor.is_virtual_method():
                 yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
 
 class FindPrivateMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
             if cursor.is_static_method():
                 yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
 
 class FindStaticMethodDeclarationsAction(object):
     def find_ranges(self, translation_unit):
-        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CXX_METHOD):
+        for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
             if cursor.is_static_method():
                 yield ExportedRange.from_clang_range(get_identifier_range(cursor))
 
@@ -34,7 +34,7 @@ class FindStaticMethodDeclarationsAction(object):
 class FindMemberReferencesAction(object):
     def find_ranges(self, translation_unit):
         for cursor in cursors_in_file_of_translation_unit(translation_unit):
-            if cursor.kind == clang.cindex.CursorKind.MEMBER_REF_EXPR:
+            if cursor.kind == CursorKind.MEMBER_REF_EXPR:
                 if cursor.is_implicit_access():
                     yield ExportedRange.from_clang_range(
                         get_identifier_range(cursor))
@@ -60,7 +60,7 @@ class FindOmittedDefaultArgumentsAction(object):
 
 
 def call_expressions_in_file_of_translation_unit(translation_unit):
-    return cursors_of_kind_in_file_of_translation_unit(translation_unit, clang.cindex.CursorKind.CALL_EXPR)
+    return cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CALL_EXPR)
 
 
 def cursors_of_kind_in_file_of_translation_unit(translation_unit, kind):
@@ -94,10 +94,10 @@ class FindParametersPassedByNonConstReferenceAction(object):
 
     def _get_nonconst_reference_param_indexes(self, function_decl_cursor):
         result = []
-        param_decls = filter(lambda cursor: cursor.kind == clang.cindex.CursorKind.PARM_DECL, function_decl_cursor.get_children())
+        param_decls = filter(lambda cursor: cursor.kind == CursorKind.PARM_DECL, function_decl_cursor.get_children())
         for index, cursor in enumerate(param_decls):
-            if cursor.kind == clang.cindex.CursorKind.PARM_DECL:
-                if cursor.type.kind in [clang.cindex.TypeKind.LVALUEREFERENCE, clang.cindex.TypeKind.RVALUEREFERENCE]:
+            if cursor.kind == CursorKind.PARM_DECL:
+                if cursor.type.kind in [TypeKind.LVALUEREFERENCE, TypeKind.RVALUEREFERENCE]:
                     if not cursor.type.get_pointee().is_const_qualified():
                         result.append(index)
         return result
@@ -158,7 +158,7 @@ class FindReferencesToOutsideOfSelectionAction(object):
 
 def get_identifier_range(cursor):
     for token in cursor.get_tokens():
-        if (token.kind == clang.cindex.TokenKind.IDENTIFIER
+        if (token.kind == TokenKind.IDENTIFIER
                 and token.cursor == cursor):
             return token.extent
 
