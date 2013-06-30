@@ -10,6 +10,8 @@ import actions
 import unittest
 import mock
 import threading
+import translation_unit_access
+import common
 
 libclang.clang.cindex.Config.set_library_path(clang_path)
 
@@ -55,7 +57,7 @@ class TestEditor(object):
         return self._file_name
 
     def current_location(self):
-        return libclang.ExportedLocation(self.file_name(), self.current_line(), self.current_column())
+        return common.ExportedLocation(self.file_name(), self.current_line(), self.current_column())
 
     def contents(self):
         return self._contents
@@ -268,7 +270,7 @@ class TestTranslationUnitParser(unittest.TestCase):
             continue_parsing.wait(1)
 
         index.parse = mock.MagicMock(wraps=wait_for_event)
-        parser = libclang.SynchronizedTranslationUnitParser(
+        parser = translation_unit_access.SynchronizedTranslationUnitParser(
                 index, TestEditor())
 
         def parse():
@@ -289,9 +291,9 @@ class TestTranslationUnitParser(unittest.TestCase):
 
 
 def range_from_tuples(file_name, start, end):
-    start_pos = libclang.ExportedLocation(file_name, start[0], start[1])
-    end_pos = libclang.ExportedLocation(file_name, end[0], end[1])
-    return libclang.ExportedRange(start_pos, end_pos)
+    start_pos = common.ExportedLocation(file_name, start[0], start[1])
+    end_pos = common.ExportedLocation(file_name, end[0], end[1])
+    return common.ExportedRange(start_pos, end_pos)
 
 
 #We really shouldn't solve this via inheritance.
@@ -449,12 +451,12 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
     def assert_gets_range(self, file_name, location, expected_range):
         def do_it(translation_unit):
-            clang_location = libclang.ExportedLocation(file_name, location[
+            clang_location = common.ExportedLocation(file_name, location[
                 0], location[1]).clang_location(translation_unit)
 
             cursor = libclang.clang.cindex.Cursor.from_location(
                 translation_unit, clang_location)
-            identifier_range = libclang.ExportedRange.from_clang_range(actions.get_identifier_range(cursor))
+            identifier_range = common.ExportedRange.from_clang_range(actions.get_identifier_range(cursor))
             expected_range_real_range = range_from_tuples(
                 file_name, expected_range[0], expected_range[1])
             self.assertEquals(identifier_range, expected_range_real_range)
@@ -528,7 +530,7 @@ class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
     def setUp(self):
         self.editor = TestEditor()
         self.parser = mock.MagicMock(spec=[])
-        self.distributor = libclang.IdleTranslationUnitParserThreadDistributor(
+        self.distributor = translation_unit_access.IdleTranslationUnitParserThreadDistributor(
                 self.editor, self.parser)
 
     def tearDown(self):
