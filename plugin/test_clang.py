@@ -313,19 +313,10 @@ class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
         return self.translation_unit_accessor.translation_unit_for_file_named_do(file_name, function)
 
 
-class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAccessor):
-    def create_action(self):
-        return actions.FindReferencesToOutsideOfSelectionAction()
-
-    def action_do(self, file_name, function):
-        def do_it(translation_unit):
-            action = self.create_action()
-            function(action, translation_unit)
-        return self.translation_unit_do(file_name, do_it)
-
+class TestFindReferencesToOutsideOfSelection(TestCaseWithTranslationUnitAccessor):
     def assert_returns_ranges(self, file_name, given_range, expected_referenced_ranges, expected_referencing_ranges):
-        def do_it(action, translation_unit):
-            references = action.find_references_to_outside_of_selection(
+        def do_it(translation_unit):
+            references = actions.find_references_to_outside_of_selection(
                 translation_unit, given_range)
 
             referenced_ranges = map(lambda reference:
@@ -337,7 +328,7 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
                                      reference.referencing_range, references)
             self.assertEquals(list(set(
                 referencing_ranges)), expected_referencing_ranges)
-        self.action_do(file_name, do_it)
+        self.translation_unit_do(file_name, do_it)
 
     def test_find_references_to_outside_of_selection2(self):
         file_name = "test_sources/test_find_references_to_outside_of_selection.cpp"
@@ -367,9 +358,9 @@ class TestFindReferencesToOutsideOfSelectionAction(TestCaseWithTranslationUnitAc
 class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAccessor):
     def assert_returns_ranges(self, file_name, expected_ranges):
         def do_it(translation_unit):
-            action = actions.FindParametersPassedByNonConstReferenceAction(
+            action = actions.make_find_parameters_passed_by_non_const_reference(
                 self.editor)
-            ranges = action.find_ranges(translation_unit)
+            ranges = action(translation_unit)
             self.assertEquals(list(set(ranges)), expected_ranges)
         self.translation_unit_do(file_name, do_it)
 
@@ -395,21 +386,21 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
 
         def do_it(translation_unit):
             actual_ranges.extend(
-                list(set(action.find_ranges(translation_unit))))
+                list(set(action(translation_unit))))
         self.translation_unit_do(file_name, do_it)
         self.assertEquals(set(actual_ranges), set(expected_ranges))
 
     def test_find_virtual_method_calls(self):
         file_name = "test_sources/test_find_virtual_method_calls.cpp"
         self.assert_returns_ranges(
-            actions.FindVirtualMethodCallsAction(),
+            actions.find_virtual_method_calls,
             file_name,
             [range_from_tuples(file_name, (13, 3), (13, 23))])
 
     def test_find_omitted_default_arguments(self):
         file_name = "test_sources/test_find_omitted_default_arguments.cpp"
         self.assert_returns_ranges(
-            actions.FindOmittedDefaultArgumentsAction(),
+            actions.find_omitted_default_arguments,
             file_name,
             [range_from_tuples(file_name, (5, 3), (5, 37))])
 
@@ -417,7 +408,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.maxDiff = None
         file_name = "test_sources/test_find_virtual_method_declarations.cpp"
         self.assert_returns_ranges(
-            actions.FindVirtualMethodDeclarationsAction(),
+            actions.find_virtual_method_declarations,
             file_name,
             [range_from_tuples(file_name, (5, 16), (5, 30)), range_from_tuples(file_name, (8, 11), (8, 25))])
 
@@ -425,7 +416,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.maxDiff = None
         file_name = "test_sources/test_find_static_method_declarations.cpp"
         self.assert_returns_ranges(
-            actions.FindStaticMethodDeclarationsAction(),
+            actions.find_static_method_declarations,
             file_name,
             [range_from_tuples(file_name, (5, 15), (5, 28)), range_from_tuples(file_name, (8, 11), (8, 24))])
 
@@ -433,7 +424,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         #self.maxDiff = None
         #file_name = "test_sources/test_find_member_references.cpp"
         #self.assert_returns_ranges(
-            #actions.FindMemberReferencesAction(),
+            #actions.find_member_references,
             #file_name,
             #[range_from_tuples(file_name, (19, 12), (19, 35)),
              #range_from_tuples(file_name, (24, 12), (24, 26)),
@@ -444,7 +435,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         #self.maxDiff = None
         #file_name = "test_sources/test_find_private_public_method_declarations.cpp"
         #self.assert_returns_ranges(
-            #actions.FindPrivateMethodDeclarationsAction(),
+            #actions.find_private_method_declarations,
             #file_name,
             #[range_from_tuples(file_name, (4, 8), (4, 22)),
            #range_from_tuples(file_name, (13, 6), (13, 25))])

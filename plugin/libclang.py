@@ -115,18 +115,19 @@ class ClangPlugin(object):
         memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
 
         styles_and_actions = [
-            ("Non-const reference", actions.FindParametersPassedByNonConstReferenceAction(self._editor)),
+            ("Non-const reference",
+                actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
             ("Virtual method declaration",
-                actions.FindVirtualMethodDeclarationsAction()),
+                actions.find_virtual_method_declarations),
             ("Static method declaration",
-                actions.FindStaticMethodDeclarationsAction()),
-            ("Member reference", actions.FindMemberReferencesAction())]
-                #("Virtual method call", actions.FindVirtualMethodCallsAction()),
-                #("Omitted default argument", actions.FindOmittedDefaultArgumentsAction())]
+                actions.find_static_method_declarations),
+            ("Member reference", actions.find_member_references)]
+                #("Virtual method call", actions.find_virtual_method_calls),
+                #("Omitted default argument", actions.find_omitted_default_arguments)]
 
         for highlight_style, action in styles_and_actions:
             self._editor.clear_highlights(highlight_style)
-            ranges = action.find_ranges(memoized_translation_unit)
+            ranges = action(memoized_translation_unit)
             for range in ranges:
                 self._highlight_range_if_in_current_file(
                     range, highlight_style)
@@ -170,7 +171,7 @@ class ClangPlugin(object):
 
     def find_references_to_outside_of_selection(self):
         def do_it(translation_unit):
-            return actions.FindReferencesToOutsideOfSelectionAction().find_references_to_outside_of_selection(
+            return actions.find_references_to_outside_of_selection(
                 translation_unit,
                 self._editor.selection())
         return self._translation_unit_accessor.current_translation_unit_do(do_it)
