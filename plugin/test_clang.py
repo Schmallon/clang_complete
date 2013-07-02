@@ -13,7 +13,10 @@ import threading
 import translation_unit_access
 import common
 
-libclang.clang.cindex.Config.set_library_path(clang_path)
+if libclang.clang.cindex.Config.library_path:
+    assert libclang.clang.cindex.Config.library_path == clang_path
+else:
+    libclang.clang.cindex.Config.set_library_path(clang_path)
 
 
 class TestEditor(object):
