@@ -28,6 +28,12 @@ def find_member_references(translation_unit):
                 yield get_identifier_range(cursor)
 
 
+def find_references(translation_unit):
+    for cursor in cursors_in_file_of_translation_unit(translation_unit):
+        if cursor.referenced and cursor.referenced.type.kind == TypeKind.LVALUEREFERENCE:
+            yield get_identifier_range(cursor)
+
+
 def find_omitted_default_arguments(translation_unit):
 
     def _omits_default_argument(cursor):

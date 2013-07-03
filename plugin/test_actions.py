@@ -144,3 +144,16 @@ class TestActions(unittest.TestCase):
               Test *member;
               Other *mpOther;
             };""")
+
+    def test_find_references(self):
+        self.assert_function_finds_marked_ranges(
+            actions.find_references,
+            """
+            class Foo
+            {
+            void Bar()
+            {
+             /*START*/ReferenceMember/*END*/ = 42;
+            }
+            int& /*START*/ReferenceMember/*END*/;
+            };""")
