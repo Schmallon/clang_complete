@@ -8,6 +8,12 @@ def virtual_methods_in_file_of_current_translation_unit(translation_unit):
             yield cursor
 
 
+def find_overriden_method_declarations(translation_unit):
+    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
+        if list(cursor.get_overriden_methods()):
+            yield get_identifier_range(cursor)
+
+
 def find_virtual_method_calls(translation_unit):
     for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
         cursor_referenced = call_expr.referenced

@@ -157,3 +157,29 @@ class TestActions(unittest.TestCase):
             }
             int& /*START*/ReferenceMember/*END*/;
             };""")
+
+    def test_find_overridden_method_declarations(self):
+        self.assert_function_finds_marked_ranges(
+            actions.find_overriden_method_declarations,
+            """
+            class Super
+            {
+            public:
+                virtual void OverrideMe() {}
+            };
+
+            class Sub : public Super
+            {
+            public:
+                virtual void /*START*/OverrideMe/*END*/();
+                virtual void ImNewHere();
+            };
+
+            void Sub::/*START*/OverrideMe/*END*/()
+            {
+            }
+
+            void Sub::ImNewHere()
+            {
+            }
+            """)
