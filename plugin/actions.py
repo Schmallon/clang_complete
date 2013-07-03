@@ -2,6 +2,12 @@ from common import get_definition_or_reference
 from clang.cindex import CursorKind, TypeKind, TokenKind, SourceRange
 
 
+def virtual_methods_in_file_of_current_translation_unit(translation_unit):
+    for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
+        if cursor.is_virtual_method():
+            yield cursor
+
+
 def find_virtual_method_calls(translation_unit):
     for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
         cursor_referenced = call_expr.referenced
@@ -10,9 +16,8 @@ def find_virtual_method_calls(translation_unit):
 
 
 def find_virtual_method_declarations(translation_unit):
-    for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
-        if cursor.is_virtual_method():
-            yield get_identifier_range(cursor)
+    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
+        yield get_identifier_range(cursor)
 
 
 def find_static_method_declarations(translation_unit):
