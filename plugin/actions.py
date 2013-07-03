@@ -39,8 +39,8 @@ def find_omitted_default_arguments(translation_unit):
     def _omits_default_argument(cursor):
         """
         This implementation relies on default arguments being represented as
-        cursors without extent. This is not ideal and is intended to serve only as
-        an intermediate solution.
+        cursors without extent. This is not ideal and is intended to serve only
+        as an intermediate solution.
         """
         for argument in cursor.get_arguments():
             if argument.extent.start.offset == 0 and argument.extent.end.offset == 0:
