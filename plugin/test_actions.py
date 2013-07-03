@@ -13,7 +13,6 @@ class TestActions(unittest.TestCase):
                 function(translation_unit))
 
     def test_find_virtual_method_calls(self):
-
         self.assert_function_finds_marked_ranges(
             actions.find_virtual_method_declarations,
             """
@@ -84,3 +83,64 @@ class TestActions(unittest.TestCase):
             void Foo::non_virtual_method()
             {
             }""")
+
+    def test_find_member_references(self):
+        self.maxDiff = None
+        self.assert_function_finds_marked_ranges(
+            actions.find_member_references,
+            """
+            class Other
+            {
+              public:
+                void some_method();
+                int x;
+            };
+
+            class TestSuper
+            {
+            public:
+              int DefinedInSuper();
+            };
+
+            class Test : public TestSuper
+            {
+            public:
+              int reference_member()
+              {
+                return /*START*/member_being_referenced/*END*/;
+              }
+
+              int reference_super_member()
+              {
+                return /*START*/DefinedInSuper/*END*/();
+              }
+
+              int call_method_on_member()
+              {
+                return /*START*/member/*END*/->call_method_on_member();
+              }
+
+              void call_method_on_member_of_field_with_other_class()
+              {
+                /*START*/mpOther/*END*/->some_method();
+              }
+
+              int reference_parameter(int parameter)
+              {
+                return parameter;
+              }
+
+              int reference_member_of_non_this(Test test)
+              {
+                return test.member_being_referenced;
+              }
+
+              int reference_member_using_this()
+              {
+                return this->member_being_referenced;
+              }
+
+              int member_being_referenced;
+              Test *member;
+              Other *mpOther;
+            };""")

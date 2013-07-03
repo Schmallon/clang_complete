@@ -392,17 +392,6 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.translation_unit_do(file_name, do_it)
         self.assertEquals(set(actual_ranges), set(expected_ranges))
 
-    #def test_find_member_references(self):
-        #self.maxDiff = None
-        #file_name = "test_sources/test_find_member_references.cpp"
-        #self.assert_returns_ranges(
-            #actions.find_member_references,
-            #file_name,
-            #[range_from_tuples(file_name, (19, 12), (19, 35)),
-             #range_from_tuples(file_name, (24, 12), (24, 26)),
-             #range_from_tuples(file_name, (29, 12), (29, 18)),
-             #range_from_tuples(file_name, (34, 5), (34, 12))])
-
     #def test_find_private_method_declarations(self):
         #self.maxDiff = None
         #file_name = "test_sources/test_find_private_public_method_declarations.cpp"
