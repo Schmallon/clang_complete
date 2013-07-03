@@ -1073,6 +1073,9 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isStatic(self)
 
+    def is_pure_virtual_method(self):
+        return conf.lib.clang_CXXMethod_isPureVirtual(self)
+
     def is_virtual_method(self):
         return conf.lib.clang_CXXMethod_isVirtual(self)
 
@@ -2587,6 +2590,10 @@ functionList = [
    c_object_p),
 
   ("clang_CXXMethod_isStatic",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isPureVirtual",
    [Cursor],
    bool),
 
