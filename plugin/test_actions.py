@@ -29,3 +29,20 @@ class TestActions(unittest.TestCase):
                 self,
                 source,
                 actions.find_virtual_method_declarations(translation_unit))
+
+    def test_find_omitted_default_arguments(self):
+        source = """
+
+            void function_with_default_arguments(int x, int y = 0);
+
+            void test()
+            {
+              /*START*/function_with_default_arguments(5)/*END*/;
+              function_with_default_arguments(5, 6);
+            }"""
+
+        with translation_unit_for(source) as translation_unit:
+            assert_ranges_equal(
+                self,
+                source,
+                actions.find_omitted_default_arguments(translation_unit))

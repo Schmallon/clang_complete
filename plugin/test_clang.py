@@ -392,13 +392,6 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
         self.translation_unit_do(file_name, do_it)
         self.assertEquals(set(actual_ranges), set(expected_ranges))
 
-    def test_find_omitted_default_arguments(self):
-        file_name = "test_sources/test_find_omitted_default_arguments.cpp"
-        self.assert_returns_ranges(
-            actions.find_omitted_default_arguments,
-            file_name,
-            [range_from_tuples(file_name, (5, 3), (5, 37))])
-
     def test_find_virtual_method_declarations(self):
         self.maxDiff = None
         file_name = "test_sources/test_find_virtual_method_declarations.cpp"
