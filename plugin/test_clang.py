@@ -381,27 +381,6 @@ class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAcc
             file_name, (15, 3), (15, 6))])
 
 
-class TestActions(TestCaseWithTranslationUnitAccessor):
-
-    def assert_returns_ranges(self, action, file_name, expected_ranges):
-        actual_ranges = []
-
-        def do_it(translation_unit):
-            actual_ranges.extend(
-                list(set(export_ranges(action(translation_unit)))))
-        self.translation_unit_do(file_name, do_it)
-        self.assertEquals(set(actual_ranges), set(expected_ranges))
-
-    #def test_find_private_method_declarations(self):
-        #self.maxDiff = None
-        #file_name = "test_sources/test_find_private_public_method_declarations.cpp"
-        #self.assert_returns_ranges(
-            #actions.find_private_method_declarations,
-            #file_name,
-            #[range_from_tuples(file_name, (4, 8), (4, 22)),
-           #range_from_tuples(file_name, (13, 6), (13, 25))])
-
-
 class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
 
     def assert_gets_range(self, file_name, location, expected_range):
