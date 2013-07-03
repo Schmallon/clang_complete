@@ -18,6 +18,8 @@ if libclang.clang.cindex.Config.library_path:
 else:
     libclang.clang.cindex.Config.set_library_path(clang_path)
 
+def export_ranges(ranges):
+    return map(common.ExportedRange.from_clang_range, ranges)
 
 class TestEditor(object):
     def __init__(self):
@@ -182,8 +184,8 @@ class TestClangPlugin(unittest.TestCase):
         self.editor.select_range((7, 5), (7, 54))
         references = self.clang_plugin.find_references_to_outside_of_selection(
         )
-        referenced_ranges = map(
-            lambda reference: reference.referenced_range, references)
+        referenced_ranges = export_ranges(map(
+            lambda reference: reference.referenced_range, references))
         self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(
             self.full_file_name(file_name), (3, 7), (3, 36))])
 
@@ -319,13 +321,13 @@ class TestFindReferencesToOutsideOfSelection(TestCaseWithTranslationUnitAccessor
             references = actions.find_references_to_outside_of_selection(
                 translation_unit, given_range)
 
-            referenced_ranges = map(lambda reference:
-                                    reference.referenced_range, references)
+            referenced_ranges = export_ranges(map(lambda reference:
+                                    reference.referenced_range, references))
             self.assertEquals(list(set(
                 referenced_ranges)), expected_referenced_ranges)
 
-            referencing_ranges = map(lambda reference:
-                                     reference.referencing_range, references)
+            referencing_ranges = export_ranges(map(lambda reference:
+                                     reference.referencing_range, references))
             self.assertEquals(list(set(
                 referencing_ranges)), expected_referencing_ranges)
         self.translation_unit_do(file_name, do_it)
@@ -360,7 +362,7 @@ class TestFindParametersPassedByNonConstReference(TestCaseWithTranslationUnitAcc
         def do_it(translation_unit):
             action = actions.make_find_parameters_passed_by_non_const_reference(
                 self.editor)
-            ranges = action(translation_unit)
+            ranges = export_ranges(action(translation_unit))
             self.assertEquals(list(set(ranges)), expected_ranges)
         self.translation_unit_do(file_name, do_it)
 
@@ -386,7 +388,7 @@ class TestActions(TestCaseWithTranslationUnitAccessor):
 
         def do_it(translation_unit):
             actual_ranges.extend(
-                list(set(action(translation_unit))))
+                list(set(export_ranges(action(translation_unit)))))
         self.translation_unit_do(file_name, do_it)
         self.assertEquals(set(actual_ranges), set(expected_ranges))
 

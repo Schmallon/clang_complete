@@ -129,7 +129,7 @@ class ClangPlugin(object):
             self._editor.clear_highlights(highlight_style)
             ranges = action(memoized_translation_unit)
             for range in ranges:
-                self._highlight_range_if_in_current_file(
+                self._export_and_highlight_range_if_in_current_file(
                     range, highlight_style)
 
     def tick(self):
@@ -176,9 +176,12 @@ class ClangPlugin(object):
                 self._editor.selection())
         return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
-    def _highlight_range_if_in_current_file(self, range, highlight_style):
-        if range.start.file_name == self._editor.file_name():
-            self._editor.highlight_range(range, highlight_style)
+    def _export_and_highlight_range_if_in_current_file(self, range, highlight_style):
+
+        exported_range = ExportedRange.from_clang_range(range)
+
+        if exported_range.start.file_name == self._editor.file_name():
+            self._editor.highlight_range(exported_range, highlight_style)
 
     def highlight_references_to_outside_of_selection(self):
         references = self.find_references_to_outside_of_selection()
@@ -188,8 +191,8 @@ class ClangPlugin(object):
         self._editor.clear_highlights(style_referenced_range)
         self._editor.clear_highlights(style_referencing_range)
         for reference in references:
-            self._highlight_range_if_in_current_file(reference.referenced_range, style_referenced_range)
-            self._highlight_range_if_in_current_file(reference.referencing_range, style_referencing_range)
+            self._export_and_highlight_range_if_in_current_file(reference.referenced_range, style_referenced_range)
+            self._export_and_highlight_range_if_in_current_file(reference.referencing_range, style_referencing_range)
 
         qf = [dict({'filename': reference.referenced_range.start.file_name,
                     'lnum': reference.referenced_range.start.line,

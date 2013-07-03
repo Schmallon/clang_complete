@@ -1,38 +1,37 @@
-from common import ExportedRange, ExportedLocation, get_definition_or_reference
-from clang.cindex import CursorKind, TypeKind, TokenKind
+from common import get_definition_or_reference
+from clang.cindex import CursorKind, TypeKind, TokenKind, SourceRange
 
 
 def find_virtual_method_calls(translation_unit):
     for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
         cursor_referenced = call_expr.referenced
         if cursor_referenced and cursor_referenced.is_virtual_method():
-            yield ExportedRange.from_clang_range(call_expr.extent)
+            yield call_expr.extent
 
 
 def find_virtual_method_declarations(translation_unit):
     for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
         if cursor.is_virtual_method():
-            yield ExportedRange.from_clang_range(get_identifier_range(cursor))
+            yield get_identifier_range(cursor)
 
 
 def find_private_method_declarations(translation_unit):
     for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
         if cursor.is_static_method():
-            yield ExportedRange.from_clang_range(get_identifier_range(cursor))
+            yield get_identifier_range(cursor)
 
 
 def find_static_method_declarations(translation_unit):
     for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
         if cursor.is_static_method():
-            yield ExportedRange.from_clang_range(get_identifier_range(cursor))
+            yield get_identifier_range(cursor)
 
 
 def find_member_references(translation_unit):
     for cursor in cursors_in_file_of_translation_unit(translation_unit):
         if cursor.kind == CursorKind.MEMBER_REF_EXPR:
             if cursor.is_implicit_access():
-                yield ExportedRange.from_clang_range(
-                    get_identifier_range(cursor))
+                yield get_identifier_range(cursor)
 
 
 def find_omitted_default_arguments(translation_unit):
@@ -50,7 +49,7 @@ def find_omitted_default_arguments(translation_unit):
 
     for call_expr in call_expressions_in_file_of_translation_unit(translation_unit):
         if _omits_default_argument(call_expr):
-            yield ExportedRange.from_clang_range(call_expr.extent)
+            yield call_expr.extent
 
 
 def call_expressions_in_file_of_translation_unit(translation_unit):
@@ -100,7 +99,7 @@ def make_find_parameters_passed_by_non_const_reference(editor):
                 args = list(cursor.get_arguments())
                 for i in _get_nonconst_reference_param_indexes(cursor_referenced):
                     try:
-                        yield ExportedRange.from_clang_range(args[i].extent)
+                        yield args[i].extent
                     except IndexError:
                         editor.display_message("Could not find parameter " + str(i) + " in " + str(cursor.extent))
 
@@ -131,12 +130,12 @@ def find_references_to_outside_of_selection(translation_unit, selection_range):
         if referenced_cursor:
             if not intersects_with_selection(referenced_cursor):
                 # Limit the extent to start at the name
-                constrained_extent = ExportedRange(
-                    ExportedLocation.from_clang_location(referenced_cursor.location),
-                    ExportedLocation.from_clang_location(referenced_cursor.extent.end))
+                constrained_extent = SourceRange.from_locations(
+                    referenced_cursor.location,
+                    referenced_cursor.extent.end)
                 result.add(Reference(
                            constrained_extent,
-                           ExportedRange.from_clang_range(cursor.extent)))
+                           cursor.extent))
 
         for child in cursor.get_children():
             if intersects_with_selection(child):
