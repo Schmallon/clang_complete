@@ -64,3 +64,23 @@ class TestActions(unittest.TestCase):
             void Foo::non_static_method()
             {
             }""")
+
+    def test_find_virtual_method_declarations(self):
+        self.maxDiff = None
+        self.assert_function_finds_marked_ranges(
+            actions.find_virtual_method_declarations,
+            """
+            class Foo
+            {
+            public:
+              void non_virtual_method();
+              virtual void /*START*/virtual_method/*END*/();
+            };
+
+            void Foo::/*START*/virtual_method/*END*/()
+            {
+            }
+
+            void Foo::non_virtual_method()
+            {
+            }""")
