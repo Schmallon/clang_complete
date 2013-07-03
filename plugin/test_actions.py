@@ -44,3 +44,23 @@ class TestActions(unittest.TestCase):
               /*START*/function_with_default_arguments(5)/*END*/;
               function_with_default_arguments(5, 6);
             }""")
+
+    def test_find_static_method_declarations(self):
+        self.maxDiff = None
+        self.assert_function_finds_marked_ranges(
+            actions.find_static_method_declarations,
+            """
+            class Foo
+            {
+            public:
+              void non_static_method();
+              static void /*START*/static_method/*END*/();
+            };
+
+            void Foo::/*START*/static_method/*END*/()
+            {
+            }
+
+            void Foo::non_static_method()
+            {
+            }""")
