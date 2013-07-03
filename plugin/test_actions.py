@@ -14,13 +14,13 @@ class TestActions(unittest.TestCase):
 
     def test_find_virtual_method_calls(self):
         self.assert_function_finds_marked_ranges(
-            actions.find_virtual_method_declarations,
+            actions.find_virtual_method_calls,
             """
             class Foo
             {
             public:
               void non_virtual_method();
-              virtual void /*START*/virtual_method/*END*/();
+              virtual void virtual_method();
             };
 
 
@@ -28,7 +28,7 @@ class TestActions(unittest.TestCase):
             {
               Foo foo;
 
-              foo.virtual_method();
+              /*START*/foo.virtual_method()/*END*/;
               foo.non_virtual_method();
             }""")
 
