@@ -10,7 +10,7 @@ def virtual_methods_in_file_of_current_translation_unit(translation_unit):
 
 def find_overriden_method_declarations(translation_unit):
     for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
-        if list(cursor.get_overriden_methods()):
+        if filter(lambda c: not c.is_pure_virtual_method(), cursor.get_overriden_methods()):
             yield get_identifier_range(cursor)
 
 

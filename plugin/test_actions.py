@@ -165,15 +165,21 @@ class TestActions(unittest.TestCase):
             class Super
             {
             public:
-                virtual void OverrideMe() {}
+                virtual void OverrideMe();
+                virtual void PureVirtual() = 0;
             };
 
             class Sub : public Super
             {
             public:
                 virtual void /*START*/OverrideMe/*END*/();
+                virtual void PureVirtual();
                 virtual void ImNewHere();
             };
+
+            void Sub::PureVirtual()
+            {
+            }
 
             void Sub::/*START*/OverrideMe/*END*/()
             {
