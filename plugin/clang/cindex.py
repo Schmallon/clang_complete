@@ -1312,6 +1312,25 @@ class Cursor(Structure):
             children)
         return iter(children)
 
+
+    def get_overriden_methods(self):
+        cursors_memory = POINTER(Cursor)()
+        cursors_count = c_uint()
+
+        conf.lib.clang_getOverriddenCursors(self, byref(cursors_memory), byref(cursors_count))
+
+        count = int(cursors_count.value)
+
+        if count < 1:
+            return
+
+        cursors_array = cast(cursors_memory, POINTER(Cursor * count)).contents
+
+        for i in xrange(0, count):
+            yield cursors_array[i]
+
+        conf.lib.clang_disposeOverriddenCursors(cursors_memory)
+
     def get_tokens(self):
         """Obtain Token instances formulating that compose this Cursor.
 
@@ -3049,7 +3068,14 @@ functionList = [
   ("clang_MemberRefExpr_IsImplicitAccess",
    [Cursor],
    bool),
+
+  ("clang_getOverriddenCursors",
+   [Cursor, POINTER(POINTER(Cursor)), POINTER(c_uint)]),
+
+  ("clang_disposeOverriddenCursors",
+   [POINTER(Cursor)])
 ]
+
 
 class LibclangError(Exception):
     def __init__(self, message):
