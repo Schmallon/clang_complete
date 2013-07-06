@@ -125,12 +125,18 @@ class ClangPlugin(object):
                 #("Virtual method call", actions.find_virtual_method_calls),
                 #("Omitted default argument", actions.find_omitted_default_arguments)]
 
-        for highlight_style, action in styles_and_actions:
-            self._editor.clear_highlights(highlight_style)
-            ranges = action(memoized_translation_unit)
-            for range in ranges:
-                self._export_and_highlight_range_if_in_current_file(
-                    range, highlight_style)
+        def collect_ranges():
+            for highlight_style, action in styles_and_actions:
+                self._editor.clear_highlights(highlight_style)
+                ranges = action(memoized_translation_unit)
+                for range in ranges:
+                    yield range, highlight_style
+
+        # Collecting ranges is more expensive than showing. We could do it asynchronously
+        ranges = list(collect_ranges())
+        for range, highlight_style in ranges:
+            self._export_and_highlight_range_if_in_current_file(
+                range, highlight_style)
 
     def tick(self):
         if self._file_has_changed:
