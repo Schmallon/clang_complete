@@ -106,6 +106,21 @@ class ClangPlugin(object):
         self._file_has_changed = True
         self._file_at_last_change = self._editor.current_file()
 
+    def _styles_and_actions(self):
+        return [
+            ("Non-const reference",
+                actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
+            ("Virtual method declaration",
+                actions.find_overriden_method_declarations),
+            #("Static method declaration", actions.find_static_method_declarations),
+            #("Member reference", actions.find_member_references),
+            #("Virtual method call", actions.find_virtual_method_calls),
+            ("Omitted default argument", actions.find_omitted_default_arguments) ]
+
+    def _clear_interesting_ranges(self):
+        for highlight_style, action in self._styles_and_actions():
+            self._editor.clear_highlights(highlight_style)
+
     def _highlight_interesting_ranges(self, translation_unit):
 
         class MemoizedTranslationUnit(object):
@@ -114,20 +129,8 @@ class ClangPlugin(object):
                 self.spelling = translation_unit.spelling
         memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
 
-        styles_and_actions = [
-            ("Non-const reference",
-                actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
-            ("Virtual method declaration",
-                actions.find_virtual_method_declarations),
-            ("Static method declaration",
-                actions.find_static_method_declarations),
-            ("Member reference", actions.find_member_references)]
-                #("Virtual method call", actions.find_virtual_method_calls),
-                #("Omitted default argument", actions.find_omitted_default_arguments)]
-
         def collect_ranges():
-            for highlight_style, action in styles_and_actions:
-                self._editor.clear_highlights(highlight_style)
+            for highlight_style, action in self._styles_and_actions():
                 ranges = action(memoized_translation_unit)
                 for range in ranges:
                     yield range, highlight_style
@@ -145,7 +148,10 @@ class ClangPlugin(object):
                 self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
                 self._diagnostics_highlighter.highlight_in_translation_unit(
                     translation_unit)
-                #self._highlight_interesting_ranges(translation_unit)
+
+                self._clear_interesting_ranges()
+                if self._editor.should_highlight_interesting_ranges():
+                    self._highlight_interesting_ranges(translation_unit)
 
                 self._file_has_changed = self._editor.current_file() != self._file_at_last_change
 

@@ -125,6 +125,9 @@ class VimInterface(object):
             optsList += [opt]
         return optsList
 
+    def should_highlight_interesting_ranges(self):
+        return int(self._get_uncached_variable("g:clang_highlight_interesting_ranges"))
+
     def user_options(self):
         user_options_global = self._split_options(
             self._get_variable("g:clang_user_options"))

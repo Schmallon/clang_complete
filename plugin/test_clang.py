@@ -39,6 +39,9 @@ class TestEditor(object):
     def clear_highlights(self, style):
         self._highlights[style] = []
 
+    def should_highlight_interesting_ranges(self):
+        return True
+
     def highlight_range(self, range, style):
         highlights = self._highlights[style]
         highlights.append(range)
