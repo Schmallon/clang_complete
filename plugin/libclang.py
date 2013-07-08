@@ -121,22 +121,29 @@ class ClangPlugin(object):
         for highlight_style, action in self._styles_and_actions():
             self._editor.clear_highlights(highlight_style)
 
-    def _highlight_interesting_ranges(self, translation_unit):
+    def _collect_interesting_ranges(self, file):
 
-        class MemoizedTranslationUnit(object):
-            def __init__(self, translation_unit):
-                self.cursor = translation_unit.cursor
-                self.spelling = translation_unit.spelling
-        memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
+        def do_it(translation_unit):
+            class MemoizedTranslationUnit(object):
+                def __init__(self, translation_unit):
+                    self.cursor = translation_unit.cursor
+                    self.spelling = translation_unit.spelling
+            memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
 
-        def collect_ranges():
-            for highlight_style, action in self._styles_and_actions():
-                ranges = action(memoized_translation_unit)
-                for range in ranges:
-                    yield range, highlight_style
+            def collect_ranges():
+                for highlight_style, action in self._styles_and_actions():
+                    ranges = action(memoized_translation_unit)
+                    for range in ranges:
+                        yield range, highlight_style
 
-        # Collecting ranges is more expensive than showing. We could do it asynchronously
-        ranges = list(collect_ranges())
+            return list(collect_ranges())
+
+        return self._translation_unit_accessor.translation_unit_do(file, do_it)
+
+    def _highlight_interesting_ranges(self):
+
+        ranges = self._collect_interesting_ranges(self._editor.current_file())
+
         for range, highlight_style in ranges:
             self._export_and_highlight_range_if_in_current_file(
                 range, highlight_style)
@@ -149,13 +156,13 @@ class ClangPlugin(object):
                 self._diagnostics_highlighter.highlight_in_translation_unit(
                     translation_unit)
 
-                self._clear_interesting_ranges()
-                if self._editor.should_highlight_interesting_ranges():
-                    self._highlight_interesting_ranges(translation_unit)
-
                 self._file_has_changed = self._editor.current_file() != self._file_at_last_change
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
+
+            self._clear_interesting_ranges()
+            if self._editor.should_highlight_interesting_ranges():
+                self._highlight_interesting_ranges()
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")
