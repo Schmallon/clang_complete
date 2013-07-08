@@ -50,6 +50,13 @@ Ideas:
      - Macros
 """
 
+def export_and_highlight_range_if_in_current_file(editor, range, highlight_style):
+
+    exported_range = ExportedRange.from_clang_range(range)
+
+    if exported_range.start.file_name == editor.file_name():
+        editor.highlight_range(exported_range, highlight_style)
+
 
 def abort_after_first_call(consumer, producer):
     class ConsumeWasCalled(Exception):
@@ -71,40 +78,10 @@ def print_cursor_with_children(cursor, n=0):
         print_cursor_with_children(child, n + 1)
 
 
-class ClangPlugin(object):
-    def __init__(self, editor, clang_complete_flags, library_path):
-
-        if not clang.cindex.Config.loaded:
-            if library_path != "":
-                clang.cindex.Config.set_library_path(library_path)
-
-            clang.cindex.Config.set_compatibility_check(False)
-
+class InterestingRangeHighlighter(object):
+    def __init__(self, translation_unit_accessor, editor):
+        self._translation_unit_accessor = translation_unit_accessor
         self._editor = editor
-        self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
-        self._definition_finder = DefinitionFinder(
-            self._editor, self._translation_unit_accessor)
-        self._declaration_finder = DeclarationFinder(
-            self._editor, self._translation_unit_accessor)
-        self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
-        self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
-        self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
-        self._file_has_changed = True
-        self._file_at_last_change = None
-
-    def terminate(self):
-        self._translation_unit_accessor.terminate()
-
-    def _start_rescan(self):
-        self._translation_unit_accessor.clear_caches()
-        self._load_files_in_background()
-
-    def file_changed(self):
-        self._editor.display_message(
-            "File change was notified, clearing all caches.")
-        self._start_rescan()
-        self._file_has_changed = True
-        self._file_at_last_change = self._editor.current_file()
 
     def _styles_and_actions(self):
         return [
@@ -115,11 +92,17 @@ class ClangPlugin(object):
             #("Static method declaration", actions.find_static_method_declarations),
             #("Member reference", actions.find_member_references),
             #("Virtual method call", actions.find_virtual_method_calls),
-            ("Omitted default argument", actions.find_omitted_default_arguments) ]
+            ("Omitted default argument", actions.find_omitted_default_arguments)]
 
     def _clear_interesting_ranges(self):
         for highlight_style, action in self._styles_and_actions():
             self._editor.clear_highlights(highlight_style)
+
+    def tick(self, file_changed):
+        if file_changed:
+            self._clear_interesting_ranges()
+            if self._editor.should_highlight_interesting_ranges():
+                self._highlight_interesting_ranges()
 
     def _collect_interesting_ranges(self, file):
 
@@ -141,15 +124,51 @@ class ClangPlugin(object):
         return self._translation_unit_accessor.translation_unit_do(file, do_it)
 
     def _highlight_interesting_ranges(self):
-
         ranges = self._collect_interesting_ranges(self._editor.current_file())
-
         for range, highlight_style in ranges:
-            self._export_and_highlight_range_if_in_current_file(
-                range, highlight_style)
+            export_and_highlight_range_if_in_current_file(
+                self._editor, range, highlight_style)
+
+
+class ClangPlugin(object):
+    def __init__(self, editor, clang_complete_flags, library_path):
+
+        if not clang.cindex.Config.loaded:
+            if library_path != "":
+                clang.cindex.Config.set_library_path(library_path)
+
+            clang.cindex.Config.set_compatibility_check(False)
+
+        self._editor = editor
+        self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
+        self._definition_finder = DefinitionFinder(
+            self._editor, self._translation_unit_accessor)
+        self._declaration_finder = DeclarationFinder(
+            self._editor, self._translation_unit_accessor)
+        self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
+        self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
+        self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
+        self._interesting_range_highlighter = InterestingRangeHighlighter(self._translation_unit_accessor, self._editor)
+        self._file_has_changed = True
+        self._file_at_last_change = None
+
+    def terminate(self):
+        self._translation_unit_accessor.terminate()
+
+    def _start_rescan(self):
+        self._translation_unit_accessor.clear_caches()
+        self._load_files_in_background()
+
+    def file_changed(self):
+        self._editor.display_message(
+            "File change was notified, clearing all caches.")
+        self._start_rescan()
+        self._file_has_changed = True
+        self._file_at_last_change = self._editor.current_file()
 
     def tick(self):
-        if self._file_has_changed:
+        file_has_changed = self._file_has_changed
+        if file_has_changed:
 
             def do_it(translation_unit):
                 self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
@@ -160,9 +179,7 @@ class ClangPlugin(object):
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
 
-            self._clear_interesting_ranges()
-            if self._editor.should_highlight_interesting_ranges():
-                self._highlight_interesting_ranges()
+        self._interesting_range_highlighter.tick(file_has_changed)
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")
@@ -196,11 +213,7 @@ class ClangPlugin(object):
         return self._translation_unit_accessor.current_translation_unit_do(do_it)
 
     def _export_and_highlight_range_if_in_current_file(self, range, highlight_style):
-
-        exported_range = ExportedRange.from_clang_range(range)
-
-        if exported_range.start.file_name == self._editor.file_name():
-            self._editor.highlight_range(exported_range, highlight_style)
+        export_and_highlight_range_if_in_current_file(self._editor, range, highlight_style)
 
     def highlight_references_to_outside_of_selection(self):
         references = self.find_references_to_outside_of_selection()
