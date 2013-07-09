@@ -89,6 +89,9 @@ class VimInterface(object):
         for variable_name in self._cached_variable_names:
             self._cached_variables[variable_name] = self._get_uncached_variable(variable_name)
 
+    def changedtick(self):
+        return self._vim.eval("b:changedtick")
+
     # Get a tuple (file_name, filecontent) for the file opened in the current
     # vim buffer. The filecontent contains the unsafed buffer content.
     def current_file(self):

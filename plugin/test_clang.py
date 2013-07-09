@@ -70,6 +70,9 @@ class TestEditor(object):
     def contents(self):
         return self._contents
 
+    def changedtick(self):
+        return self.current_file()
+
     def current_file(self):
         return (self.file_name(), self.contents())
 

@@ -5,6 +5,7 @@ from translation_unit_access import TranslationUnitAccessor
 from completion import Completer
 import sys
 import actions
+import threading
 
 """
 Ideas:
@@ -50,12 +51,16 @@ Ideas:
      - Macros
 """
 
-def export_and_highlight_range_if_in_current_file(editor, range, highlight_style):
 
-    exported_range = ExportedRange.from_clang_range(range)
-
+def highlight_range_if_in_current_file(editor, exported_range, highlight_style):
     if exported_range.start.file_name == editor.file_name():
         editor.highlight_range(exported_range, highlight_style)
+
+
+def export_and_highlight_range_if_in_current_file(editor, range, highlight_style):
+    """"Caution. You must still own the range's translation unit."""
+    exported_range = ExportedRange.from_clang_range(range)
+    highlight_range_if_in_current_file(editor, exported_range, highlight_style)
 
 
 def abort_after_first_call(consumer, producer):
@@ -82,6 +87,9 @@ class InterestingRangeHighlighter(object):
     def __init__(self, translation_unit_accessor, editor):
         self._translation_unit_accessor = translation_unit_accessor
         self._editor = editor
+        self._ranges = None
+        self._last_highlighted_ranges = None
+        self._last_changedtick = 0
 
     def _styles_and_actions(self):
         return [
@@ -98,11 +106,22 @@ class InterestingRangeHighlighter(object):
         for highlight_style, action in self._styles_and_actions():
             self._editor.clear_highlights(highlight_style)
 
-    def tick(self, file_changed):
-        if file_changed:
+    def tick(self):
+
+        changedtick = self._editor.changedtick()
+
+        if changedtick != self._last_changedtick:
+            self._last_changedtick = changedtick
             self._clear_interesting_ranges()
-            if self._editor.should_highlight_interesting_ranges():
-                self._highlight_interesting_ranges()
+            current_file = self._editor.current_file()
+
+            def do_it():
+                self._ranges = self._collect_interesting_ranges(current_file)
+            threading.Thread(target=do_it, name="compute_interesting_ranges").start()
+
+        if self._ranges != self._last_highlighted_ranges:
+            self._clear_interesting_ranges()
+            self._highlight_interesting_ranges(self._ranges)
 
     def _collect_interesting_ranges(self, file):
 
@@ -117,17 +136,16 @@ class InterestingRangeHighlighter(object):
                 for highlight_style, action in self._styles_and_actions():
                     ranges = action(memoized_translation_unit)
                     for range in ranges:
-                        yield range, highlight_style
+                        yield ExportedRange.from_clang_range(range), highlight_style
 
             return list(collect_ranges())
 
         return self._translation_unit_accessor.translation_unit_do(file, do_it)
 
-    def _highlight_interesting_ranges(self):
-        ranges = self._collect_interesting_ranges(self._editor.current_file())
+    def _highlight_interesting_ranges(self, ranges):
         for range, highlight_style in ranges:
-            export_and_highlight_range_if_in_current_file(
-                self._editor, range, highlight_style)
+            highlight_range_if_in_current_file(self._editor, range, highlight_style)
+        self._last_highlighted_ranges = ranges
 
 
 class ClangPlugin(object):
@@ -167,8 +185,7 @@ class ClangPlugin(object):
         self._file_at_last_change = self._editor.current_file()
 
     def tick(self):
-        file_has_changed = self._file_has_changed
-        if file_has_changed:
+        if self._file_has_changed:
 
             def do_it(translation_unit):
                 self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
@@ -179,7 +196,7 @@ class ClangPlugin(object):
 
             self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
 
-        self._interesting_range_highlighter.tick(file_has_changed)
+        self._interesting_range_highlighter.tick()
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")
