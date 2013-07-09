@@ -1,6 +1,7 @@
 import threading
 import time
 from common import ExportedRange, ExportedLocation
+import traceback
 
 
 class VimInterface(object):
