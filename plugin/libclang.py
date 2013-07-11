@@ -6,6 +6,7 @@ from completion import Completer
 import sys
 import actions
 import threading
+import Queue
 
 """
 Ideas:
@@ -83,13 +84,64 @@ def print_cursor_with_children(cursor, n=0):
         print_cursor_with_children(child, n + 1)
 
 
+class ReplacingSingleElementQueue(object):
+    def __init__(self):
+        self._queue = Queue.Queue(maxsize=1)
+
+    def set(self, value):
+        while True:
+            try:
+                self._queue.put_nowait(value)
+                return
+            except Queue.Full:
+                self.get_nowait()
+
+    def get_nowait(self):
+        try:
+            return self._queue.get_nowait()
+        except Queue.Empty:
+            return None
+
+    def get(self):
+        return self._queue.get()
+
+
+class SingleResultWorker(object):
+    def __init__(self, consume_request):
+        self._alive = True
+        self._request = ReplacingSingleElementQueue()
+        self._result = ReplacingSingleElementQueue()
+        self._consume_request = consume_request
+        self._thread = threading.Thread(target=self.run, name="single_result_worker").start()
+
+    def terminate(self):
+        self._alive = False
+        self._request.set(None)
+
+    def request(self, request):
+        self._request.set(request)
+
+    def peek_result(self):
+        return self._result.get_nowait()
+
+    def run(self):
+        while True:
+            request = self._request.get()
+            if not self._alive:
+                return
+            result = self._consume_request(request)
+            self._result.set(result)
+
+
 class InterestingRangeHighlighter(object):
     def __init__(self, translation_unit_accessor, editor):
         self._translation_unit_accessor = translation_unit_accessor
         self._editor = editor
-        self._ranges = None
-        self._last_highlighted_ranges = None
         self._last_changedtick = 0
+        self._worker = SingleResultWorker(self._collect_interesting_ranges)
+
+    def terminate(self):
+        self._worker.terminate()
 
     def _styles_and_actions(self):
         return [
@@ -107,21 +159,18 @@ class InterestingRangeHighlighter(object):
             self._editor.clear_highlights(highlight_style)
 
     def tick(self):
-
         changedtick = self._editor.changedtick()
 
         if changedtick != self._last_changedtick:
             self._last_changedtick = changedtick
             self._clear_interesting_ranges()
-            current_file = self._editor.current_file()
 
-            def do_it():
-                self._ranges = self._collect_interesting_ranges(current_file)
-            threading.Thread(target=do_it, name="compute_interesting_ranges").start()
+            self._worker.request(self._editor.current_file())
 
-        if self._ranges != self._last_highlighted_ranges:
+        ranges = self._worker.peek_result()
+        if ranges:
             self._clear_interesting_ranges()
-            self._highlight_interesting_ranges(self._ranges)
+            self._highlight_interesting_ranges(ranges)
 
     def _collect_interesting_ranges(self, file):
 
@@ -172,6 +221,7 @@ class ClangPlugin(object):
 
     def terminate(self):
         self._translation_unit_accessor.terminate()
+        self._interesting_range_highlighter.terminate()
 
     def _start_rescan(self):
         self._translation_unit_accessor.clear_caches()
@@ -183,6 +233,7 @@ class ClangPlugin(object):
         self._start_rescan()
         self._file_has_changed = True
         self._file_at_last_change = self._editor.current_file()
+        self.tick()
 
     def tick(self):
         if self._file_has_changed:
