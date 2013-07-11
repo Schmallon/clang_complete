@@ -1,5 +1,5 @@
 import clang.cindex
-from common import ExportedRange
+from common import ExportedRange, Worker
 from finding import DeclarationFinder, DefinitionFinder
 from translation_unit_access import TranslationUnitAccessor
 from completion import Completer
@@ -88,7 +88,7 @@ class ReplacingSingleElementQueue(object):
     def __init__(self):
         self._queue = Queue.Queue(maxsize=1)
 
-    def add(self, value):
+    def put(self, value):
         while True:
             try:
                 self._queue.put_nowait(value)
@@ -108,29 +108,22 @@ class ReplacingSingleElementQueue(object):
 
 class SingleResultWorker(object):
     def __init__(self, consume_request):
-        self._alive = True
         self._request = ReplacingSingleElementQueue()
         self._result = ReplacingSingleElementQueue()
         self._consume_request = consume_request
-        self._thread = threading.Thread(target=self.run, name="single_result_worker").start()
+        self._worker = Worker(self._process, self._request)
 
     def terminate(self):
-        self._alive = False
-        self._request.add(None)
+        self._worker.terminate()
 
     def request(self, request):
-        self._request.add(request)
+        self._request.put(request)
 
     def peek_result(self):
         return self._result.get_nowait()
 
-    def run(self):
-        while True:
-            request = self._request.get()
-            if not self._alive:
-                return
-            result = self._consume_request(request)
-            self._result.add(result)
+    def _process(self, request):
+        self._result.put(self._consume_request(request))
 
 
 class InterestingRangeHighlighter(object):

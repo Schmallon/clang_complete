@@ -1,3 +1,6 @@
+import threading
+
+
 class ExportedRange(object):
     def __init__(self, start, end):
         self.start = start
@@ -46,3 +49,22 @@ def get_definition_or_reference(cursor):
         return definition
     else:
         return cursor.referenced
+
+
+class Worker(object):
+    def __init__(self, consume_request, in_queue):
+        self._alive = True
+        self._consume_request = consume_request
+        self._in_queue = in_queue
+        self._thread = threading.Thread(target=self._run, name="Worker").start()
+
+    def terminate(self):
+        self._alive = False
+        self._in_queue.put(None)
+
+    def _run(self):
+        while True:
+            request = self._in_queue.get()
+            if not self._alive:
+                return
+            self._consume_request(request)
