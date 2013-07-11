@@ -115,6 +115,7 @@ class SingleResultWorker(object):
 
     def terminate(self):
         self._worker.terminate()
+        self.request(None)
 
     def request(self, request):
         self._request.put(request)

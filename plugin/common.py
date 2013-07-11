@@ -60,7 +60,6 @@ class Worker(object):
 
     def terminate(self):
         self._alive = False
-        self._in_queue.put(None)
 
     def _run(self):
         while True:

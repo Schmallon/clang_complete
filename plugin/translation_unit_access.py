@@ -2,6 +2,8 @@ import clang.cindex
 import threading
 import Queue
 from finding import DefinitionFileFinder
+from common import Worker
+import traceback
 
 
 class TranslationUnitParsingAction(object):
@@ -128,8 +130,6 @@ class IdleTranslationUnitParserThreadDistributor():
         self._threads = [IdleTranslationUnitParserThread(self._editor,
             translation_unit_parser, self._remaining_files, self._file_contents, self.enqueue_file)
             for i in range(1, 8)]
-        for thread in self._threads:
-            thread.start()
 
     def terminate(self):
         for thread in self._threads:
@@ -152,35 +152,30 @@ class IdleTranslationUnitParserThreadDistributor():
             self._remaining_files.put((priority, file[0]))
 
 
-class IdleTranslationUnitParserThread(threading.Thread):
+class IdleTranslationUnitParserThread(object):
     def __init__(self, editor, translation_unit_parser, _remaining_files, file_contents, enqueue_in_any_thread):
-        threading.Thread.__init__(self)
         self._editor = editor
         self._parser = translation_unit_parser
         self._enqueue_in_any_thread = enqueue_in_any_thread
-        self._remaining_files = _remaining_files
         self._file_contents = file_contents
-        self._termination_requested = False
+        self._worker = Worker(self._process, _remaining_files)
 
-    def run(self):
+    def _process(self, priority_and_file_name):
+        if not priority_and_file_name:
+            traceback.print_stack()
+        ignored_priority, file_name = priority_and_file_name
         try:
-            while True:
-                ignored_priority, file_name = self._remaining_files.get()
-                if self._termination_requested:
-                    return
-
-                def get_contents():
-                    return self._file_contents[file_name]
-                self._parser.translation_unit_do(file_name, get_contents, lambda tu: tu)
-                self._enqueue_definition_files(file_name)
-                self._remaining_files.task_done()
+            def get_contents():
+                return self._file_contents[file_name]
+            self._parser.translation_unit_do(file_name, get_contents, lambda tu: tu)
+            self._enqueue_definition_files(file_name)
         except Exception, e:
             self._editor.display_message(
                 "Exception thrown in idle thread: " + str(e))
             raise e
 
     def terminate(self):
-        self._termination_requested = True
+        self._worker.terminate()
 
     def _enqueue_if_new(self, file_name):
         """Do not enqueue already parsed files to prevent overriding in memory
