@@ -262,6 +262,7 @@ class TestClangPlugin(unittest.TestCase):
 
         self.clang_plugin.tick()
         self.clang_plugin.tick()
+        self.clang_plugin.tick()
 
         self.assertEquals(
                 num_changes,
