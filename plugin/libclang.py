@@ -88,7 +88,7 @@ class ReplacingSingleElementQueue(object):
     def __init__(self):
         self._queue = Queue.Queue(maxsize=1)
 
-    def set(self, value):
+    def add(self, value):
         while True:
             try:
                 self._queue.put_nowait(value)
@@ -116,10 +116,10 @@ class SingleResultWorker(object):
 
     def terminate(self):
         self._alive = False
-        self._request.set(None)
+        self._request.add(None)
 
     def request(self, request):
-        self._request.set(request)
+        self._request.add(request)
 
     def peek_result(self):
         return self._result.get_nowait()
@@ -130,7 +130,7 @@ class SingleResultWorker(object):
             if not self._alive:
                 return
             result = self._consume_request(request)
-            self._result.set(result)
+            self._result.add(result)
 
 
 class InterestingRangeHighlighter(object):
