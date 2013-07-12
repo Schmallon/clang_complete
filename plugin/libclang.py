@@ -5,7 +5,6 @@ from translation_unit_access import TranslationUnitAccessor
 from completion import Completer
 import sys
 import actions
-import threading
 import Queue
 
 """
@@ -204,10 +203,8 @@ class ClangPlugin(object):
 
         self._editor = editor
         self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
-        self._definition_finder = DefinitionFinder(
-            self._editor, self._translation_unit_accessor)
-        self._declaration_finder = DeclarationFinder(
-            self._editor, self._translation_unit_accessor)
+        self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
+        self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
@@ -224,8 +221,7 @@ class ClangPlugin(object):
         self._load_files_in_background()
 
     def file_changed(self):
-        self._editor.display_message(
-            "File change was notified, clearing all caches.")
+        self._editor.display_message("File change was notified, clearing all caches.")
         self._start_rescan()
         self._file_has_changed = True
         self._file_at_last_change = self._editor.current_file()
