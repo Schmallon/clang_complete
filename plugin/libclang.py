@@ -141,8 +141,10 @@ class InterestingRangeHighlighter(object):
         return [
             ("Non-const reference",
                 actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
-            ("Virtual method declaration",
+            ("Overridden method declaration",
                 actions.find_overriden_method_declarations),
+            ("Implemented method declaration",
+                actions.find_implemented_pure_virtual_methods),
             #("Static method declaration", actions.find_static_method_declarations),
             #("Member reference", actions.find_member_references),
             #("Virtual method call", actions.find_virtual_method_calls),

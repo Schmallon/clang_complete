@@ -8,6 +8,12 @@ def virtual_methods_in_file_of_current_translation_unit(translation_unit):
             yield cursor
 
 
+def find_implemented_pure_virtual_methods(translation_unit):
+    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
+        if filter(lambda c: c.is_pure_virtual_method(), cursor.get_overriden_methods()):
+            yield get_identifier_range(cursor)
+
+
 def find_overriden_method_declarations(translation_unit):
     for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
         if filter(lambda c: not c.is_pure_virtual_method(), cursor.get_overriden_methods()):

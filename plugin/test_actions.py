@@ -189,3 +189,35 @@ class TestActions(unittest.TestCase):
             {
             }
             """)
+
+    def test_find_implemented_pure_virtual_methods(self):
+        self.assert_function_finds_marked_ranges(
+            actions.find_implemented_pure_virtual_methods,
+            """
+            class Super
+            {
+            public:
+                virtual void OverrideMe();
+                virtual void PureVirtual() = 0;
+            };
+
+            class Sub : public Super
+            {
+            public:
+                virtual void OverrideMe();
+                virtual void /*START*/PureVirtual/*END*/();
+                virtual void ImNewHere();
+            };
+
+            void Sub::/*START*/PureVirtual/*END*/()
+            {
+            }
+
+            void Sub::OverrideMe()
+            {
+            }
+
+            void Sub::ImNewHere()
+            {
+            }
+            """)
