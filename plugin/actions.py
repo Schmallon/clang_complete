@@ -2,6 +2,14 @@ from common import get_definition_or_reference
 from clang.cindex import CursorKind, TypeKind, TokenKind, SourceRange
 
 
+def find_diagnostics(translation_unit):
+    for diagnostic in translation_unit.diagnostics:
+        if diagnostic.severity in (diagnostic.Warning, diagnostic.Error, diagnostic.Note):
+            yield SourceRange.from_locations(diagnostic.location, diagnostic.location)
+            for range in diagnostic.ranges:
+                yield range
+
+
 def virtual_methods_in_file_of_current_translation_unit(translation_unit):
     for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
         if cursor.is_virtual_method():

@@ -93,10 +93,7 @@ class ClangPlugin(object):
         self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
         self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
-        self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
         self._interesting_range_highlighter = InterestingRangeHighlighter(self._translation_unit_accessor, self._editor)
-        self._file_has_changed = True
-        self._file_at_last_change = None
 
     def terminate(self):
         self._translation_unit_accessor.terminate()
@@ -109,21 +106,9 @@ class ClangPlugin(object):
     def file_changed(self):
         self._editor.display_message("File change was notified, clearing all caches.")
         self._start_rescan()
-        self._file_has_changed = True
-        self._file_at_last_change = self._editor.current_file()
         self.tick()
 
     def tick(self):
-        if self._file_has_changed:
-
-            def do_it(translation_unit):
-                self._diagnostics_highlighter.highlight_in_translation_unit(
-                    translation_unit)
-
-                self._file_has_changed = self._editor.current_file() != self._file_at_last_change
-
-            self._translation_unit_accessor.current_translation_unit_if_parsed_do(do_it)
-
         self._interesting_range_highlighter.tick()
 
     def file_opened(self):
@@ -177,27 +162,3 @@ class ClangPlugin(object):
                     'text': 'Reference'}) for reference in references if reference.referenced_range.start.file_name == self._editor.file_name()]
 
         self._editor.display_diagnostics(qf)
-
-
-class DiagnosticsHighlighter(object):
-
-    def __init__(self, editor):
-        self._editor = editor
-        self._highlight_style = "Diagnostic"
-
-    def _highlight_diagnostic(self, diagnostic):
-
-        if diagnostic.severity not in (diagnostic.Warning, diagnostic.Error, diagnostic.Note):
-            return
-
-        single_location_range = ExportedRange(
-            diagnostic.location, diagnostic.location)
-        self._editor.highlight_range(
-            single_location_range, self._highlight_style)
-
-        for range in diagnostic.ranges:
-            self._editor.highlight_range(range, self._highlight_style)
-
-    def highlight_in_translation_unit(self, translation_unit):
-        self._editor.clear_highlights(self._highlight_style)
-        map(self._highlight_diagnostic, translation_unit.diagnostics)

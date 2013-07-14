@@ -70,6 +70,7 @@ class InterestingRangeHighlighter(object):
 
     def _styles_and_actions(self):
         return [
+            ("Diagnostic", actions.find_diagnostics),
             ("Non-const reference",
                 actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
             ("Overridden method declaration",
@@ -109,6 +110,7 @@ class InterestingRangeHighlighter(object):
                 def __init__(self, translation_unit):
                     self.cursor = translation_unit.cursor
                     self.spelling = translation_unit.spelling
+                    self.diagnostics = translation_unit.diagnostics
             memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
 
             def collect_ranges():
