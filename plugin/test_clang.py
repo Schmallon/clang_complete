@@ -19,14 +19,17 @@ if libclang.clang.cindex.Config.library_path:
 else:
     libclang.clang.cindex.Config.set_library_path(clang_path)
 
+
 def export_ranges(ranges):
     return map(common.ExportedRange.from_clang_range, ranges)
+
 
 def has_diagnostics(editor):
     try:
         return editor.highlights()["Diagnostic"]
     except KeyError:
         return False
+
 
 def has_diagnostic_at_line(editor, line):
     try:
@@ -263,6 +266,7 @@ class TestClangPlugin(unittest.TestCase):
 
         self.assert_eventually(lambda: has_diagnostic_at_line(self.editor, num_changes))
 
+
 class TestTranslationUnitParser(unittest.TestCase):
     def test_files_changed_while_parsing_should_not_be_up_to_date(self):
 
@@ -276,14 +280,13 @@ class TestTranslationUnitParser(unittest.TestCase):
             continue_parsing.wait(1)
 
         index.parse = mock.MagicMock(wraps=wait_for_event)
-        parser = translation_unit_access.SynchronizedTranslationUnitParser(
-                index, TestEditor())
+        parser = translation_unit_access.SynchronizedTranslationUnitParser(index, TestEditor())
 
         def parse():
             parser.translation_unit_do(
-                    "foo.cpp",
-                    lambda: "void foo();",
-                    lambda tu: tu)
+                "foo.cpp",
+                lambda: "void foo();",
+                lambda tu: tu)
 
         thread = threading.Thread(target=parse)
 
@@ -319,18 +322,13 @@ class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
 class TestFindReferencesToOutsideOfSelection(TestCaseWithTranslationUnitAccessor):
     def assert_returns_ranges(self, file_name, given_range, expected_referenced_ranges, expected_referencing_ranges):
         def do_it(translation_unit):
-            references = actions.find_references_to_outside_of_selection(
-                translation_unit, given_range)
+            references = actions.find_references_to_outside_of_selection(translation_unit, given_range)
 
-            referenced_ranges = export_ranges(map(lambda reference:
-                                    reference.referenced_range, references))
-            self.assertEquals(list(set(
-                referenced_ranges)), expected_referenced_ranges)
+            referenced_ranges = export_ranges(map(lambda reference: reference.referenced_range, references))
+            self.assertEquals(list(set(referenced_ranges)), expected_referenced_ranges)
 
-            referencing_ranges = export_ranges(map(lambda reference:
-                                     reference.referencing_range, references))
-            self.assertEquals(list(set(
-                referencing_ranges)), expected_referencing_ranges)
+            referencing_ranges = export_ranges(map(lambda reference: reference.referencing_range, references))
+            self.assertEquals(list(set(referencing_ranges)), expected_referencing_ranges)
         self.translation_unit_do(file_name, do_it)
 
     def test_find_references_to_outside_of_selection2(self):
@@ -447,18 +445,15 @@ class TestTranslationUnitAccessor(unittest.TestCase):
     def test_can_parse_current_file(self):
         self.editor.set_content("void foo() {}")
         self.translation_unit_accessor.current_translation_unit_do(
-                self.assert_was_run(
-                    lambda tu: self.assertEquals(
-                        "TRANSLATION_UNIT",
-                        tu.cursor.kind.name)))
+            self.assert_was_run(lambda tu: self.assertEquals("TRANSLATION_UNIT", tu.cursor.kind.name)))
 
     def test_can_parse_file(self):
         self.translation_unit_accessor.translation_unit_for_file_named_do(
-                "test_sources/simple.cpp",
-                self.assert_was_run(
-                    lambda tu: self.assertEquals(
-                        "TRANSLATION_UNIT",
-                        tu.cursor.kind.name)))
+            "test_sources/simple.cpp",
+            self.assert_was_run(
+                lambda tu: self.assertEquals(
+                    "TRANSLATION_UNIT",
+                    tu.cursor.kind.name)))
 
 
 class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
@@ -466,7 +461,7 @@ class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
         self.editor = TestEditor()
         self.parser = mock.MagicMock(spec=[])
         self.distributor = translation_unit_access.IdleTranslationUnitParserThreadDistributor(
-                self.editor, self.parser)
+            self.editor, self.parser)
 
     def tearDown(self):
         self.distributor.terminate()
@@ -487,7 +482,7 @@ class TestIdleTranslationUnitParserThreadDistributor(unittest.TestCase):
 
         self.parser.is_up_to_date = mock.MagicMock(return_value=False)
         self.parser.translation_unit_do = mock.MagicMock(
-                wraps=translation_unit_do)
+            wraps=translation_unit_do)
 
         contents = "void foo();"
         self.distributor.enqueue_file(("file.cpp", contents))
