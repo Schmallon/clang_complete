@@ -24,13 +24,13 @@ class ReplacingSingleElementQueue(object):
                 self._queue.put_nowait(value)
                 return
             except Queue.Full:
-                self.get_nowait()
+                try:
+                    self.get_nowait()
+                except Queue.Empty:
+                    pass
 
     def get_nowait(self):
-        try:
-            return self._queue.get_nowait()
-        except Queue.Empty:
-            return None
+        return self._queue.get_nowait()
 
     def get(self):
         return self._queue.get()
@@ -63,6 +63,7 @@ class InterestingRangeHighlighter(object):
         self._editor = editor
         self._last_changedtick = 0
         self._worker = SingleResultWorker(self._collect_interesting_ranges)
+        self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
 
     def terminate(self):
         self._worker.terminate()
@@ -93,10 +94,13 @@ class InterestingRangeHighlighter(object):
 
             self._worker.request(self._editor.current_file())
 
-        ranges = self._worker.peek_result()
-        if ranges:
+        try:
+            diagnostics, ranges = self._worker.peek_result()
+            self._editor.display_diagnostics(diagnostics)
             self._clear_interesting_ranges()
             self._highlight_interesting_ranges(ranges)
+        except Queue.Empty:
+            pass
 
     def _collect_interesting_ranges(self, file):
 
@@ -113,7 +117,9 @@ class InterestingRangeHighlighter(object):
                     for range in ranges:
                         yield ExportedRange.from_clang_range(range), highlight_style
 
-            return list(collect_ranges())
+            diagnostics = self._quick_fix_list_generator.get_quick_fix_list(translation_unit)
+
+            return diagnostics, list(collect_ranges())
 
         return self._translation_unit_accessor.translation_unit_do(file, do_it)
 
@@ -121,3 +127,42 @@ class InterestingRangeHighlighter(object):
         for range, highlight_style in ranges:
             highlight_range_if_in_current_file(self._editor, range, highlight_style)
         self._last_highlighted_ranges = ranges
+
+
+class QuickFixListGenerator(object):
+
+    def __init__(self, editor):
+        self._editor = editor
+
+    def _get_quick_fix(self, diagnostic):
+        # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
+        if diagnostic.location.file:
+            file_name = diagnostic.location.file.name
+        else:
+            "hack: report errors without files. should nevertheless be in quick_fix list"
+            self._editor.display_message(diagnostic.spelling)
+            file_name = ""
+
+        if diagnostic.severity == diagnostic.Ignored:
+            type = 'I'
+        elif diagnostic.severity == diagnostic.Note:
+            type = 'I'
+        elif diagnostic.severity == diagnostic.Warning:
+            if "argument unused during compilation" in diagnostic.spelling:
+                return None
+            type = 'W'
+        elif diagnostic.severity == diagnostic.Error:
+            type = 'E'
+        elif diagnostic.severity == diagnostic.Fatal:
+            type = 'E'
+        else:
+            type = 'O'
+
+        return dict({'filename': file_name,
+                     'lnum': diagnostic.location.line,
+                     'col': diagnostic.location.column,
+                     'text': diagnostic.spelling,
+                     'type': type})
+
+    def get_quick_fix_list(self, tu):
+        return filter(None, map(self._get_quick_fix, tu.diagnostics))

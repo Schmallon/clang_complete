@@ -93,7 +93,6 @@ class ClangPlugin(object):
         self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
         self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
-        self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
         self._diagnostics_highlighter = DiagnosticsHighlighter(self._editor)
         self._interesting_range_highlighter = InterestingRangeHighlighter(self._translation_unit_accessor, self._editor)
         self._file_has_changed = True
@@ -118,7 +117,6 @@ class ClangPlugin(object):
         if self._file_has_changed:
 
             def do_it(translation_unit):
-                self._editor.display_diagnostics(self._quick_fix_list_generator.get_quick_fix_list(translation_unit))
                 self._diagnostics_highlighter.highlight_in_translation_unit(
                     translation_unit)
 
@@ -203,42 +201,3 @@ class DiagnosticsHighlighter(object):
     def highlight_in_translation_unit(self, translation_unit):
         self._editor.clear_highlights(self._highlight_style)
         map(self._highlight_diagnostic, translation_unit.diagnostics)
-
-
-class QuickFixListGenerator(object):
-
-    def __init__(self, editor):
-        self._editor = editor
-
-    def _get_quick_fix(self, diagnostic):
-        # Some diagnostics have no file, e.g. "too many errors emitted, stopping now"
-        if diagnostic.location.file:
-            file_name = diagnostic.location.file.name
-        else:
-            "hack: report errors without files. should nevertheless be in quick_fix list"
-            self._editor.display_message(diagnostic.spelling)
-            file_name = ""
-
-        if diagnostic.severity == diagnostic.Ignored:
-            type = 'I'
-        elif diagnostic.severity == diagnostic.Note:
-            type = 'I'
-        elif diagnostic.severity == diagnostic.Warning:
-            if "argument unused during compilation" in diagnostic.spelling:
-                return None
-            type = 'W'
-        elif diagnostic.severity == diagnostic.Error:
-            type = 'E'
-        elif diagnostic.severity == diagnostic.Fatal:
-            type = 'E'
-        else:
-            type = 'O'
-
-        return dict({'filename': file_name,
-                     'lnum': diagnostic.location.line,
-                     'col': diagnostic.location.column,
-                     'text': diagnostic.spelling,
-                     'type': type})
-
-    def get_quick_fix_list(self, tu):
-        return filter(None, map(self._get_quick_fix, tu.diagnostics))
