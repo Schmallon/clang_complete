@@ -73,17 +73,23 @@ def print_cursor_with_children(cursor, n=0):
         print_cursor_with_children(child, n + 1)
 
 
+def make_clang_plugin(editor, clang_complete_flags, library_path):
+    if not clang.cindex.Config.loaded:
+        if library_path != "":
+            clang.cindex.Config.set_library_path(library_path)
+
+        clang.cindex.Config.set_compatibility_check(False)
+
+    translation_unit_accessor = TranslationUnitAccessor(editor)
+
+    return ClangPlugin(editor, translation_unit_accessor, clang_complete_flags)
+
+
 class ClangPlugin(object):
-    def __init__(self, editor, clang_complete_flags, library_path):
-
-        if not clang.cindex.Config.loaded:
-            if library_path != "":
-                clang.cindex.Config.set_library_path(library_path)
-
-            clang.cindex.Config.set_compatibility_check(False)
+    def __init__(self, editor, translation_unit_accessor, clang_complete_flags):
 
         self._editor = editor
-        self._translation_unit_accessor = TranslationUnitAccessor(self._editor)
+        self._translation_unit_accessor = translation_unit_accessor
         self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
         self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))

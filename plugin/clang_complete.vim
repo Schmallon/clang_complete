@@ -249,7 +249,7 @@ function! s:initClangCompletePython()
 
     python vim_interface = VimInterface()
 
-    python clang_plugin = ClangPlugin(vim_interface, vim.eval('g:clang_complete_lib_flags'), vim.eval('g:clang_library_path'))
+    python clang_plugin = make_clang_plugin(vim_interface, vim.eval('g:clang_complete_lib_flags'), vim.eval('g:clang_library_path'))
 
     augroup ClangComplete
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()

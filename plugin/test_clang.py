@@ -107,7 +107,8 @@ class TestEditor(object):
 class TestClangPlugin(unittest.TestCase):
     def setUp(self):
         self.editor = TestEditor()
-        self.clang_plugin = libclang.ClangPlugin(self.editor, 0, "")
+        self.translation_unit_accessor = translation_unit_access.TranslationUnitAccessor(self.editor)
+        self.clang_plugin = libclang.ClangPlugin(self.editor, self.translation_unit_accessor, 0)
 
     def tearDown(self):
         self.clang_plugin.terminate()
