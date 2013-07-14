@@ -24,16 +24,13 @@ class InterestingRangeHighlighter(object):
     def _styles_and_actions(self):
         return [
             ("Diagnostic", actions.find_diagnostics),
-            ("Non-const reference",
-                actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
-            ("Overridden method declaration",
-                actions.find_overriden_method_declarations),
-            ("Implemented method declaration",
-                actions.find_implemented_pure_virtual_methods),
+            ("Non-const reference", actions.make_find_parameters_passed_by_non_const_reference(self._editor)),
+            ("Overridden method declaration", actions.find_overriden_method_declarations),
+            ("Implemented method declaration", actions.find_implemented_pure_virtual_methods)]
             #("Static method declaration", actions.find_static_method_declarations),
             #("Member reference", actions.find_member_references),
             #("Virtual method call", actions.find_virtual_method_calls),
-            ("Omitted default argument", actions.find_omitted_default_arguments)]
+            #("Omitted default argument", actions.find_omitted_default_arguments)]
 
     def _clear_interesting_ranges(self):
         for highlight_style, action in self._styles_and_actions():
