@@ -12,6 +12,7 @@ import mock
 import threading
 import translation_unit_access
 import common
+import math
 
 if libclang.clang.cindex.Config.library_path:
     assert libclang.clang.cindex.Config.library_path == clang_path
@@ -20,6 +21,19 @@ else:
 
 def export_ranges(ranges):
     return map(common.ExportedRange.from_clang_range, ranges)
+
+def has_diagnostics(editor):
+    try:
+        return editor.highlights()["Diagnostic"]
+    except KeyError:
+        return False
+
+def has_diagnostic_at_line(editor, line):
+    try:
+        return line == editor.highlights()["Diagnostic"][0].start.line
+    except KeyError:
+        return False
+
 
 class TestEditor(object):
     def __init__(self):
@@ -113,6 +127,16 @@ class TestClangPlugin(unittest.TestCase):
     def tearDown(self):
         self.clang_plugin.terminate()
 
+    def assert_eventually(self, do_it):
+        max_time = 0.5
+        step_size = 0.05
+        for i in range(int(math.ceil(max_time / step_size))):
+            if do_it():
+                return
+            time.sleep(step_size)
+            self.clang_plugin.tick()
+        self.assertTrue(False)
+
     def full_file_name(self, file_name):
         return "test_sources/" + file_name
 
@@ -196,57 +220,37 @@ class TestClangPlugin(unittest.TestCase):
         self.assertEquals(list(set(referenced_ranges)), [range_from_tuples(
             self.full_file_name(file_name), (3, 7), (3, 36))])
 
-    def wait_until_parsed(self):
-        time.sleep(0.2)
-
     def test_diagnostics_are_hidden_when_fixed(self):
         self.editor.set_content("foo")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.assertTrue(self.editor.highlights()["Diagnostic"])
+        self.assert_eventually(lambda: has_diagnostics(self.editor))
 
         self.editor.set_content("void foo(){}")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.assertFalse(self.editor.highlights()["Diagnostic"])
+        self.assert_eventually(lambda: not has_diagnostics(self.editor))
 
     def test_diagnostics_appear(self):
+        self.editor.set_content("foo")
+        self.clang_plugin.file_changed()
+        self.assert_eventually(lambda: has_diagnostics(self.editor))
+
         self.editor.set_content("void foo(){}")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
+        self.assert_eventually(lambda: not has_diagnostics(self.editor))
 
-        self.clang_plugin.tick()
-        self.assertFalse(self.editor.highlights()["Diagnostic"])
-
-        self.editor.set_content("foo")
+        self.editor.set_content("bar")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.assertTrue(self.editor.highlights()["Diagnostic"])
+        self.assert_eventually(lambda: has_diagnostics(self.editor))
 
     def test_diagnostics_are_updated(self):
+
         self.editor.set_content("foo")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.assertEquals(
-                1,
-                self.editor.highlights()["Diagnostic"][0].start.line)
+        self.assert_eventually(lambda: has_diagnostic_at_line(self.editor, 1))
 
         self.editor.set_content("\n\nfoo")
         self.clang_plugin.file_changed()
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.assertEquals(
-                3,
-                self.editor.highlights()["Diagnostic"][0].start.line)
+        self.assert_eventually(lambda: has_diagnostic_at_line(self.editor, 3))
 
     def test_diagnostics_are_updated2(self):
 
@@ -257,18 +261,7 @@ class TestClangPlugin(unittest.TestCase):
             self.editor.set_content("\n" * i + "foo")
             self.clang_plugin.file_changed()
 
-        self.wait_until_parsed()
-        print "foo"
-        self.wait_until_parsed()
-
-        self.clang_plugin.tick()
-        self.clang_plugin.tick()
-        self.clang_plugin.tick()
-
-        self.assertEquals(
-                num_changes,
-                self.editor.highlights()["Diagnostic"][0].start.line)
-
+        self.assert_eventually(lambda: has_diagnostic_at_line(self.editor, num_changes))
 
 class TestTranslationUnitParser(unittest.TestCase):
     def test_files_changed_while_parsing_should_not_be_up_to_date(self):
