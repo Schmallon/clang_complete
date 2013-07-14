@@ -1,4 +1,4 @@
-from common import ExportedRange
+from common import SingleResultWorker
 from completion import Completer
 from finding import DeclarationFinder, DefinitionFinder
 from highlighting import InterestingRangeHighlighter, export_and_highlight_range_if_in_current_file
@@ -85,6 +85,31 @@ def make_clang_plugin(editor, clang_complete_flags, library_path):
     return ClangPlugin(editor, translation_unit_accessor, clang_complete_flags)
 
 
+class CurrentTranslationUnitAccess(object):
+    def __init__(self, translation_unit_accessor):
+        self._translation_unit_accessor = translation_unit_accessor
+        self._listeners = []
+        self._worker = SingleResultWorker(self._process)
+
+    def terminate(self):
+        self._worker.terminate()
+
+    def file_changed(self, file):
+        self._worker.request(file)
+
+    def add_listener(self, listener):
+        self._listeners.append(listener)
+
+    def _process(self, file):
+
+        def do_it(translation_unit):
+            for listener in self._listeners:
+                listener(translation_unit)
+
+        self._translation_unit_accessor.clear_caches()
+        self._translation_unit_accessor.translation_unit_do(file, do_it)
+
+
 class ClangPlugin(object):
     def __init__(self, editor, translation_unit_accessor, clang_complete_flags):
 
@@ -93,19 +118,16 @@ class ClangPlugin(object):
         self._definition_finder = DefinitionFinder(self._editor, self._translation_unit_accessor)
         self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
-        self._interesting_range_highlighter = InterestingRangeHighlighter(self._translation_unit_accessor, self._editor)
+        self._current_translation_unit_access = CurrentTranslationUnitAccess(self._translation_unit_accessor)
+        self._interesting_range_highlighter = InterestingRangeHighlighter(self._current_translation_unit_access, self._editor)
 
     def terminate(self):
+        self._current_translation_unit_access.terminate()
         self._translation_unit_accessor.terminate()
-        self._interesting_range_highlighter.terminate()
-
-    def _start_rescan(self):
-        self._translation_unit_accessor.clear_caches()
-        self._load_files_in_background()
 
     def file_changed(self):
         self._editor.display_message("File change was notified, clearing all caches.")
-        self._start_rescan()
+        self._current_translation_unit_access.file_changed(self._editor.current_file())
         self.tick()
 
     def tick(self):
@@ -113,12 +135,7 @@ class ClangPlugin(object):
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")
-        # Why clear on opening, closing is enough.
-        self._load_files_in_background()
-
-    def _load_files_in_background(self):
-        self._translation_unit_accessor.enqueue_translation_unit_creation(
-            self._editor.current_file())
+        self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
     def jump_to_definition(self):
         #self._editor.user_abortable_perform(

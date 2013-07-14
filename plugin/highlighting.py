@@ -1,4 +1,4 @@
-from common import ExportedRange, SingleResultWorker
+from common import ExportedRange, SingleResultWorker, ReplacingSingleElementQueue
 import Queue
 import actions
 
@@ -15,15 +15,11 @@ def export_and_highlight_range_if_in_current_file(editor, range, highlight_style
 
 
 class InterestingRangeHighlighter(object):
-    def __init__(self, translation_unit_accessor, editor):
-        self._translation_unit_accessor = translation_unit_accessor
+    def __init__(self, current_translation_unit_access, editor):
+        current_translation_unit_access.add_listener(self._process_translation_unit)
+        self._results = ReplacingSingleElementQueue()
         self._editor = editor
-        self._last_changedtick = 0
-        self._worker = SingleResultWorker(self._collect_interesting_ranges)
         self._quick_fix_list_generator = QuickFixListGenerator(self._editor)
-
-    def terminate(self):
-        self._worker.terminate()
 
     def _styles_and_actions(self):
         return [
@@ -43,44 +39,37 @@ class InterestingRangeHighlighter(object):
         for highlight_style, action in self._styles_and_actions():
             self._editor.clear_highlights(highlight_style)
 
+    def _process_translation_unit(self, translation_unit):
+        self._results.put(self._collect_interesting_ranges(translation_unit))
+
     def tick(self):
-        changedtick = self._editor.changedtick()
-
-        if changedtick != self._last_changedtick:
-            self._last_changedtick = changedtick
-            self._clear_interesting_ranges()
-
-            self._worker.request(self._editor.current_file())
-
         try:
-            diagnostics, ranges = self._worker.peek_result()
+            diagnostics, ranges = self._results.get_nowait()
             self._editor.display_diagnostics(diagnostics)
             self._clear_interesting_ranges()
             self._highlight_interesting_ranges(ranges)
         except Queue.Empty:
             pass
 
-    def _collect_interesting_ranges(self, file):
+    def _collect_interesting_ranges(self, translation_unit):
 
-        def do_it(translation_unit):
-            class MemoizedTranslationUnit(object):
-                def __init__(self, translation_unit):
-                    self.cursor = translation_unit.cursor
-                    self.spelling = translation_unit.spelling
-                    self.diagnostics = translation_unit.diagnostics
-            memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
+        class MemoizedTranslationUnit(object):
+            def __init__(self, translation_unit):
+                self.cursor = translation_unit.cursor
+                self.spelling = translation_unit.spelling
+                self.diagnostics = translation_unit.diagnostics
+        memoized_translation_unit = MemoizedTranslationUnit(translation_unit)
 
-            def collect_ranges():
-                for highlight_style, action in self._styles_and_actions():
-                    ranges = action(memoized_translation_unit)
-                    for range in ranges:
-                        yield ExportedRange.from_clang_range(range), highlight_style
+        def collect_ranges():
+            for highlight_style, action in self._styles_and_actions():
+                ranges = action(memoized_translation_unit)
+                for range in ranges:
+                    yield ExportedRange.from_clang_range(range), highlight_style
 
-            diagnostics = self._quick_fix_list_generator.get_quick_fix_list(translation_unit)
+        diagnostics = self._quick_fix_list_generator.get_quick_fix_list(translation_unit)
 
-            return diagnostics, list(collect_ranges())
+        return diagnostics, list(collect_ranges())
 
-        return self._translation_unit_accessor.translation_unit_do(file, do_it)
 
     def _highlight_interesting_ranges(self, ranges):
         for range, highlight_style in ranges:
