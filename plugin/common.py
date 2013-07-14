@@ -1,4 +1,5 @@
 import threading
+import Queue
 
 
 class ExportedRange(object):
@@ -67,3 +68,46 @@ class Worker(object):
             if not self._alive:
                 return
             self._consume_request(request)
+
+
+class ReplacingSingleElementQueue(object):
+    def __init__(self):
+        self._queue = Queue.Queue(maxsize=1)
+
+    def put(self, value):
+        while True:
+            try:
+                self._queue.put_nowait(value)
+                return
+            except Queue.Full:
+                try:
+                    self.get_nowait()
+                except Queue.Empty:
+                    pass
+
+    def get_nowait(self):
+        return self._queue.get_nowait()
+
+    def get(self):
+        return self._queue.get()
+
+
+class SingleResultWorker(object):
+    def __init__(self, consume_request):
+        self._request = ReplacingSingleElementQueue()
+        self._result = ReplacingSingleElementQueue()
+        self._consume_request = consume_request
+        self._worker = Worker(self._process, self._request)
+
+    def terminate(self):
+        self._worker.terminate()
+        self.request(None)
+
+    def request(self, request):
+        self._request.put(request)
+
+    def peek_result(self):
+        return self._result.get_nowait()
+
+    def _process(self, request):
+        self._result.put(self._consume_request(request))

@@ -1,4 +1,4 @@
-from common import ExportedRange, Worker
+from common import ExportedRange, SingleResultWorker
 import Queue
 import actions
 
@@ -12,49 +12,6 @@ def export_and_highlight_range_if_in_current_file(editor, range, highlight_style
     """"Caution. You must still own the range's translation unit."""
     exported_range = ExportedRange.from_clang_range(range)
     highlight_range_if_in_current_file(editor, exported_range, highlight_style)
-
-
-class ReplacingSingleElementQueue(object):
-    def __init__(self):
-        self._queue = Queue.Queue(maxsize=1)
-
-    def put(self, value):
-        while True:
-            try:
-                self._queue.put_nowait(value)
-                return
-            except Queue.Full:
-                try:
-                    self.get_nowait()
-                except Queue.Empty:
-                    pass
-
-    def get_nowait(self):
-        return self._queue.get_nowait()
-
-    def get(self):
-        return self._queue.get()
-
-
-class SingleResultWorker(object):
-    def __init__(self, consume_request):
-        self._request = ReplacingSingleElementQueue()
-        self._result = ReplacingSingleElementQueue()
-        self._consume_request = consume_request
-        self._worker = Worker(self._process, self._request)
-
-    def terminate(self):
-        self._worker.terminate()
-        self.request(None)
-
-    def request(self, request):
-        self._request.put(request)
-
-    def peek_result(self):
-        return self._result.get_nowait()
-
-    def _process(self, request):
-        self._result.put(self._consume_request(request))
 
 
 class InterestingRangeHighlighter(object):
