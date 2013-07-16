@@ -67,7 +67,7 @@ class VimInterface(object):
             "Virtual method call": {'group': 'clang_virtual_method_call', 'default': 'guibg=LightRed'},
             "Virtual method declaration": {'group': 'clang_virtual_method_declaration', 'default': 'guibg=#eee8d5 guifg=#d33682 gui=bold'},
             "Overridden method declaration": {'group': 'clang_overridden_method_declaration', 'default': 'guibg=#eee8d5 guifg=#d33682 gui=bold'},
-            "Implemented method declaration": {'group': 'clang_implemented_method_declaration', 'default': 'guibg=#000000 guifg=#00FF00 gui=bold'},
+            "Implemented method declaration": {'group': 'clang_implemented_method_declaration', 'default': 'guifg=#007F00 guibg=#eee8d5 gui=bold'},
             "Static method declaration": {'group': 'clang_static_method_declaration', 'default': 'gui=underline'},
             "Member reference": {'group': 'clang_member_reference', 'default': 'gui=bold guifg=#005079 guibg=#DBF2FF'},
             "Referenced Range": {'group': 'clang_referenced_range', 'default': 'gui=bold guifg=#FFFF00 guibg=#0000FF', 'priority': '-10'},
