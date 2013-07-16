@@ -121,11 +121,15 @@ class TickingDispatcher(object):
         self.pairs.append((queue, receiver))
 
     def tick(self):
-        for queue, receiver in self.pairs:
-            try:
-                receiver(queue.get_nowait())
-            except Queue.Empty:
-                pass
+        message_handled = True
+        while message_handled:
+            message_handled = False
+            for queue, receiver in self.pairs:
+                try:
+                    receiver(queue.get_nowait())
+                    message_handled = True
+                except Queue.Empty:
+                    pass
 
 
 def listen_and_map(listenable, transform):
