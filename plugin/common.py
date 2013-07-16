@@ -111,3 +111,28 @@ class SingleResultWorker(object):
 
     def _process(self, request):
         self._result.put(self._consume_request(request))
+
+
+class TickingDispatcher(object):
+    def __init__(self):
+        self.pairs = []
+
+    def add_queue(self, queue, receiver):
+        self.pairs.append((queue, receiver))
+
+    def tick(self):
+        for queue, receiver in self.pairs:
+            try:
+                receiver(queue.get_nowait())
+            except Queue.Empty:
+                pass
+
+
+def listen_and_map(listenable, transform):
+    queue = ReplacingSingleElementQueue()
+
+    def do_it(param):
+        queue.put(transform(param))
+
+    listenable.add_listener(do_it)
+    return queue

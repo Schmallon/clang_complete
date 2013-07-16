@@ -1,5 +1,4 @@
-from common import ExportedRange, SingleResultWorker, ReplacingSingleElementQueue
-import Queue
+from common import ExportedRange, listen_and_map
 import actions
 
 
@@ -41,25 +40,20 @@ def interesting_range_collector(styles_and_actions):
 
 
 class InterestingRangeHighlighter(object):
-    def __init__(self, current_translation_unit_access, editor):
+    def __init__(self, current_translation_unit_access, dispatch_in_main_thread, editor):
         self._editor = editor
-        self._results = ReplacingSingleElementQueue()
 
-        collector = interesting_range_collector(self._styles_and_actions())
+        dispatch_in_main_thread.add_queue(
+            listen_and_map(
+                current_translation_unit_access,
+                interesting_range_collector(self._styles_and_actions())),
+            self._display_ranges)
 
-        def publish_result(translation_unit):
-            self._results.put(collector(translation_unit))
-
-        current_translation_unit_access.add_listener(publish_result)
-
-    def tick(self):
-        try:
-            diagnostics, ranges = self._results.get_nowait()
-            self._editor.display_diagnostics(diagnostics)
-            self._clear_interesting_ranges()
-            self._highlight_interesting_ranges(ranges)
-        except Queue.Empty:
-            pass
+    def _display_ranges(self, d_n_r):
+        diagnostics, ranges = d_n_r
+        self._editor.display_diagnostics(diagnostics)
+        self._clear_interesting_ranges()
+        self._highlight_interesting_ranges(ranges)
 
     def _styles_and_actions(self):
         return [

@@ -1,4 +1,4 @@
-from common import SingleResultWorker
+from common import SingleResultWorker, TickingDispatcher
 from completion import Completer
 from finding import DeclarationFinder, DefinitionFinder
 from highlighting import InterestingRangeHighlighter, export_and_highlight_range_if_in_current_file
@@ -119,7 +119,8 @@ class ClangPlugin(object):
         self._declaration_finder = DeclarationFinder(self._editor, self._translation_unit_accessor)
         self._completer = Completer(self._editor, self._translation_unit_accessor, int(clang_complete_flags))
         self._current_translation_unit_access = CurrentTranslationUnitAccess(self._translation_unit_accessor)
-        self._interesting_range_highlighter = InterestingRangeHighlighter(self._current_translation_unit_access, self._editor)
+        self._dispatcher = TickingDispatcher()
+        self._interesting_range_highlighter = InterestingRangeHighlighter(self._current_translation_unit_access, self._dispatcher, self._editor)
 
     def terminate(self):
         self._current_translation_unit_access.terminate()
@@ -131,7 +132,7 @@ class ClangPlugin(object):
         self.tick()
 
     def tick(self):
-        self._interesting_range_highlighter.tick()
+        self._dispatcher.tick()
 
     def file_opened(self):
         self._editor.display_message("Noticed opening of new file")
