@@ -10,22 +10,17 @@ def find_diagnostics(translation_unit):
                 yield range
 
 
-def virtual_methods_in_file_of_current_translation_unit(translation_unit):
-    for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
-        if cursor.is_virtual_method():
-            yield cursor
-
-
 def find_implemented_pure_virtual_methods(translation_unit):
-    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
-        if filter(lambda c: c.is_pure_virtual_method(), cursor.get_overriden_methods()):
+    for cursor in cursors_in_file_of_translation_unit(translation_unit):
+        if any(filter(lambda c: c.is_pure_virtual_method(), cursor.get_overriden_methods())):
             yield get_identifier_range(cursor)
 
 
 def find_overriden_method_declarations(translation_unit):
-    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
-        if filter(lambda c: not c.is_pure_virtual_method(), cursor.get_overriden_methods()):
-            yield get_identifier_range(cursor)
+    for cursor in cursors_in_file_of_translation_unit(translation_unit):
+        if cursor.is_virtual_method():
+            if filter(lambda c: not c.is_pure_virtual_method(), cursor.get_overriden_methods()):
+                yield get_identifier_range(cursor)
 
 
 def find_virtual_method_calls(translation_unit):
@@ -36,8 +31,9 @@ def find_virtual_method_calls(translation_unit):
 
 
 def find_virtual_method_declarations(translation_unit):
-    for cursor in virtual_methods_in_file_of_current_translation_unit(translation_unit):
-        yield get_identifier_range(cursor)
+    for cursor in cursors_in_file_of_translation_unit(translation_unit):
+        if cursor.is_virtual_method():
+            yield get_identifier_range(cursor)
 
 
 def find_static_method_declarations(translation_unit):
@@ -99,7 +95,6 @@ def cursors_in_file_of_translation_unit(translation_unit):
     top_level_cursors_in_this_file = filter(
         lambda cursor: cursor.location.file and cursor.location.file.name == translation_unit.spelling,
         translation_unit.cursor.get_children())
-
     for cursor in top_level_cursors_in_this_file:
         for result in dfs(cursor, lambda node: node.get_children()):
             yield result
