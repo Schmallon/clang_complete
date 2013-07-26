@@ -1,5 +1,3 @@
-clang_path = "/Users/mkl/projects/llvm/ninja/lib"
-
 import time
 import clang_plugin
 import actions
