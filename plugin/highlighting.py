@@ -53,7 +53,8 @@ class InterestingRangeHighlighter(object):
         diagnostics, ranges = d_n_r
         self._editor.display_diagnostics(diagnostics)
         self._clear_interesting_ranges()
-        self._highlight_interesting_ranges(ranges)
+        if self._editor.should_highlight_interesting_ranges():
+            self._highlight_interesting_ranges(ranges)
 
     def _styles_and_actions(self):
         return [
