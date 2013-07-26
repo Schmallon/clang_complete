@@ -5,3 +5,4 @@
 *.cache
 tags
 plugin/sandbox
+plugin/.clang_path
