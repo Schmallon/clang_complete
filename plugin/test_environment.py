@@ -1,10 +1,8 @@
-import sys
 import contextlib
 import clang.cindex
 import re
 
 clang_path = "/Users/mkl/projects/llvm/ninja/lib"
-sys.argv = [clang_path]
 
 import libclang
 

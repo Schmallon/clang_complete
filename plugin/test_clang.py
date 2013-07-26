@@ -1,9 +1,5 @@
-import sys
-
 clang_path = "/Users/mkl/projects/llvm/ninja/lib"
-sys.argv = [clang_path]
 
-#sys.argv = ["/Users/mkl/projects/llvm/debug/Debug+Asserts/lib"]
 import time
 import libclang
 import actions
