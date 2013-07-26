@@ -5,7 +5,6 @@ from highlighting import InterestingRangeHighlighter, export_and_highlight_range
 from translation_unit_access import TranslationUnitAccessor
 import actions
 import clang.cindex
-import sys
 
 
 def abort_after_first_call(consumer, producer):
@@ -19,13 +18,6 @@ def abort_after_first_call(consumer, producer):
         producer(consume_and_abort)
     except ConsumeWasCalled:
         pass
-
-
-def print_cursor_with_children(cursor, n=0):
-    sys.stdout.write(n * " ")
-    print(str(cursor.kind.name))
-    for child in cursor.get_children():
-        print_cursor_with_children(child, n + 1)
 
 
 def make_clang_plugin(editor, clang_complete_flags, library_path):
