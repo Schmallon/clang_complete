@@ -1,7 +1,7 @@
 clang_path = "/Users/mkl/projects/llvm/ninja/lib"
 
 import time
-import libclang
+import clang_plugin
 import actions
 import unittest
 import mock
@@ -119,7 +119,7 @@ class TestClangPlugin(unittest.TestCase):
     def setUp(self):
         self.editor = TestEditor()
         self.translation_unit_accessor = translation_unit_access.TranslationUnitAccessor(self.editor)
-        self.clang_plugin = libclang.ClangPlugin(self.editor, self.translation_unit_accessor, 0)
+        self.clang_plugin = clang_plugin.ClangPlugin(self.editor, self.translation_unit_accessor, 0)
 
     def tearDown(self):
         self.clang_plugin.terminate()
@@ -303,7 +303,7 @@ def range_from_tuples(file_name, start, end):
 class TestCaseWithTranslationUnitAccessor(unittest.TestCase):
     def setUp(self):
         self.editor = TestEditor()
-        self.translation_unit_accessor = libclang.TranslationUnitAccessor(
+        self.translation_unit_accessor = clang_plugin.TranslationUnitAccessor(
             self.editor)
 
     def tearDown(self):
@@ -381,7 +381,7 @@ class TestGetIdentifierRange(TestCaseWithTranslationUnitAccessor):
             clang_location = common.ExportedLocation(file_name, location[
                 0], location[1]).clang_location(translation_unit)
 
-            cursor = libclang.clang.cindex.Cursor.from_location(
+            cursor = clang_plugin.clang.cindex.Cursor.from_location(
                 translation_unit, clang_location)
             identifier_range = common.ExportedRange.from_clang_range(actions.get_identifier_range(cursor))
             expected_range_real_range = range_from_tuples(
@@ -417,7 +417,7 @@ class TestTranslationUnitAccessor(unittest.TestCase):
         self.must_be_run = {}
 
         self.editor = TestEditor()
-        self.translation_unit_accessor = libclang.TranslationUnitAccessor(
+        self.translation_unit_accessor = clang_plugin.TranslationUnitAccessor(
             self.editor)
 
     def tearDown(self):

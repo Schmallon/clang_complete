@@ -239,12 +239,12 @@ endfunction
 
 function! s:initClangCompletePython()
   " Only parse the python library once
-  if !exists('s:libclang_loaded')
+  if !exists('s:clang_plugin_loaded')
     python import sys
     python import vim
 
     exe 'python sys.path = ["' . s:plugin_path . '"] + sys.path'
-    exe 'pyfile ' . fnameescape(s:plugin_path) . '/libclang.py'
+    exe 'pyfile ' . fnameescape(s:plugin_path) . '/clang_plugin.py'
     exe 'pyfile ' . fnameescape(s:plugin_path) . '/vim_interface.py'
 
     python vim_interface = VimInterface()
@@ -255,7 +255,7 @@ function! s:initClangCompletePython()
       autocmd BufReadPost *.cpp,*.c,*.h python clang_plugin.file_opened()
       autocmd VimLeave * python clang_plugin.terminate()
     augroup end
-  let s:libclang_loaded = 1
+  let s:clang_plugin_loaded = 1
   endif
 endfunction
 
