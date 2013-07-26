@@ -36,6 +36,13 @@ def find_virtual_method_declarations(translation_unit):
             yield get_identifier_range(cursor)
 
 
+def find_non_virtual_methods(translation_unit):
+    for cursor in cursors_in_file_of_translation_unit(translation_unit):
+        if cursor.kind == CursorKind.CXX_METHOD:
+            if not cursor.is_virtual_method():
+                yield get_identifier_range(cursor)
+
+
 def find_static_method_declarations(translation_unit):
     for cursor in cursors_of_kind_in_file_of_translation_unit(translation_unit, CursorKind.CXX_METHOD):
         if cursor.is_static_method():

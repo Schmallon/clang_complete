@@ -221,3 +221,23 @@ class TestActions(unittest.TestCase):
             {
             }
             """)
+
+    def test_find_non_virtual_methods(self):
+        self.assert_function_finds_marked_ranges(
+            actions.find_non_virtual_methods,
+            """
+            class SomeClass
+            {
+            public:
+                virtual void ImVirtual();
+                void /*START*/ImNotVirtual/*END*/();
+            };
+
+            void SomeClass::ImVirtual()
+            {
+            }
+
+            void SomeClass::/*START*/ImNotVirtual/*END*/()
+            {
+            }
+            """)
