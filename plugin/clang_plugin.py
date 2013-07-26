@@ -86,9 +86,6 @@ class ClangPlugin(object):
         self._translation_unit_accessor.enqueue_translation_unit_creation(self._editor.current_file())
 
     def jump_to_definition(self):
-        #self._editor.user_abortable_perform(
-            #functools.partial(abort_after_first_call, self._editor.open_location),
-            #self._definition_finder.definition_locations_do)
         abort_after_first_call(self._editor.open_location,
                                self._definition_finder.definition_locations_do)
 
