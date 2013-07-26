@@ -9,11 +9,9 @@ import threading
 import translation_unit_access
 import common
 import math
+import configure_clang
 
-if libclang.clang.cindex.Config.library_path:
-    assert libclang.clang.cindex.Config.library_path == clang_path
-else:
-    libclang.clang.cindex.Config.set_library_path(clang_path)
+configure_clang.configure()
 
 
 def export_ranges(ranges):

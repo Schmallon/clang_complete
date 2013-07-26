@@ -1,14 +1,9 @@
 import contextlib
 import clang.cindex
 import re
+import configure_clang
 
-clang_path = "/Users/mkl/projects/llvm/ninja/lib"
-
-import libclang
-
-if not libclang.clang.cindex.Config.library_path:
-    libclang.clang.cindex.Config.set_library_path(clang_path)
-
+configure_clang.configure()
 
 @contextlib.contextmanager
 def translation_unit_for(contents):
