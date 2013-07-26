@@ -140,3 +140,16 @@ def listen_and_map(listenable, transform):
 
     listenable.add_listener(do_it)
     return queue
+
+
+def abort_after_first_call(consumer, producer):
+    class ConsumeWasCalled(Exception):
+        pass
+
+    def consume_and_abort(x):
+        consumer(x)
+        raise ConsumeWasCalled
+    try:
+        producer(consume_and_abort)
+    except ConsumeWasCalled:
+        pass

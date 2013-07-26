@@ -1,23 +1,10 @@
-from common import SingleResultWorker, TickingDispatcher
+from common import SingleResultWorker, TickingDispatcher, abort_after_first_call
 from completion import Completer
 from finding import DeclarationFinder, DefinitionFinder
 from highlighting import InterestingRangeHighlighter, export_and_highlight_range_if_in_current_file
 from translation_unit_access import TranslationUnitAccessor
 import actions
 import clang.cindex
-
-
-def abort_after_first_call(consumer, producer):
-    class ConsumeWasCalled(Exception):
-        pass
-
-    def consume_and_abort(x):
-        consumer(x)
-        raise ConsumeWasCalled
-    try:
-        producer(consume_and_abort)
-    except ConsumeWasCalled:
-        pass
 
 
 def make_clang_plugin(editor, clang_complete_flags, library_path):
